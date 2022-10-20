@@ -1,6 +1,6 @@
 use std::{fs::File, io::BufWriter, path::Path};
 
-use crate::window::BadIcon;
+use crate::icon::BadIcon;
 
 #[derive(Debug, Clone)]
 pub struct PlatformIcon {
@@ -27,6 +27,6 @@ impl PlatformIcon {
         encoder.set_depth(png::BitDepth::Eight);
 
         let mut writer = encoder.write_header().unwrap();
-        writer.write_image_data(&self.raw).unwrap();
+        writer.write_image_data(&self.rgba).unwrap();
     }
 }

@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use counter::Counter;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use icon::Icon;
@@ -67,6 +69,9 @@ pub struct TrayIconAttributes {
 
     /// Tray icon
     pub icon: Option<Icon>,
+
+    /// Tray icon temp dir path. Linux only.
+    pub temp_dir_path: Option<PathBuf>,
 }
 
 #[derive(Default)]
@@ -81,6 +86,9 @@ impl TrayIconBuilder {
         }
     }
 
+    /// ## Platform-specific:
+    ///
+    /// - **Linux**: once a menu is set it cannot be removed.
     pub fn with_menu(mut self, menu: Box<dyn menu::ContextMenu>) -> Self {
         self.attrs.menu = Some(menu);
         self
@@ -93,6 +101,11 @@ impl TrayIconBuilder {
 
     pub fn with_tooltip<S: AsRef<str>>(mut self, s: S) -> Self {
         self.attrs.tooltip = Some(s.as_ref().to_string());
+        self
+    }
+
+    pub fn with_temp_dir_path<P: AsRef<Path>>(mut self, s: P) -> Self {
+        self.attrs.temp_dir_path = Some(s.as_ref().to_path_buf());
         self
     }
 
@@ -125,6 +138,10 @@ impl TrayIcon {
     }
 
     /// Set new tray menu.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux**: once a menu is set it cannot be removed so `None` has no effect
     pub fn set_menu(&mut self, menu: Option<Box<dyn menu::ContextMenu>>) {
         self.tray.set_menu(menu)
     }
@@ -136,5 +153,13 @@ impl TrayIcon {
     /// - **Linux:** Unsupported
     pub fn set_tooltip<S: AsRef<str>>(&mut self, tooltip: Option<S>) {
         self.tray.set_tooltip(tooltip);
+    }
+
+    /// Sets the tray icon temp dir path. Linux only.
+    pub fn set_temp_dir_path<P: AsRef<Path>>(&mut self, path: Option<P>) {
+        #[cfg(target_os = "linux")]
+        self.tray.set_temp_dir_path(path);
+        #[cfg(not(target_os = "linux"))]
+        let _ = path;
     }
 }

@@ -28,12 +28,14 @@ fn main() {
         &quit_i,
     ]);
 
-    let tray_icon = TrayIconBuilder::new()
-        .with_menu(Box::new(tray_menu.clone()))
-        .with_tooltip("winit - awesome windowing lib")
-        .with_icon(icon)
-        .build()
-        .unwrap();
+    let mut tray_icon = Some(
+        TrayIconBuilder::new()
+            .with_menu(Box::new(tray_menu))
+            .with_tooltip("winit - awesome windowing lib")
+            .with_icon(icon)
+            .build()
+            .unwrap(),
+    );
 
     let menu_channel = menu_event_receiver();
     let tray_channel = tray_event_receiver();
@@ -43,7 +45,7 @@ fn main() {
 
         if let Ok(event) = menu_channel.try_recv() {
             if event.id == quit_i.id() {
-                drop(&tray_icon);
+                tray_icon.take();
                 *control_flow = ControlFlow::Exit;
             }
             println!("{:?}", event);

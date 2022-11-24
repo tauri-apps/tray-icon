@@ -21,8 +21,8 @@ static COUNTER: Counter = Counter::new();
 pub struct TrayEvent {
     /// Id of the tray icon which triggered this event
     pub id: u32,
-    pub x: f32,
-    pub y: f32,
+    pub x: f64,
+    pub y: f64,
     pub icon_rect: Rectangle,
     pub event: ClickEvent,
 }
@@ -37,10 +37,10 @@ pub enum ClickEvent {
 /// Describes a rectangle including position (x - y axis) and size.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Rectangle {
-    left: f32,
-    right: f32,
-    top: f32,
-    bottom: f32,
+    left: f64,
+    right: f64,
+    top: f64,
+    bottom: f64,
 }
 
 /// A reciever that could be used to listen to tray events.
@@ -55,7 +55,6 @@ pub fn tray_event_receiver<'a>() -> &'a TrayEventReceiver {
 }
 
 /// Attributes to use when creating a tray icon.
-#[derive(Default)]
 pub struct TrayIconAttributes {
     /// Tooltip for the tray icon
     ///
@@ -70,8 +69,27 @@ pub struct TrayIconAttributes {
     /// Tray icon
     pub icon: Option<Icon>,
 
-    /// Tray icon temp dir path. Linux only.
+    /// Tray icon temp dir path. **Linux only**.
     pub temp_dir_path: Option<PathBuf>,
+
+    /// Use the icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+    pub icon_is_template: bool,
+
+    /// Whether to show the tray menu on left click or not, default is `true`. **macOS only**.
+    pub menu_on_left_click: bool,
+}
+
+impl Default for TrayIconAttributes {
+    fn default() -> Self {
+        Self {
+            tooltip: None,
+            menu: None,
+            icon: None,
+            temp_dir_path: None,
+            icon_is_template: false,
+            menu_on_left_click: true,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -104,8 +122,21 @@ impl TrayIconBuilder {
         self
     }
 
+    /// Set tray icon temp dir path. **Linux only**.
     pub fn with_temp_dir_path<P: AsRef<Path>>(mut self, s: P) -> Self {
         self.attrs.temp_dir_path = Some(s.as_ref().to_path_buf());
+        self
+    }
+
+    /// Use the icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+    pub fn with_icon_as_template(mut self, is_template: bool) -> Self {
+        self.attrs.icon_is_template = is_template;
+        self
+    }
+
+    /// Whether to show the tray menu on left click or not, default is `true`. **macOS only**.
+    pub fn with_menu_on_left_click(mut self, enable: bool) -> Self {
+        self.attrs.menu_on_left_click = enable;
         self
     }
 
@@ -155,11 +186,27 @@ impl TrayIcon {
         self.tray.set_tooltip(tooltip);
     }
 
-    /// Sets the tray icon temp dir path. Linux only.
+    /// Sets the tray icon temp dir path. **Linux only**.
     pub fn set_temp_dir_path<P: AsRef<Path>>(&mut self, path: Option<P>) {
         #[cfg(target_os = "linux")]
         self.tray.set_temp_dir_path(path);
         #[cfg(not(target_os = "linux"))]
         let _ = path;
+    }
+
+    /// Set the current icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+    pub fn set_icon_as_template(&mut self, is_template: bool) {
+        #[cfg(target_os = "macos")]
+        self.tray.set_icon_as_template(is_template);
+        #[cfg(not(target_os = "macos"))]
+        let _ = is_template;
+    }
+
+    /// Disable or enable showing the tray menu on left click. **macOS only**.
+    pub fn set_show_menu_on_left_click(&mut self, enable: bool) {
+        #[cfg(target_os = "macos")]
+        self.tray.set_show_menu_on_left_click(enable);
+        #[cfg(not(target_os = "macos"))]
+        let _ = enable;
     }
 }

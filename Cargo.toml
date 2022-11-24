@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-muda = { git = "https://github.com/tauri-apps/muda" }
+muda = { git = "https://github.com/tauri-apps/muda", branch = "feat/macOS-ns-menu" }
+# muda = { path = "../muda" }
 crossbeam-channel = "0.5"
 once_cell = "1"
 
@@ -17,7 +18,9 @@ libappindicator = "0.7"
 dirs-next = "2.0"
 
 [target."cfg(target_os = \"macos\")".dependencies]
+cocoa = "0.24"
 objc = "0.2"
+core-graphics = "0.22.3"
 
 [target."cfg(any(target_os = \"linux\", target_os = \"macos\"))".dependencies]
 png = "0.17"

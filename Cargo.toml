@@ -11,7 +11,11 @@ once_cell = "1"
 
 [target.'cfg(target_os = "windows")'.dependencies.windows-sys]
 version = "0.42"
-features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation"]
+features = [
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+]
 
 [target."cfg(target_os = \"linux\")".dependencies]
 libappindicator = "0.7"

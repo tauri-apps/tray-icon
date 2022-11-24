@@ -296,8 +296,8 @@ unsafe extern "system" fn tray_subclass_proc(
             let mut cursor = POINT { x: 0, y: 0 };
             GetCursorPos(&mut cursor as _);
 
-            let x = cursor.x as f32;
-            let y = cursor.y as f32;
+            let x = cursor.x as f64;
+            let y = cursor.y as f64;
 
             let event = match lparam as u32 {
                 WM_LBUTTONUP => ClickEvent::Left,
@@ -311,10 +311,10 @@ unsafe extern "system" fn tray_subclass_proc(
                 x,
                 y,
                 icon_rect: Rectangle {
-                    left: icon_rect.left as f32,
-                    right: icon_rect.right as f32,
-                    bottom: icon_rect.bottom as f32,
-                    top: icon_rect.top as f32,
+                    left: icon_rect.left as f64,
+                    right: icon_rect.right as f64,
+                    bottom: icon_rect.bottom as f64,
+                    top: icon_rect.top as f64,
                 },
                 event,
             });

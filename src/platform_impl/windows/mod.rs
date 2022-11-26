@@ -55,7 +55,7 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
-    pub fn new(id: u32, attrs: TrayIconAttributes) -> Result<Self, ()> {
+    pub fn new(id: u32, attrs: TrayIconAttributes) -> crate::Result<Self> {
         let class_name = util::encode_wide("tao_system_tray_app");
         unsafe {
             let hinstance = GetModuleHandleW(ptr::null());
@@ -101,13 +101,13 @@ impl TrayIcon {
                 std::ptr::null_mut(),
             );
             if hwnd == 0 {
-                return Err(());
+                return Err(crate::Error::OsError(std::io::Error::last_os_error()));
             }
 
             let hicon = attrs.icon.as_ref().map(|i| i.inner.as_raw_handle());
 
             if !register_tray_icon(hwnd, id, &hicon, &attrs.tooltip) {
-                return Err(());
+                return Err(crate::Error::OsError(std::io::Error::last_os_error()));
             }
 
             if let Some(menu) = &attrs.menu {
@@ -137,7 +137,7 @@ impl TrayIcon {
         }
     }
 
-    pub fn set_icon(&mut self, icon: Option<Icon>) {
+    pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
         unsafe {
             let mut nid = NOTIFYICONDATAW {
                 uFlags: NIF_ICON,
@@ -151,7 +151,7 @@ impl TrayIcon {
             }
 
             if Shell_NotifyIconW(NIM_MODIFY, &mut nid as _) == 0 {
-                eprintln!("Error setting tray icon");
+                return Err(crate::Error::OsError(std::io::Error::last_os_error()));
             }
 
             // send the new icon to the subclass proc to store it in the tray data
@@ -162,6 +162,8 @@ impl TrayIcon {
                 0,
             );
         }
+
+        Ok(())
     }
 
     pub fn set_menu(&mut self, menu: Option<Box<dyn menu::ContextMenu>>) {
@@ -182,7 +184,7 @@ impl TrayIcon {
         self.menu = menu;
     }
 
-    pub fn set_tooltip<S: AsRef<str>>(&mut self, tooltip: Option<S>) {
+    pub fn set_tooltip<S: AsRef<str>>(&mut self, tooltip: Option<S>) -> crate::Result<()> {
         unsafe {
             let mut nid = NOTIFYICONDATAW {
                 uFlags: NIF_TIP,
@@ -197,7 +199,7 @@ impl TrayIcon {
             }
 
             if Shell_NotifyIconW(NIM_MODIFY, &mut nid as _) == 0 {
-                eprintln!("Error setting tray tooltip");
+                return Err(crate::Error::OsError(std::io::Error::last_os_error()));
             }
 
             // send the new tooltip to the subclass proc to store it in the tray data
@@ -208,6 +210,8 @@ impl TrayIcon {
                 0,
             );
         }
+
+        Ok(())
     }
 }
 

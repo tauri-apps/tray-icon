@@ -32,7 +32,7 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
-    pub fn new(id: u32, attrs: TrayIconAttributes) -> Result<Self, ()> {
+    pub fn new(id: u32, attrs: TrayIconAttributes) -> crate::Result<Self> {
         let ns_status_bar = unsafe {
             let ns_status_bar =
                 NSStatusBar::systemStatusBar(nil).statusItemWithLength_(NSVariableStatusItemLength);
@@ -80,13 +80,14 @@ impl TrayIcon {
         };
 
         // attach tool_tip if provided
-        system_tray.set_tooltip(attrs.tooltip);
+        system_tray.set_tooltip(attrs.tooltip)?;
 
         Ok(system_tray)
     }
 
-    pub fn set_icon(&mut self, icon: Option<Icon>) {
+    pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
         create_button_with_icon(self.ns_status_bar, icon, false);
+        Ok(())
     }
 
     pub fn set_menu(&mut self, menu: Option<Box<dyn menu::ContextMenu>>) {
@@ -95,7 +96,7 @@ impl TrayIcon {
         }
     }
 
-    pub fn set_tooltip<S: AsRef<str>>(&mut self, tooltip: Option<S>) {
+    pub fn set_tooltip<S: AsRef<str>>(&mut self, tooltip: Option<S>) -> crate::Result<()> {
         unsafe {
             let tooltip = match tooltip {
                 Some(tooltip) => NSString::alloc(nil).init_str(tooltip.as_ref()),
@@ -103,6 +104,7 @@ impl TrayIcon {
             };
             let _: () = msg_send![self.ns_status_bar.button(), setToolTip: tooltip];
         }
+        Ok(())
     }
 
     pub fn set_icon_as_template(&mut self, is_template: bool) {

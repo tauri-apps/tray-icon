@@ -15,12 +15,11 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
-    pub fn new(id: u32, attrs: TrayIconAttributes) -> Result<Self, ()> {
+    pub fn new(id: u32, attrs: TrayIconAttributes) -> crate::Result<Self> {
         let mut indicator = AppIndicator::new("system_tray tray app", "");
         indicator.set_status(AppIndicatorStatus::Active);
 
-        let (parent_path, icon_path) = temp_icon_path(attrs.temp_dir_path.as_ref(), id)
-            .expect("Failed to create a temp folder for icon");
+        let (parent_path, icon_path) = temp_icon_path(attrs.temp_dir_path.as_ref(), id)?;
 
         if let Some(icon) = attrs.icon {
             icon.inner.write_to_png(&icon_path);
@@ -40,11 +39,10 @@ impl TrayIcon {
             temp_dir_path: attrs.temp_dir_path,
         })
     }
-    pub fn set_icon(&mut self, icon: Option<Icon>) {
+    pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
         let _ = std::fs::remove_file(&self.path);
 
-        let (parent_path, icon_path) = temp_icon_path(self.temp_dir_path.as_ref(), self.id)
-            .expect("Failed to create a temp folder for icon");
+        let (parent_path, icon_path) = temp_icon_path(self.temp_dir_path.as_ref(), self.id)?;
 
         if let Some(icon) = icon {
             icon.inner.write_to_png(&icon_path);
@@ -55,13 +53,17 @@ impl TrayIcon {
         self.indicator
             .set_icon_full(&icon_path.to_string_lossy(), "icon");
         self.path = icon_path;
+
+        Ok(())
     }
     pub fn set_menu(&mut self, menu: Option<Box<dyn crate::menu::ContextMenu>>) {
         if let Some(menu) = menu {
             self.indicator.set_menu(&mut menu.gtk_context_menu());
         }
     }
-    pub fn set_tooltip<S: AsRef<str>>(&mut self, _tooltip: Option<S>) {}
+    pub fn set_tooltip<S: AsRef<str>>(&mut self, _tooltip: Option<S>) -> crate::Result<()> {
+        Ok(())
+    }
     pub fn set_temp_dir_path<P: AsRef<Path>>(&mut self, path: Option<P>) {
         self.temp_dir_path = path.map(|p| p.as_ref().to_path_buf());
     }

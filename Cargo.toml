@@ -8,6 +8,7 @@ muda = { git = "https://github.com/tauri-apps/muda", branch = "feat/macOS-ns-men
 # muda = { path = "../muda" }
 crossbeam-channel = "0.5"
 once_cell = "1"
+thiserror = "1.0"
 
 [target.'cfg(target_os = "windows")'.dependencies.windows-sys]
 version = "0.42"

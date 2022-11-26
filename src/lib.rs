@@ -66,8 +66,11 @@ use icon::Icon;
 use once_cell::sync::Lazy;
 
 mod counter;
+mod error;
 pub mod icon;
 mod platform_impl;
+
+pub use self::error::*;
 
 /// Re-export of [muda](::muda) crate and used for tray context menu.
 pub mod menu {
@@ -200,7 +203,7 @@ impl TrayIconBuilder {
         self
     }
 
-    pub fn build(self) -> Result<TrayIcon, ()> {
+    pub fn build(self) -> Result<TrayIcon> {
         TrayIcon::new(self.attrs)
     }
 }
@@ -211,7 +214,7 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
-    pub fn new(attrs: TrayIconAttributes) -> Result<Self, ()> {
+    pub fn new(attrs: TrayIconAttributes) -> Result<Self> {
         let id = COUNTER.next();
         Ok(Self {
             id,
@@ -224,7 +227,7 @@ impl TrayIcon {
     }
 
     /// Set new tray icon. If `None` is provided, it will hide the icon.
-    pub fn set_icon(&mut self, icon: Option<Icon>) {
+    pub fn set_icon(&mut self, icon: Option<Icon>) -> Result<()> {
         self.tray.set_icon(icon)
     }
 
@@ -242,8 +245,8 @@ impl TrayIcon {
     /// ## Platform-specific:
     ///
     /// - **Linux:** Unsupported
-    pub fn set_tooltip<S: AsRef<str>>(&mut self, tooltip: Option<S>) {
-        self.tray.set_tooltip(tooltip);
+    pub fn set_tooltip<S: AsRef<str>>(&mut self, tooltip: Option<S>) -> Result<()> {
+        self.tray.set_tooltip(tooltip)
     }
 
     /// Sets the tray icon temp dir path. **Linux only**.

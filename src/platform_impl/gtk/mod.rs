@@ -84,7 +84,7 @@ fn temp_icon_path(temp_icon_dir: Option<&PathBuf>, id: u32) -> std::io::Result<(
     let parent_path = match temp_icon_dir.as_ref() {
         Some(path) => path.to_path_buf(),
         None => dirs_next::runtime_dir()
-            .unwrap_or_else(|| std::env::temp_dir())
+            .unwrap_or_else(std::env::temp_dir)
             .join("tao"),
     };
 

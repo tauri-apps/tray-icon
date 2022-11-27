@@ -23,7 +23,7 @@ use system_tray::{TrayIconBuilder, menu::Menu};
 
 let tray_menu = Menu::new();
 let tray_icon = TrayIconBuilder::new()
-    .with_menu(tray_menu)
+    .with_menu(Box::new(tray_menu))
     .with_tooltip("system-tray - tray icon library!")
     .with_icon(icon)
     .build()
@@ -38,7 +38,7 @@ which you can use to listen to events when a click happens on the tray icon
 use system_tray::tray_event_receiver;
 
 if let Ok(event) = tray_event_receiver().try_recv() {
-    println!("{}", event);
+    println!("{:?}", event);
 }
 ```
 
@@ -48,10 +48,10 @@ You can also listen for the menu events using `menu_event_listener` to get event
 use system_tray::{tray_event_receiver, menu::menu_event_receiver};
 
 if let Ok(event) = tray_event_receiver().try_recv() {
-    println!("tray event: {}", event);
+    println!("tray event: {:?}", event);
 }
 
 if let Ok(event) = menu_event_receiver().try_recv() {
-    println!("menu event: {}", event);
+    println!("menu event: {:?}", event);
 }
 ```

@@ -20,7 +20,7 @@ impl PlatformIcon {
 
     pub fn write_to_png(&self, path: impl AsRef<Path>) {
         let png = File::create(path).unwrap();
-        let ref mut w = BufWriter::new(png);
+        let w = &mut BufWriter::new(png);
 
         let mut encoder = png::Encoder::new(w, self.width as _, self.height as _);
         encoder.set_color(png::ColorType::Rgba);

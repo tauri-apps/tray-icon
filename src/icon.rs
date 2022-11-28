@@ -1,7 +1,7 @@
 // taken from https://github.com/rust-windowing/winit/blob/92fdf5ba85f920262a61cee4590f4a11ad5738d1/src/icon.rs
 
 use crate::platform_impl::PlatformIcon;
-use std::{error::Error, fmt, io, mem};
+use std::{error::Error, fmt, io, mem, path::Path};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -129,5 +129,31 @@ impl Icon {
         Ok(Icon {
             inner: PlatformIcon::from_rgba(rgba, width, height)?,
         })
+    }
+
+    /// Create an icon from a file path.
+    ///
+    /// Specify `size` to load a specific icon size from the file, or `None` to load the default
+    /// icon size from the file.
+    ///
+    /// In cases where the specified size does not exist in the file, Windows may perform scaling
+    /// to get an icon of the desired size.
+    #[cfg(windows)]
+    pub fn from_path<P: AsRef<Path>>(path: P, size: Option<(u32, u32)>) -> Result<Self, BadIcon> {
+        let win_icon = PlatformIcon::from_path(path, size)?;
+        Ok(Icon { inner: win_icon })
+    }
+
+    /// Create an icon from a resource embedded in this executable or library.
+    ///
+    /// Specify `size` to load a specific icon size from the file, or `None` to load the default
+    /// icon size from the file.
+    ///
+    /// In cases where the specified size does not exist in the file, Windows may perform scaling
+    /// to get an icon of the desired size.
+    #[cfg(windows)]
+    pub fn from_resource(ordinal: u16, size: Option<(u32, u32)>) -> Result<Self, BadIcon> {
+        let win_icon = PlatformIcon::from_resource(ordinal, size)?;
+        Ok(Icon { inner: win_icon })
     }
 }

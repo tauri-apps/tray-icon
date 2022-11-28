@@ -7,7 +7,6 @@ use windows_sys::{
     s,
     Win32::{
         Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM},
-        System::LibraryLoader::GetModuleHandleW,
         UI::{
             Shell::{
                 DefSubclassProc, SetWindowSubclass, Shell_NotifyIconGetRect, Shell_NotifyIconW,
@@ -58,7 +57,7 @@ impl TrayIcon {
     pub fn new(id: u32, attrs: TrayIconAttributes) -> crate::Result<Self> {
         let class_name = util::encode_wide("tao_system_tray_app");
         unsafe {
-            let hinstance = GetModuleHandleW(ptr::null());
+            let hinstance = util::get_instance_handle();
 
             unsafe extern "system" fn call_default_window_proc(
                 hwnd: HWND,

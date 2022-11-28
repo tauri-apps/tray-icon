@@ -1,10 +1,17 @@
 // taken from https://github.com/rust-windowing/winit/blob/92fdf5ba85f920262a61cee4590f4a11ad5738d1/src/platform_impl/windows/icon.rs
 
-use std::{fmt, io, mem, sync::Arc};
+use std::{fmt, io, mem, path::Path, sync::Arc};
 
-use windows_sys::Win32::UI::WindowsAndMessaging::{CreateIcon, DestroyIcon, HICON};
+use windows_sys::{
+    core::PCWSTR,
+    Win32::UI::WindowsAndMessaging::{
+        CreateIcon, DestroyIcon, LoadImageW, HICON, IMAGE_ICON, LR_DEFAULTSIZE, LR_LOADFROMFILE,
+    },
+};
 
 use crate::icon::*;
+
+use super::util;
 
 impl Pixel {
     fn convert_to_bgra(&mut self) {
@@ -49,7 +56,7 @@ struct RaiiIcon {
 }
 
 #[derive(Clone)]
-pub struct WinIcon {
+pub(crate) struct WinIcon {
     inner: Arc<RaiiIcon>,
 }
 
@@ -68,6 +75,55 @@ impl WinIcon {
     fn from_handle(handle: HICON) -> Self {
         Self {
             inner: Arc::new(RaiiIcon { handle }),
+        }
+    }
+
+    pub(crate) fn from_path<P: AsRef<Path>>(
+        path: P,
+        size: Option<(u32, u32)>,
+    ) -> Result<Self, BadIcon> {
+        // width / height of 0 along with LR_DEFAULTSIZE tells windows to load the default icon size
+        let (width, height) = size.unwrap_or((0, 0));
+
+        let wide_path = util::encode_wide(path.as_ref());
+
+        let handle = unsafe {
+            LoadImageW(
+                0,
+                wide_path.as_ptr(),
+                IMAGE_ICON,
+                width as i32,
+                height as i32,
+                LR_DEFAULTSIZE | LR_LOADFROMFILE,
+            )
+        };
+        if handle != 0 {
+            Ok(WinIcon::from_handle(handle as HICON))
+        } else {
+            Err(BadIcon::OsError(io::Error::last_os_error()))
+        }
+    }
+
+    pub(crate) fn from_resource(
+        resource_id: u16,
+        size: Option<(u32, u32)>,
+    ) -> Result<Self, BadIcon> {
+        // width / height of 0 along with LR_DEFAULTSIZE tells windows to load the default icon size
+        let (width, height) = size.unwrap_or((0, 0));
+        let handle = unsafe {
+            LoadImageW(
+                util::get_instance_handle(),
+                resource_id as PCWSTR,
+                IMAGE_ICON,
+                width as i32,
+                height as i32,
+                LR_DEFAULTSIZE,
+            )
+        };
+        if handle != 0 {
+            Ok(WinIcon::from_handle(handle as HICON))
+        } else {
+            Err(BadIcon::OsError(io::Error::last_os_error()))
         }
     }
 }

@@ -1,7 +1,7 @@
 // taken from https://github.com/rust-windowing/winit/blob/92fdf5ba85f920262a61cee4590f4a11ad5738d1/src/icon.rs
 
 use crate::platform_impl::PlatformIcon;
-use std::{error::Error, fmt, io, mem, path::Path};
+use std::{error::Error, fmt, io, mem};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -139,7 +139,10 @@ impl Icon {
     /// In cases where the specified size does not exist in the file, Windows may perform scaling
     /// to get an icon of the desired size.
     #[cfg(windows)]
-    pub fn from_path<P: AsRef<Path>>(path: P, size: Option<(u32, u32)>) -> Result<Self, BadIcon> {
+    pub fn from_path<P: AsRef<std::path::Path>>(
+        path: P,
+        size: Option<(u32, u32)>,
+    ) -> Result<Self, BadIcon> {
         let win_icon = PlatformIcon::from_path(path, size)?;
         Ok(Icon { inner: win_icon })
     }

@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-/// Errors returned by system_tray.
+/// Errors returned by tray-icon.
 #[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum Error {
@@ -8,5 +8,5 @@ pub enum Error {
     OsError(#[from] std::io::Error),
 }
 
-/// Convenient type alias of Result type for system_tray.
+/// Convenient type alias of Result type for tray-icon.
 pub type Result<T> = std::result::Result<T, Error>;

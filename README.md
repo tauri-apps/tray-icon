@@ -1,11 +1,11 @@
-system_tray lets you create tray icons for desktop applications.
+tray-icon lets you create tray icons for desktop applications.
 
 # Example
 
 Create a tray icon without a menu.
 
 ```rs
-use system_tray::TrayIconBuilder;
+use tray_icon::TrayIconBuilder;
 
 let tray_icon = TrayIconBuilder::new()
     .with_tooltip("system-tray - tray icon library!")
@@ -19,7 +19,7 @@ let tray_icon = TrayIconBuilder::new()
 Create a tray icon with a menu.
 
 ```rs
-use system_tray::{TrayIconBuilder, menu::Menu};
+use tray_icon::{TrayIconBuilder, menu::Menu};
 
 let tray_menu = Menu::new();
 let tray_icon = TrayIconBuilder::new()
@@ -35,7 +35,7 @@ let tray_icon = TrayIconBuilder::new()
 You can use `tray_event_receiver` to get a reference to the `TrayEventReceiver`
 which you can use to listen to events when a click happens on the tray icon
 ```rs
-use system_tray::tray_event_receiver;
+use tray_icon::tray_event_receiver;
 
 if let Ok(event) = tray_event_receiver().try_recv() {
     println!("{:?}", event);
@@ -45,7 +45,7 @@ if let Ok(event) = tray_event_receiver().try_recv() {
 You can also listen for the menu events using `menu_event_listener` to get events for the tray context menu.
 
 ```rs
-use system_tray::{tray_event_receiver, menu::menu_event_receiver};
+use tray_icon::{tray_event_receiver, menu::menu_event_receiver};
 
 if let Ok(event) = tray_event_receiver().try_recv() {
     println!("tray event: {:?}", event);

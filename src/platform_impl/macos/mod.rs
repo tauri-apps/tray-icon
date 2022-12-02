@@ -74,15 +74,15 @@ impl TrayIcon {
             }
         }
 
-        let mut system_tray = Self {
+        let mut tray_icon = Self {
             ns_status_bar,
             tray_target,
         };
 
         // attach tool_tip if provided
-        system_tray.set_tooltip(attrs.tooltip)?;
+        tray_icon.set_tooltip(attrs.tooltip)?;
 
-        Ok(system_tray)
+        Ok(tray_icon)
     }
 
     pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {

@@ -55,7 +55,7 @@ pub struct TrayIcon {
 
 impl TrayIcon {
     pub fn new(id: u32, attrs: TrayIconAttributes) -> crate::Result<Self> {
-        let class_name = util::encode_wide("tao_system_tray_app");
+        let class_name = util::encode_wide("tray_icon_app");
         unsafe {
             let hinstance = util::get_instance_handle();
 
@@ -113,7 +113,7 @@ impl TrayIcon {
                 menu.attach_menu_subclass_for_hwnd(hwnd);
             }
 
-            // system_tray event handler
+            // tray-icon event handler
             let traydata = TrayLoopData {
                 id,
                 hwnd,

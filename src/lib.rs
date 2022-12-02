@@ -1,11 +1,11 @@
-//! system_tray lets you create tray icons for desktop applications.
+//! tray-icon lets you create tray icons for desktop applications.
 //!
 //! # Example
 //!
 //! Create a tray icon without a menu.
 //!
 //! ```no_run
-//! use system_tray::{TrayIconBuilder, icon::Icon};
+//! use tray_icon::{TrayIconBuilder, icon::Icon};
 //!
 //! # let icon = Icon::from_rgba(Vec::new(), 0, 0).unwrap();
 //! let tray_icon = TrayIconBuilder::new()
@@ -20,7 +20,7 @@
 //! Create a tray icon with a menu.
 //!
 //! ```no_run
-//! use system_tray::{TrayIconBuilder, menu::Menu, icon::Icon};
+//! use tray_icon::{TrayIconBuilder, menu::Menu, icon::Icon};
 //!
 //! # let icon = Icon::from_rgba(Vec::new(), 0, 0).unwrap();
 //! let tray_menu = Menu::new();
@@ -37,7 +37,7 @@
 //! You can use [`tray_event_receiver`] to get a reference to the [`TrayEventReceiver`]
 //! which you can use to listen to events when a click happens on the tray icon
 //! ```no_run
-//! use system_tray::tray_event_receiver;
+//! use tray_icon::tray_event_receiver;
 //!
 //! if let Ok(event) = tray_event_receiver().try_recv() {
 //!     println!("{:?}", event);
@@ -47,7 +47,7 @@
 //! You can also listen for the menu events using [`menu_event_receiver`](crate::menu::menu_event_receiver) to get events for the tray context menu.
 //!
 //! ```no_run
-//! use system_tray::{tray_event_receiver, menu::menu_event_receiver};
+//! use tray_icon::{tray_event_receiver, menu::menu_event_receiver};
 //!
 //! if let Ok(event) = tray_event_receiver().try_recv() {
 //!     println!("tray event: {:?}", event);

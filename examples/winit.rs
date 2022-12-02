@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use system_tray::{
+use tray_icon::{
     menu::{menu_event_receiver, AboutMetadata, Menu, MenuItem, PredefinedMenuItem},
     tray_event_receiver, TrayIconBuilder,
 };
@@ -57,7 +57,7 @@ fn main() {
     })
 }
 
-fn load_icon(path: &std::path::Path) -> system_tray::icon::Icon {
+fn load_icon(path: &std::path::Path) -> tray_icon::icon::Icon {
     let (icon_rgba, icon_width, icon_height) = {
         let image = image::open(path)
             .expect("Failed to open icon path")
@@ -66,6 +66,6 @@ fn load_icon(path: &std::path::Path) -> system_tray::icon::Icon {
         let rgba = image.into_raw();
         (rgba, width, height)
     };
-    system_tray::icon::Icon::from_rgba(icon_rgba, icon_width, icon_height)
+    tray_icon::icon::Icon::from_rgba(icon_rgba, icon_width, icon_height)
         .expect("Failed to open icon")
 }

@@ -23,16 +23,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v2.2.2
-        with:
-          version: 7
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16
-          check-latest: true
-          registry-url: 'https://registry.npmjs.org'
-
       - name: cargo login
         run: cargo login ${{ secrets.ORG_CRATES_IO_TOKEN  }}
       - name: git config
@@ -43,8 +33,6 @@ jobs:
       - name: covector version or publish (publish when no change files present)
         uses: jbolda/covector/packages/action@covector-v0
         id: covector
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.ORG_NPM_TOKEN }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: 'version-or-publish'

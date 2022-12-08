@@ -55,3 +55,7 @@ if let Ok(event) = menu_event_receiver().try_recv() {
     println!("menu event: {:?}", event);
 }
 ```
+
+## License
+
+Apache-2.0/MIT

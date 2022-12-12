@@ -41,7 +41,6 @@ impl DerefMut for Accel {
     }
 }
 
-#[cfg(windows)]
 pub fn get_instance_handle() -> windows_sys::Win32::Foundation::HINSTANCE {
     // Gets the instance handle by taking the address of the
     // pseudo-variable created by the microsoft linker:

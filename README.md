@@ -14,7 +14,7 @@ let tray_icon = TrayIconBuilder::new()
     .unwrap();
 ```
 
-# Example
+## Example
 
 Create a tray icon with a menu.
 
@@ -30,7 +30,7 @@ let tray_icon = TrayIconBuilder::new()
     .unwrap();
 ```
 
-# Processing tray events
+## Processing tray events
 
 You can use `tray_event_receiver` to get a reference to the `TrayEventReceiver`
 which you can use to listen to events when a click happens on the tray icon

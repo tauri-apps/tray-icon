@@ -41,6 +41,8 @@ impl DerefMut for Accel {
     }
 }
 
+// taken from winit's code base
+// https://github.com/rust-windowing/winit/blob/ee88e38f13fbc86a7aafae1d17ad3cd4a1e761df/src/platform_impl/windows/util.rs#L138
 pub fn get_instance_handle() -> windows_sys::Win32::Foundation::HINSTANCE {
     // Gets the instance handle by taking the address of the
     // pseudo-variable created by the microsoft linker:

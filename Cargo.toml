@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 categories = [ "gui" ]
 
 [dependencies]
-muda = "0.1"
+muda = "0.2"
 crossbeam-channel = "0.5"
 once_cell = "1"
 thiserror = "1.0"

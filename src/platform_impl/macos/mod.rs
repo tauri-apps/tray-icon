@@ -257,7 +257,7 @@ extern "C" fn perform_tray_click(this: &mut Object, _: Sel, button: id) {
                 event: click_event,
             };
 
-            let _ = &TRAY_CHANNEL.0.send(event);
+            TrayEvent::send(event);
 
             let menu = this.get_ivar::<id>(TRAY_MENU);
             if *menu != nil {

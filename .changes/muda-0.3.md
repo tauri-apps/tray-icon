@@ -2,4 +2,4 @@
 "tray-icon": patch
 ---
 
-Update `muda` to `0.2`.
+Update `muda` to `0.3`.

@@ -23,7 +23,7 @@ use objc::{
     sel, sel_impl,
 };
 
-use crate::{icon::Icon, menu, ClickEvent, Rectangle, TrayEvent, TrayIconAttributes, TRAY_CHANNEL};
+use crate::{icon::Icon, menu, ClickEvent, Rectangle, TrayEvent, TrayIconAttributes};
 
 const TRAY_ID: &str = "id";
 const TRAY_MENU: &str = "menu";

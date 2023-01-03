@@ -299,6 +299,7 @@ impl TrayEvent {
         }
     }
 
+    #[allow(unused)]
     pub(crate) fn send(event: TrayEvent) {
         if let Some(handler) = TRAY_EVENT_HANDLER.get_or_init(|| None) {
             handler(event);

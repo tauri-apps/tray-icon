@@ -271,8 +271,8 @@ pub struct Rectangle {
 pub type TrayEventReceiver = Receiver<TrayEvent>;
 type TrayEventHandler = Box<dyn Fn(TrayEvent) + Send + Sync + 'static>;
 
-static MENU_CHANNEL: Lazy<(Sender<TrayEvent>, TrayEventReceiver)> = Lazy::new(unbounded);
-static MENU_EVENT_HANDLER: OnceCell<Option<TrayEventHandler>> = OnceCell::new();
+static TRAY_CHANNEL: Lazy<(Sender<TrayEvent>, TrayEventReceiver)> = Lazy::new(unbounded);
+static TRAY_EVENT_HANDLER: OnceCell<Option<TrayEventHandler>> = OnceCell::new();
 
 impl TrayEvent {
     /// Gets a reference to the event channel's [`TrayEventReceiver`]
@@ -282,7 +282,7 @@ impl TrayEvent {
     ///
     /// This will not receive any events if [`TrayEvent::set_event_handler`] has been called with a `Some` value.
     pub fn receiver<'a>() -> &'a TrayEventReceiver {
-        &MENU_CHANNEL.1
+        &TRAY_CHANNEL.1
     }
 
     /// Set a handler to be called for new events. Useful for implementing custom event sender.
@@ -293,17 +293,17 @@ impl TrayEvent {
     /// will not send new events to the channel associated with [`TrayEvent::receiver`]
     pub fn set_event_handler<F: Fn(TrayEvent) + Send + Sync + 'static>(f: Option<F>) {
         if let Some(f) = f {
-            let _ = MENU_EVENT_HANDLER.set(Some(Box::new(f)));
+            let _ = TRAY_EVENT_HANDLER.set(Some(Box::new(f)));
         } else {
-            let _ = MENU_EVENT_HANDLER.set(None);
+            let _ = TRAY_EVENT_HANDLER.set(None);
         }
     }
 
     pub(crate) fn send(event: TrayEvent) {
-        if let Some(handler) = MENU_EVENT_HANDLER.get_or_init(|| None) {
+        if let Some(handler) = TRAY_EVENT_HANDLER.get_or_init(|| None) {
             handler(event);
         } else {
-            let _ = MENU_CHANNEL.0.send(event);
+            let _ = TRAY_CHANNEL.0.send(event);
         }
     }
 }

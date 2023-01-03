@@ -28,7 +28,7 @@ use windows_sys::{
     },
 };
 
-use crate::{icon::Icon, menu, ClickEvent, Rectangle, TrayIconAttributes, TRAY_CHANNEL};
+use crate::{icon::Icon, menu, ClickEvent, Rectangle, TrayEvent, TrayIconAttributes};
 
 pub(crate) use self::icon::WinIcon as PlatformIcon;
 
@@ -313,7 +313,7 @@ unsafe extern "system" fn tray_subclass_proc(
                 _ => unreachable!(),
             };
 
-            let _ = &TRAY_CHANNEL.0.send(crate::TrayEvent {
+            TrayEvent::send(crate::TrayEvent {
                 id: subclass_input.id,
                 x,
                 y,

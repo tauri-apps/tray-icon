@@ -32,26 +32,26 @@ let tray_icon = TrayIconBuilder::new()
 
 ## Processing tray events
 
-You can use `tray_event_receiver` to get a reference to the `TrayEventReceiver`
+You can use `TrayEvent::receiver` to get a reference to the `TrayEventReceiver`
 which you can use to listen to events when a click happens on the tray icon
 ```rs
-use tray_icon::tray_event_receiver;
+use tray_icon::TrayEvent;
 
-if let Ok(event) = tray_event_receiver().try_recv() {
+if let Ok(event) = TrayEvent::receiver().try_recv() {
     println!("{:?}", event);
 }
 ```
 
-You can also listen for the menu events using `menu_event_listener` to get events for the tray context menu.
+You can also listen for the menu events using `TrayEvent::receiver` to get events for the tray context menu.
 
 ```rs
-use tray_icon::{tray_event_receiver, menu::menu_event_receiver};
+use tray_icon::{TrayEvent, menu::{MenuEvent}};
 
-if let Ok(event) = tray_event_receiver().try_recv() {
+if let Ok(event) = TrayEvent::receiver().try_recv() {
     println!("tray event: {:?}", event);
 }
 
-if let Ok(event) = menu_event_receiver().try_recv() {
+if let Ok(event) = MenuEvent::receiver().try_recv() {
     println!("menu event: {:?}", event);
 }
 ```

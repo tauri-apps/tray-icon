@@ -1,5 +1,5 @@
 ---
-"muda": "minor"
+"tray-icon": "minor"
 ---
 
 **Breaking change** Remove `tray_event_receiver` function, use `TrayEvent::receiver` instead.

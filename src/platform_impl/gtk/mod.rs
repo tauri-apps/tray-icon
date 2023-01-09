@@ -36,6 +36,10 @@ impl TrayIcon {
             indicator.set_menu(&mut menu.gtk_context_menu());
         }
 
+        if let Some(title) = attrs.title {
+            indicator.set_label(title.as_str(), "");
+        }
+
         Ok(Self {
             id,
             indicator,
@@ -65,9 +69,15 @@ impl TrayIcon {
             self.indicator.set_menu(&mut menu.gtk_context_menu());
         }
     }
+
     pub fn set_tooltip<S: AsRef<str>>(&mut self, _tooltip: Option<S>) -> crate::Result<()> {
         Ok(())
     }
+
+    pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) -> crate::Result<()> {
+        self.indicator.set_label(title.as_ref(), "");
+    }
+
     pub fn set_temp_dir_path<P: AsRef<Path>>(&mut self, path: Option<P>) {
         self.temp_dir_path = path.map(|p| p.as_ref().to_path_buf());
     }
@@ -82,14 +92,14 @@ impl Drop for TrayIcon {
 
 /// Generates an icon path in one of the following dirs:
 /// 1. If `temp_icon_dir` is `Some` use that.
-/// 2. `$XDG_RUNTIME_DIR/tao`
-/// 3. `/tmp/tao`
+/// 2. `$XDG_RUNTIME_DIR/tray-icon`
+/// 3. `/tmp/tray-icon`
 fn temp_icon_path(temp_icon_dir: Option<&PathBuf>, id: u32) -> std::io::Result<(PathBuf, PathBuf)> {
     let parent_path = match temp_icon_dir.as_ref() {
         Some(path) => path.to_path_buf(),
         None => dirs_next::runtime_dir()
             .unwrap_or_else(std::env::temp_dir)
-            .join("tao"),
+            .join("tray-icon"),
     };
 
     std::fs::create_dir_all(&parent_path)?;
@@ -110,8 +120,8 @@ fn temp_icon_path_preference_order() {
     assert_eq!(dir1, override_dir);
     if let Some(runtime_dir) = runtime_dir {
         std::env::set_var("XDG_RUNTIME_DIR", runtime_dir);
-        assert_eq!(dir2, PathBuf::from(format!("{}/tao", runtime_dir)));
+        assert_eq!(dir2, PathBuf::from(format!("{}/tray-icon", runtime_dir)));
     }
 
-    assert_eq!(dir3, PathBuf::from("/tmp/tao"));
+    assert_eq!(dir3, PathBuf::from("/tmp/tray-icon"));
 }

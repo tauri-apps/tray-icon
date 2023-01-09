@@ -216,6 +216,10 @@ impl TrayIcon {
 
         Ok(())
     }
+
+    pub fn set_title<S: AsRef<str>>(&mut self, _title: Option<S>) -> crate::Result<()> {
+        Ok(())
+    }
 }
 
 impl Drop for TrayIcon {

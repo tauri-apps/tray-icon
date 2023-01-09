@@ -254,7 +254,7 @@ impl TrayIcon {
     /// ## Platform-specific:
     ///
     /// - **Windows:** Unsupported
-    pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) -> Result<()> {
+    pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) {
         self.tray.set_title(title)
     }
 

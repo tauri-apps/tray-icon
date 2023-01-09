@@ -74,8 +74,9 @@ impl TrayIcon {
         Ok(())
     }
 
-    pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) -> crate::Result<()> {
-        self.indicator.set_label(title.as_ref(), "");
+    pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) {
+        self.indicator
+            .set_label(title.map(|t| t.as_ref()).unwrap_or_default(), "");
     }
 
     pub fn set_temp_dir_path<P: AsRef<Path>>(&mut self, path: Option<P>) {

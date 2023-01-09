@@ -83,7 +83,7 @@ impl TrayIcon {
         };
 
         tray_icon.set_tooltip(attrs.tooltip)?;
-        tray_icon.set_title(attrs.title)?;
+        tray_icon.set_title(attrs.title);
 
         Ok(tray_icon)
     }
@@ -110,7 +110,7 @@ impl TrayIcon {
         Ok(())
     }
 
-    pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) -> crate::Result<()> {
+    pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) {
         unsafe {
             let title = match title {
                 Some(title) => NSString::alloc(nil).init_str(title.as_ref()),
@@ -118,7 +118,6 @@ impl TrayIcon {
             };
             let _: () = msg_send![self.ns_status_bar.button(), setTitle: title];
         }
-        Ok(())
     }
 
     pub fn set_icon_as_template(&mut self, is_template: bool) {

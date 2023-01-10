@@ -1,5 +1,10 @@
 # Changelog
 
+## \[0.3.1]
+
+- On macOS and Linux, add `TrayIconBuilder::with_title` and `TrayIcon::set_title` to optionally add a text next to the icon.
+  - [6df6fc7](https://www.github.com/tauri-apps/tray-icon/commit/6df6fc78885204be5189b41527a39324851c9671) feat: add `with_title` and `set_title` ([#11](https://www.github.com/tauri-apps/tray-icon/pull/11)) on 2023-01-10
+
 ## \[0.3.0]
 
 - Add `TrayEvent::set_event_handler` to set a handler for new tray events.

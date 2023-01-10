@@ -85,14 +85,18 @@ static COUNTER: Counter = Counter::new();
 
 /// Attributes to use when creating a tray icon.
 pub struct TrayIconAttributes {
-    /// Tooltip for the tray icon
+    /// Tray icon tooltip
     ///
     /// ## Platform-specific:
     ///
     /// - **Linux:** Unsupported.
     pub tooltip: Option<String>,
 
+    /// ## Platform-specific:
+    ///
     /// Tray menu
+    ///
+    /// - **Linux**: once a menu is set, it cannot be removed.
     pub menu: Option<Box<dyn menu::ContextMenu>>,
 
     /// Tray icon
@@ -106,6 +110,18 @@ pub struct TrayIconAttributes {
 
     /// Whether to show the tray menu on left click or not, default is `true`. **macOS only**.
     pub menu_on_left_click: bool,
+
+    /// Tray icon title.
+    ///
+    /// ## Platform-specific
+    ///
+    /// - **Linux:** The title will not be shown unless there is an icon
+    /// as well.  The title is useful for numerical and other frequently
+    /// updated information.  In general, it shouldn't be shown unless a
+    /// user requests it as it can take up a significant amount of space
+    /// on the user's panel.  This may not be shown in all visualizations.
+    /// - **Windows:** Unsupported.
+    pub title: Option<String>,
 }
 
 impl Default for TrayIconAttributes {
@@ -117,6 +133,7 @@ impl Default for TrayIconAttributes {
             temp_dir_path: None,
             icon_is_template: false,
             menu_on_left_click: true,
+            title: None,
         }
     }
 }
@@ -133,25 +150,51 @@ impl TrayIconBuilder {
         }
     }
 
+    /// Set the a menu for this tray icon.
+    ///
     /// ## Platform-specific:
     ///
-    /// - **Linux**: once a menu is set it cannot be removed.
+    /// - **Linux**: once a menu is set, it cannot be removed.
     pub fn with_menu(mut self, menu: Box<dyn menu::ContextMenu>) -> Self {
         self.attrs.menu = Some(menu);
         self
     }
 
+    /// Set an icon for this tray icon.
     pub fn with_icon(mut self, icon: Icon) -> Self {
         self.attrs.icon = Some(icon);
         self
     }
 
+    /// Set a tooltip for this tray icon.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
     pub fn with_tooltip<S: AsRef<str>>(mut self, s: S) -> Self {
         self.attrs.tooltip = Some(s.as_ref().to_string());
         self
     }
 
+    /// Set the tray icon title.
+    ///
+    /// ## Platform-specific
+    ///
+    /// - **Linux:** The title will not be shown unless there is an icon
+    /// as well.  The title is useful for numerical and other frequently
+    /// updated information.  In general, it shouldn't be shown unless a
+    /// user requests it as it can take up a significant amount of space
+    /// on the user's panel.  This may not be shown in all visualizations.
+    /// - **Windows:** Unsupported.
+    pub fn with_title<S: AsRef<str>>(mut self, title: S) -> Self {
+        self.attrs.title.replace(title.as_ref().to_string());
+        self
+    }
+
     /// Set tray icon temp dir path. **Linux only**.
+    ///
+    /// On Linux, we need to write the icon to the disk and usually it will
+    /// be `$XDG_RUNTIME_DIR/tray-icon` or `$TEMP/tray-icon`.
     pub fn with_temp_dir_path<P: AsRef<Path>>(mut self, s: P) -> Self {
         self.attrs.temp_dir_path = Some(s.as_ref().to_path_buf());
         self
@@ -188,6 +231,7 @@ impl TrayIcon {
         })
     }
 
+    /// Returns the id associated with this tray icon.
     pub fn id(&self) -> u32 {
         self.id
     }
@@ -215,7 +259,24 @@ impl TrayIcon {
         self.tray.set_tooltip(tooltip)
     }
 
+    /// Sets the tooltip for this tray icon.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** The title will not be shown unless there is an icon
+    /// as well.  The title is useful for numerical and other frequently
+    /// updated information.  In general, it shouldn't be shown unless a
+    /// user requests it as it can take up a significant amount of space
+    /// on the user's panel.  This may not be shown in all visualizations.
+    /// - **Windows:** Unsupported
+    pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) {
+        self.tray.set_title(title)
+    }
+
     /// Sets the tray icon temp dir path. **Linux only**.
+    ///
+    /// On Linux, we need to write the icon to the disk and usually it will
+    /// be `$XDG_RUNTIME_DIR/tray-icon` or `$TEMP/tray-icon`.
     pub fn set_temp_dir_path<P: AsRef<Path>>(&mut self, path: Option<P>) {
         #[cfg(target_os = "linux")]
         self.tray.set_temp_dir_path(path);

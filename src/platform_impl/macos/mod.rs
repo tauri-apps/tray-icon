@@ -67,7 +67,6 @@ impl TrayIcon {
                     | NSEventMask::NSKeyDownMask
             ];
 
-            // attach menu only if provided
             if let Some(menu) = &attrs.menu {
                 // We set the tray menu to tray_target instead of status bar
                 // Because setting directly to status bar will overwrite the event callback of the button
@@ -83,8 +82,8 @@ impl TrayIcon {
             tray_target,
         };
 
-        // attach tool_tip if provided
         tray_icon.set_tooltip(attrs.tooltip)?;
+        tray_icon.set_title(attrs.title);
 
         Ok(tray_icon)
     }
@@ -109,6 +108,16 @@ impl TrayIcon {
             let _: () = msg_send![self.ns_status_bar.button(), setToolTip: tooltip];
         }
         Ok(())
+    }
+
+    pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) {
+        unsafe {
+            let title = match title {
+                Some(title) => NSString::alloc(nil).init_str(title.as_ref()),
+                None => nil,
+            };
+            let _: () = msg_send![self.ns_status_bar.button(), setTitle: title];
+        }
     }
 
     pub fn set_icon_as_template(&mut self, is_template: bool) {

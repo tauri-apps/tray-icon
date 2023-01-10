@@ -216,6 +216,8 @@ impl TrayIcon {
 
         Ok(())
     }
+
+    pub fn set_title<S: AsRef<str>>(&mut self, _title: Option<S>) {}
 }
 
 impl Drop for TrayIcon {

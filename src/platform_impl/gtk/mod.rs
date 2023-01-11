@@ -59,7 +59,7 @@ impl TrayIcon {
         self.indicator
             .set_icon_theme_path(&parent_path.to_string_lossy());
         self.indicator
-            .set_icon_full(&icon_path.to_string_lossy(), "icon");
+            .set_icon_full(&icon_path.to_string_lossy(), "tray icon");
         self.path = icon_path;
 
         Ok(())
@@ -77,6 +77,14 @@ impl TrayIcon {
     pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) {
         self.indicator
             .set_label(title.as_ref().map(|t| t.as_ref()).unwrap_or(""), "");
+    }
+
+    pub fn set_visible(&mut self, visible: bool) {
+        if visible {
+            self.indicator.set_status(AppIndicatorStatus::Passive);
+        } else {
+            self.indicator.set_status(AppIndicatorStatus::Active);
+        }
     }
 
     pub fn set_temp_dir_path<P: AsRef<Path>>(&mut self, path: Option<P>) {

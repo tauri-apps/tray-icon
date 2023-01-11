@@ -120,6 +120,14 @@ impl TrayIcon {
         }
     }
 
+    pub fn set_visible(&mut self, visible: bool) {
+        unsafe {
+            let button = self.ns_status_bar.button();
+            let visible = !visible as i8;
+            let _: () = msg_send![button, setHidden: visible];
+        }
+    }
+
     pub fn set_icon_as_template(&mut self, is_template: bool) {
         unsafe {
             let button = self.ns_status_bar.button();
@@ -145,6 +153,8 @@ impl Drop for TrayIcon {
 }
 
 fn create_button_with_icon(ns_status_bar: id, icon: Option<Icon>, icon_is_template: bool) {
+    let button = unsafe { ns_status_bar.button() };
+
     if let Some(icon) = icon {
         // The image is to the right of the title https://developer.apple.com/documentation/appkit/nscellimageposition/nsimageleft
         const NSIMAGE_LEFT: i32 = 2;
@@ -157,8 +167,6 @@ fn create_button_with_icon(ns_status_bar: id, icon: Option<Icon>, icon_is_templa
         let icon_width: f64 = (width as f64) / (height as f64 / icon_height);
 
         unsafe {
-            let button = ns_status_bar.button();
-
             // build our icon
             let nsdata = NSData::dataWithBytes_length_(
                 nil,
@@ -174,6 +182,8 @@ fn create_button_with_icon(ns_status_bar: id, icon: Option<Icon>, icon_is_templa
             let _: () = msg_send![button, setImagePosition: NSIMAGE_LEFT];
             let _: () = msg_send![nsimage, setTemplate: icon_is_template as i8];
         }
+    } else {
+        button.setImage_(nil);
     }
 }
 

@@ -36,7 +36,9 @@ const TRAY_SUBCLASS_ID: usize = 6001;
 const WM_USER_TRAYICON: u32 = 6002;
 const WM_USER_UPDATE_TRAYMENU: u32 = 6003;
 const WM_USER_UPDATE_TRAYICON: u32 = 6004;
-const WM_USER_UPDATE_TRAYTOOLTIP: u32 = 6005;
+const WM_USER_SHOW_TRAYICON: u32 = 6005;
+const WM_USER_HIDE_TRAYICON: u32 = 6006;
+const WM_USER_UPDATE_TRAYTOOLTIP: u32 = 6007;
 
 /// When the taskbar is created, it registers a message with the "TaskbarCreated" string and then broadcasts this message to all top-level windows
 /// When the application receives this message, it should assume that any taskbar icons it added have been removed and add them again.
@@ -218,21 +220,27 @@ impl TrayIcon {
     }
 
     pub fn set_title<S: AsRef<str>>(&mut self, _title: Option<S>) {}
+
+    pub fn set_visible(&mut self, visible: bool) {
+        unsafe {
+            SendMessageW(
+                self.hwnd,
+                if visible {
+                    WM_USER_SHOW_TRAYICON
+                } else {
+                    WM_USER_HIDE_TRAYICON
+                },
+                0,
+                0,
+            );
+        }
+    }
 }
 
 impl Drop for TrayIcon {
     fn drop(&mut self) {
         unsafe {
-            // remove the icon from system tray
-            let mut nid = NOTIFYICONDATAW {
-                uFlags: NIF_ICON,
-                hWnd: self.hwnd,
-                uID: self.id,
-                ..std::mem::zeroed()
-            };
-            if Shell_NotifyIconW(NIM_DELETE, &mut nid as _) == 0 {
-                eprintln!("Error removing system tray icon");
-            }
+            remove_tray_icon(self.hwnd, self.id);
 
             if let Some(menu) = &self.menu {
                 menu.detach_menu_subclass_from_hwnd(self.hwnd);
@@ -266,6 +274,20 @@ unsafe extern "system" fn tray_subclass_proc(
         WM_USER_UPDATE_TRAYICON => {
             let icon = Box::from_raw(wparam as *mut Option<Icon>);
             subclass_input.icon = *icon;
+        }
+        WM_USER_SHOW_TRAYICON => {
+            register_tray_icon(
+                subclass_input.hwnd,
+                subclass_input.id,
+                &subclass_input
+                    .icon
+                    .as_ref()
+                    .map(|i| i.inner.as_raw_handle()),
+                &subclass_input.tooltip,
+            );
+        }
+        WM_USER_HIDE_TRAYICON => {
+            remove_tray_icon(subclass_input.hwnd, subclass_input.id);
         }
         WM_USER_UPDATE_TRAYTOOLTIP => {
             let tooltip = Box::from_raw(wparam as *mut Option<String>);
@@ -383,4 +405,17 @@ unsafe fn register_tray_icon(
     }
 
     Shell_NotifyIconW(NIM_ADD, &mut nid as _) == 1
+}
+
+unsafe fn remove_tray_icon(hwnd: HWND, id: u32) {
+    let mut nid = NOTIFYICONDATAW {
+        uFlags: NIF_ICON,
+        hWnd: hwnd,
+        uID: id,
+        ..std::mem::zeroed()
+    };
+
+    if Shell_NotifyIconW(NIM_DELETE, &mut nid as _) == 0 {
+        eprintln!("Error removing system tray icon");
+    }
 }

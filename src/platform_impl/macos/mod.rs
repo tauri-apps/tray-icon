@@ -183,7 +183,7 @@ fn create_button_with_icon(ns_status_bar: id, icon: Option<Icon>, icon_is_templa
             let _: () = msg_send![nsimage, setTemplate: icon_is_template as i8];
         }
     } else {
-        button.setImage_(nil);
+        unsafe { button.setImage_(nil) };
     }
 }
 

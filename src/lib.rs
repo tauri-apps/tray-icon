@@ -236,7 +236,7 @@ impl TrayIcon {
         self.id
     }
 
-    /// Set new tray icon. If `None` is provided, it will hide the icon.
+    /// Set new tray icon. If `None` is provided, it will remove the icon.
     pub fn set_icon(&mut self, icon: Option<Icon>) -> Result<()> {
         self.tray.set_icon(icon)
     }
@@ -271,6 +271,11 @@ impl TrayIcon {
     /// - **Windows:** Unsupported
     pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) {
         self.tray.set_title(title)
+    }
+
+    /// Show or hide this tray icon
+    pub fn set_visible(&mut self, visible: bool) {
+        self.tray.set_visible(visible)
     }
 
     /// Sets the tray icon temp dir path. **Linux only**.

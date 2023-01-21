@@ -6,7 +6,7 @@ description = "Create tray icons for desktop applications"
 homepage = "https://github.com/tauri-apps/tray-icon"
 repository = "https://github.com/tauri-apps/tray-icon"
 license = "MIT OR Apache-2.0"
-categories = [ "gui" ]
+categories = ["gui"]
 
 [dependencies]
 muda = "0.3"
@@ -19,7 +19,9 @@ version = "0.45"
 features = [
   "Win32_UI_WindowsAndMessaging",
   "Win32_Foundation",
-  "Win32_System_SystemServices"
+  "Win32_System_SystemServices",
+  "Win32_Graphics_Gdi",
+  "Win32_UI_Shell",
 ]
 
 [target."cfg(target_os = \"linux\")".dependencies]

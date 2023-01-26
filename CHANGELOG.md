@@ -1,5 +1,10 @@
 # Changelog
 
+## \[0.4.1]
+
+- Bump `muda` to `0.4` and `libappindicator` to `0.8`
+  - [d92dd6d](https://www.github.com/tauri-apps/tray-icon/commit/d92dd6dc25d268befe9c14cfe193e1de10bc5717) chore(deps): update deps ([#17](https://www.github.com/tauri-apps/tray-icon/pull/17)) on 2023-01-26
+
 ## \[0.4.0]
 
 - On macOS and Linux, add `TrayIconBuilder::with_title` and `TrayIcon::set_title` to optionally add a text next to the icon.

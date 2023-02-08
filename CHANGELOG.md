@@ -1,5 +1,10 @@
 # Changelog
 
+## \[0.4.2]
+
+- Update docs.
+  - [258b49a](https://www.github.com/tauri-apps/tray-icon/commit/258b49aaebd81b6e4327cca1a1a0a2d9bb64188a) docs: update docs on 2023-02-08
+
 ## \[0.4.1]
 
 - Bump `muda` to `0.4` and `libappindicator` to `0.8`

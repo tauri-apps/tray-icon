@@ -52,11 +52,11 @@ fn main() {
                 tray_icon.take();
                 *control_flow = ControlFlow::Exit;
             }
-            println!("{:?}", event);
+            println!("{event:?}");
         }
 
         if let Ok(event) = tray_channel.try_recv() {
-            println!("{:?}", event);
+            println!("{event:?}");
         }
     })
 }

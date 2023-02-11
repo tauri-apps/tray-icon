@@ -3,7 +3,7 @@
 use eframe::egui;
 use tray_icon::TrayIconBuilder;
 
-fn main() {
+fn main() -> Result<(), eframe::Error> {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/icon.png");
     let icon = load_icon(std::path::Path::new(path));
 

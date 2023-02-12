@@ -32,7 +32,7 @@
 //! ```sh
 //! sudo apt install libgtk-3-dev libappindicator3-dev #or libayatana-appindicator3-dev
 //! ```
-//! if you use `tray_icon::muda` module, make sure to checkout https://github.com/tauri-apps/muda#dependencies
+//! if you use `tray_icon::menu` module, make sure to checkout <https://github.com/tauri-apps/muda#dependencies>
 //!
 //! # Examples
 //!
@@ -128,6 +128,11 @@ pub struct TrayIconAttributes {
     pub menu: Option<Box<dyn menu::ContextMenu>>,
 
     /// Tray icon
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
+    /// Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub icon: Option<Icon>,
 
     /// Tray icon temp dir path. **Linux only**.
@@ -166,12 +171,14 @@ impl Default for TrayIconAttributes {
     }
 }
 
+/// [`TrayIcon`] builder struct and associated methods.
 #[derive(Default)]
 pub struct TrayIconBuilder {
     attrs: TrayIconAttributes,
 }
 
 impl TrayIconBuilder {
+    /// Creates a new [`TrayIconBuilder`] with default [`TrayIconAttributes`].
     pub fn new() -> Self {
         Self {
             attrs: TrayIconAttributes::default(),
@@ -182,13 +189,18 @@ impl TrayIconBuilder {
     ///
     /// ## Platform-specific:
     ///
-    /// - **Linux**: once a menu is set, it cannot be removed.
+    /// - **Linux**: once a menu is set, it cannot be removed or replaced but you can change its content.
     pub fn with_menu(mut self, menu: Box<dyn menu::ContextMenu>) -> Self {
         self.attrs.menu = Some(menu);
         self
     }
 
     /// Set an icon for this tray icon.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
+    /// Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub fn with_icon(mut self, icon: Icon) -> Self {
         self.attrs.icon = Some(icon);
         self
@@ -240,17 +252,25 @@ impl TrayIconBuilder {
         self
     }
 
+    /// Builds and adds a new [`TrayIcon`] to the system tray.
     pub fn build(self) -> Result<TrayIcon> {
         TrayIcon::new(self.attrs)
     }
 }
 
+/// Tray icon struct and associated methods.
 pub struct TrayIcon {
     id: u32,
     tray: platform_impl::TrayIcon,
 }
 
 impl TrayIcon {
+    /// Builds and adds a new tray icon to the system tray.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
+    /// Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub fn new(attrs: TrayIconAttributes) -> Result<Self> {
         let id = COUNTER.next();
         Ok(Self {

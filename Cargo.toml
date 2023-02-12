@@ -43,4 +43,4 @@ png = "0.17"
 winit = "0.28"
 tao = { git = "https://github.com/tauri-apps/tao", branch = "muda" }
 image = "0.24"
-eframe = "0.21.0"
+eframe = "0.21.1"

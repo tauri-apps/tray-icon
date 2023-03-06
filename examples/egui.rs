@@ -1,5 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
+#[cfg(not(target_os = "linux"))]
+use std::{cell::RefCell, rc::Rc};
+
 use eframe::egui;
 use tray_icon::TrayIconBuilder;
 
@@ -22,7 +25,9 @@ fn main() -> Result<(), eframe::Error> {
     });
 
     #[cfg(not(target_os = "linux"))]
-    let _tray_icon = TrayIconBuilder::new().with_icon(icon).build().unwrap();
+    let mut _tray_icon = Rc::new(RefCell::new(None));
+    #[cfg(not(target_os = "linux"))]
+    let tray_c = _tray_icon.clone();
 
     let options = eframe::NativeOptions {
         initial_window_size: Some(egui::vec2(320.0, 240.0)),
@@ -32,7 +37,15 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "My egui App",
         options,
-        Box::new(|_cc| Box::<MyApp>::default()),
+        Box::new(move |_cc| {
+            #[cfg(not(target_os = "linux"))]
+            {
+                tray_c
+                    .borrow_mut()
+                    .replace(TrayIconBuilder::new().with_icon(icon).build().unwrap());
+            }
+            Box::<MyApp>::default()
+        }),
     )
 }
 

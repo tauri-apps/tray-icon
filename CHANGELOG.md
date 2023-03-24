@@ -1,5 +1,10 @@
 # Changelog
 
+## \[0.4.4]
+
+- Make Rectangle's point fields public.
+  - [12a0daf](https://www.github.com/tauri-apps/tray-icon/commit/12a0daf92352fbecddd7b0afdfc0c633232fb15c) Make Rectangle's point fields public. ([#33](https://www.github.com/tauri-apps/tray-icon/pull/33)) on 2023-03-23
+
 ## \[0.4.3]
 
 - Update documentation.

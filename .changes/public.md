@@ -1,5 +1,5 @@
 ---
-"tray-icon": "minor"
+"tray-icon": "patch"
 ---
 
 Make Rectangle's point fields public.

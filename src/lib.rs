@@ -375,10 +375,10 @@ pub enum ClickEvent {
 /// Describes a rectangle including position (x - y axis) and size.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Rectangle {
-    left: f64,
-    right: f64,
-    top: f64,
-    bottom: f64,
+    pub left: f64,
+    pub right: f64,
+    pub top: f64,
+    pub bottom: f64,
 }
 
 /// A reciever that could be used to listen to tray events.

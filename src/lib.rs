@@ -120,9 +120,9 @@ pub struct TrayIconAttributes {
     /// - **Linux:** Unsupported.
     pub tooltip: Option<String>,
 
-    /// ## Platform-specific:
-    ///
     /// Tray menu
+    ///
+    /// ## Platform-specific:
     ///
     /// - **Linux**: once a menu is set, it cannot be removed.
     pub menu: Option<Box<dyn menu::ContextMenu>>,
@@ -132,7 +132,7 @@ pub struct TrayIconAttributes {
     /// ## Platform-specific:
     ///
     /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
-    /// Setting an empty [`Menu`](crate::menu::Menu) is enough.
+    ///     Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub icon: Option<Icon>,
 
     /// Tray icon temp dir path. **Linux only**.
@@ -322,7 +322,7 @@ impl TrayIcon {
     }
 
     /// Show or hide this tray icon
-    pub fn set_visible(&mut self, visible: bool) {
+    pub fn set_visible(&mut self, visible: bool) -> Result<()> {
         self.tray.set_visible(visible)
     }
 

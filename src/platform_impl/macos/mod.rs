@@ -31,12 +31,27 @@ const TRAY_MENU_ON_LEFT_CLICK: &str = "menu_on_left_click";
 const TRAY_STATUS_BAR: &str = "status_bar";
 
 pub struct TrayIcon {
-    ns_status_bar: id,
-    tray_target: id,
+    ns_status_bar: Option<id>,
+    tray_target: Option<id>,
+    id: u32,
+    attrs: TrayIconAttributes,
 }
 
 impl TrayIcon {
     pub fn new(id: u32, attrs: TrayIconAttributes) -> crate::Result<Self> {
+        let (ns_status_bar, tray_target) = Self::create(id, &attrs)?;
+
+        let tray_icon = Self {
+            ns_status_bar: Some(ns_status_bar),
+            tray_target: Some(tray_target),
+            id,
+            attrs,
+        };
+
+        Ok(tray_icon)
+    }
+
+    fn create(id: u32, attrs: &TrayIconAttributes) -> crate::Result<(id, id)> {
         let ns_status_bar = unsafe {
             let ns_status_bar =
                 NSStatusBar::systemStatusBar(nil).statusItemWithLength_(NSVariableStatusItemLength);
@@ -44,14 +59,18 @@ impl TrayIcon {
             ns_status_bar
         };
 
-        create_button_with_icon(ns_status_bar, attrs.icon, attrs.icon_is_template);
+        set_icon_for_ns_status_bar_button(
+            ns_status_bar,
+            attrs.icon.clone(),
+            attrs.icon_is_template,
+        );
 
-        let tray_target: id;
         // attach click event to our button
-        unsafe {
+        let tray_target: id = unsafe {
             let button = ns_status_bar.button();
             let target: id = msg_send![make_tray_class(), alloc];
-            tray_target = msg_send![target, init];
+            let tray_target: id = msg_send![target, init];
+            let _: () = msg_send![target, retain];
 
             (*tray_target).set_ivar(TRAY_ID, id);
             (*tray_target).set_ivar(TRAY_STATUS_BAR, ns_status_bar);
@@ -75,84 +94,133 @@ impl TrayIcon {
                 (*tray_target).set_ivar("menu", menu);
                 let () = msg_send![menu, setDelegate: tray_target];
             }
-        }
 
-        let mut tray_icon = Self {
-            ns_status_bar,
-            tray_target,
+            tray_target
         };
 
-        tray_icon.set_tooltip(attrs.tooltip)?;
-        tray_icon.set_title(attrs.title);
+        Self::set_tooltip_inner(ns_status_bar, attrs.tooltip.clone())?;
+        Self::set_title_inner(ns_status_bar, attrs.title.clone());
 
-        Ok(tray_icon)
+        Ok((ns_status_bar, tray_target))
+    }
+
+    fn remove(&mut self) {
+        if let (Some(ns_status_bar), Some(tray_target)) = (&self.ns_status_bar, &self.tray_target) {
+            unsafe {
+                NSStatusBar::systemStatusBar(nil).removeStatusItem_(*ns_status_bar);
+                let _: () = msg_send![*ns_status_bar, release];
+                let _: () = msg_send![*tray_target, release];
+            }
+        }
+        self.ns_status_bar = None;
+        self.tray_target = None;
     }
 
     pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
-        create_button_with_icon(self.ns_status_bar, icon, false);
+        if let Some(ns_status_bar) = self.ns_status_bar {
+            set_icon_for_ns_status_bar_button(ns_status_bar, icon.clone(), false);
+        }
+        self.attrs.icon = icon;
         Ok(())
     }
 
     pub fn set_menu(&mut self, menu: Option<Box<dyn menu::ContextMenu>>) {
-        unsafe {
-            (*self.tray_target).set_ivar(TRAY_MENU, menu.map(|m| m.ns_menu() as _).unwrap_or(nil));
+        if let Some(tray_target) = self.tray_target {
+            unsafe {
+                let menu = menu.as_ref().map(|m| m.ns_menu() as _).unwrap_or(nil);
+                (*tray_target).set_ivar(TRAY_MENU, menu);
+            }
         }
+        self.attrs.menu = menu;
     }
 
     pub fn set_tooltip<S: AsRef<str>>(&mut self, tooltip: Option<S>) -> crate::Result<()> {
+        let tooltip = tooltip.map(|s| s.as_ref().to_string());
+        if let Some(ns_status_bar) = self.ns_status_bar {
+            Self::set_tooltip_inner(ns_status_bar, tooltip.clone())?;
+        }
+        self.attrs.tooltip = tooltip;
+        Ok(())
+    }
+
+    fn set_tooltip_inner<S: AsRef<str>>(
+        ns_status_bar: id,
+        tooltip: Option<S>,
+    ) -> crate::Result<()> {
         unsafe {
             let tooltip = match tooltip {
                 Some(tooltip) => NSString::alloc(nil).init_str(tooltip.as_ref()),
                 None => nil,
             };
-            let _: () = msg_send![self.ns_status_bar.button(), setToolTip: tooltip];
+            let _: () = msg_send![ns_status_bar.button(), setToolTip: tooltip];
         }
         Ok(())
     }
 
     pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) {
+        let title = title.map(|s| s.as_ref().to_string());
+        if let Some(ns_status_bar) = self.ns_status_bar {
+            Self::set_title_inner(ns_status_bar, title.clone());
+        }
+        self.attrs.title = title;
+    }
+
+    fn set_title_inner<S: AsRef<str>>(ns_status_bar: id, title: Option<S>) {
         unsafe {
             let title = match title {
                 Some(title) => NSString::alloc(nil).init_str(title.as_ref()),
                 None => nil,
             };
-            let _: () = msg_send![self.ns_status_bar.button(), setTitle: title];
+            let _: () = msg_send![ns_status_bar.button(), setTitle: title];
         }
     }
 
-    pub fn set_visible(&mut self, visible: bool) {
-        unsafe {
-            let button = self.ns_status_bar.button();
-            let visible = !visible as i8;
-            let _: () = msg_send![button, setHidden: visible];
+    pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {
+        if visible {
+            if self.ns_status_bar.is_none() {
+                let (ns_status_bar, tray_target) = Self::create(self.id, &self.attrs)?;
+                self.ns_status_bar = Some(ns_status_bar);
+                self.tray_target = Some(tray_target);
+            }
+        } else {
+            self.remove();
         }
+
+        Ok(())
     }
 
     pub fn set_icon_as_template(&mut self, is_template: bool) {
-        unsafe {
-            let button = self.ns_status_bar.button();
-            let nsimage: id = msg_send![button, image];
-            let _: () = msg_send![nsimage, setTemplate: is_template as i8];
+        if let Some(ns_status_bar) = self.ns_status_bar {
+            unsafe {
+                let button = ns_status_bar.button();
+                let nsimage: id = msg_send![button, image];
+                let _: () = msg_send![nsimage, setTemplate: is_template as i8];
+            }
         }
+        self.attrs.icon_is_template = is_template;
     }
 
     pub fn set_show_menu_on_left_click(&mut self, enable: bool) {
-        unsafe {
-            (*self.tray_target).set_ivar(TRAY_MENU_ON_LEFT_CLICK, enable);
+        if let Some(tray_target) = self.tray_target {
+            unsafe {
+                (*tray_target).set_ivar(TRAY_MENU_ON_LEFT_CLICK, enable);
+            }
         }
+        self.attrs.menu_on_left_click = enable;
     }
 }
 
 impl Drop for TrayIcon {
     fn drop(&mut self) {
-        unsafe {
-            NSStatusBar::systemStatusBar(nil).removeStatusItem_(self.ns_status_bar);
-            let _: () = msg_send![self.ns_status_bar, release];
-        }
+        self.remove()
     }
 }
 
-fn create_button_with_icon(ns_status_bar: id, icon: Option<Icon>, icon_is_template: bool) {
+fn set_icon_for_ns_status_bar_button(
+    ns_status_bar: id,
+    icon: Option<Icon>,
+    icon_is_template: bool,
+) {
     let button = unsafe { ns_status_bar.button() };
 
     if let Some(icon) = icon {

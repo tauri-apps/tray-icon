@@ -221,7 +221,7 @@ impl TrayIcon {
 
     pub fn set_title<S: AsRef<str>>(&mut self, _title: Option<S>) {}
 
-    pub fn set_visible(&mut self, visible: bool) {
+    pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {
         unsafe {
             SendMessageW(
                 self.hwnd,
@@ -234,6 +234,8 @@ impl TrayIcon {
                 0,
             );
         }
+
+        Ok(())
     }
 }
 

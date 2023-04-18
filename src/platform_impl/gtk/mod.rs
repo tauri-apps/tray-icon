@@ -79,12 +79,14 @@ impl TrayIcon {
             .set_label(title.as_ref().map(|t| t.as_ref()).unwrap_or(""), "");
     }
 
-    pub fn set_visible(&mut self, visible: bool) {
+    pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {
         if visible {
             self.indicator.set_status(AppIndicatorStatus::Passive);
         } else {
             self.indicator.set_status(AppIndicatorStatus::Active);
         }
+
+        Ok(())
     }
 
     pub fn set_temp_dir_path<P: AsRef<Path>>(&mut self, path: Option<P>) {

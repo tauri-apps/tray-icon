@@ -1,5 +1,10 @@
 # Changelog
 
+## \[0.5.0]
+
+- On macOS, fix `set_visible(false)` still occupying space on the system menu bar.
+  - [71f9d29](https://www.github.com/tauri-apps/tray-icon/commit/71f9d292dd69b498e57fcebeb76ad6a1365144cd) fix(macos): remove tray icon when `set_visible(false)` ([#37](https://www.github.com/tauri-apps/tray-icon/pull/37)) on 2023-04-18
+
 ## \[0.4.4]
 
 - Make Rectangle's point fields public.

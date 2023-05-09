@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.5.1]
+
+- [`ff7f7bc`](https://www.github.com/tauri-apps/tray-icon/commit/ff7f7bc4400a6f7aa0b5c025c85ab6c4f89e9109)([#40](https://www.github.com/tauri-apps/tray-icon/pull/40)) Fix building for `i686-pc-windows-msvc` target.
+
 ## \[0.5.0]
 
 - On macOS, fix `set_visible(false)` still occupying space on the system menu bar.

@@ -386,25 +386,32 @@ unsafe fn register_tray_icon(
     hicon: &Option<HICON>,
     tooltip: &Option<String>,
 ) -> bool {
-    let mut nid = NOTIFYICONDATAW {
-        uFlags: NIF_MESSAGE,
-        hWnd: hwnd,
-        uID: tray_id,
-        uCallbackMessage: WM_USER_TRAYICON,
-        ..std::mem::zeroed()
-    };
+    let mut h_icon = 0;
+    let mut flags = NIF_MESSAGE;
+    let mut sz_tip: [u16; 128] = [0; 128];
 
     if let Some(hicon) = hicon {
-        nid.uFlags |= NIF_ICON;
-        nid.hIcon = *hicon;
+        flags |= NIF_ICON;
+        h_icon = *hicon;
     }
 
     if let Some(tooltip) = tooltip {
-        nid.uFlags |= NIF_TIP;
-        let mut tooltip_w = util::encode_wide(tooltip);
-        tooltip_w.resize(128, 0);
-        nid.szTip.copy_from_slice(&tooltip_w)
+        let mut tip = util::encode_wide(tooltip);
+        tip.resize(128, 0);
+
+        flags |= NIF_TIP;
+        sz_tip.copy_from_slice(&tip)
     }
+
+    let mut nid = NOTIFYICONDATAW {
+        uFlags: flags,
+        hWnd: hwnd,
+        uID: tray_id,
+        uCallbackMessage: WM_USER_TRAYICON,
+        hIcon: h_icon,
+        szTip: sz_tip,
+        ..std::mem::zeroed()
+    };
 
     Shell_NotifyIconW(NIM_ADD, &mut nid as _) == 1
 }

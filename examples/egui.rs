@@ -10,6 +10,9 @@ fn main() -> Result<(), eframe::Error> {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/icon.png");
     let icon = load_icon(std::path::Path::new(path));
 
+    // Since egui uses winit under the hood and doesn't use gtk on Linux, and we need gtk for
+    // the tray icon to show up, we need to spawn a thread
+    // where we initialize gtk and create the tray_icon
     #[cfg(target_os = "linux")]
     std::thread::spawn(|| {
         use tray_icon::menu::Menu;

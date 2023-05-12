@@ -14,27 +14,29 @@ fn main() {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/icon.png");
     let icon = load_icon(std::path::Path::new(path));
 
+    // Since winit doesn't use gtk on Linux, and we need gtk for
+    // the tray icon to show up, we need to spawn a thread
+    // where we initialize gtk and create the tray_icon
+    #[cfg(target_os = "linux")]
+    std::thread::spawn(|| {
+        use tray_icon::menu::Menu;
+
+        gtk::init().unwrap();
+        let _tray_icon = TrayIconBuilder::new()
+            .with_menu(Box::new(Menu::new()))
+            .with_icon(icon)
+            .build()
+            .unwrap();
+
+        gtk::main();
+    });
+
     let event_loop = EventLoopBuilder::new().build();
 
-    let tray_menu = Menu::new();
-
-    let quit_i = MenuItem::new("Quit", true, None);
-    tray_menu.append_items(&[
-        &PredefinedMenuItem::about(
-            None,
-            Some(AboutMetadata {
-                name: Some("winit".to_string()),
-                copyright: Some("Copyright winit".to_string()),
-                ..Default::default()
-            }),
-        ),
-        &PredefinedMenuItem::separator(),
-        &quit_i,
-    ]);
-
+    #[cfg(not(target_os = "linux"))]
     let mut tray_icon = Some(
         TrayIconBuilder::new()
-            .with_menu(Box::new(tray_menu))
+            .with_menu(Box::new(Menu::new()))
             .with_tooltip("winit - awesome windowing lib")
             .with_icon(icon)
             .build()
@@ -46,14 +48,6 @@ fn main() {
 
     event_loop.run(move |_event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
-
-        if let Ok(event) = menu_channel.try_recv() {
-            if event.id == quit_i.id() {
-                tray_icon.take();
-                *control_flow = ControlFlow::Exit;
-            }
-            println!("{event:?}");
-        }
 
         if let Ok(event) = tray_channel.try_recv() {
             println!("{event:?}");

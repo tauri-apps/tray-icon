@@ -198,11 +198,9 @@ impl TrayIcon {
                 ..std::mem::zeroed()
             };
             if let Some(tooltip) = &tooltip {
-                let mut wide = util::encode_wide(tooltip.as_ref());
-                wide.resize(128, 0);
-                // nid.szTip.copy_from_slice(&wide); has misalginment issues on x86
-                for i in 0..128 {
-                    nid.szTip[i] = wide[i];
+                let tip = util::encode_wide(tooltip.as_ref());
+                for i in 0..tip.len().min(128) {
+                    nid.szTip[i] = tip[i];
                 }
             }
 
@@ -399,11 +397,11 @@ unsafe fn register_tray_icon(
     }
 
     if let Some(tooltip) = tooltip {
-        let mut tip = util::encode_wide(tooltip);
-        tip.resize(128, 0);
-
         flags |= NIF_TIP;
-        sz_tip.copy_from_slice(&tip)
+        let tip = util::encode_wide(tooltip);
+        for i in 0..tip.len().min(128) {
+            sz_tip[i] = tip[i];
+        }
     }
 
     let mut nid = NOTIFYICONDATAW {

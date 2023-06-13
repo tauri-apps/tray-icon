@@ -200,7 +200,10 @@ impl TrayIcon {
             if let Some(tooltip) = &tooltip {
                 let mut wide = util::encode_wide(tooltip.as_ref());
                 wide.resize(128, 0);
-                nid.szTip.copy_from_slice(&wide);
+                // nid.szTip.copy_from_slice(&wide); has misalginment issues on x86
+                for i in 0..128 {
+                    nid.szTip[i] = wide[i];
+                }
             }
 
             if Shell_NotifyIconW(NIM_MODIFY, &mut nid as _) == 0 {

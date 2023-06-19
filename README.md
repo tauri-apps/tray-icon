@@ -11,6 +11,10 @@ tray-icon lets you create tray icons for desktop applications.
 - On Windows and Linux, an event loop must be running on the thread, on Windows, a win32 event loop and on Linux, a gtk event loop. It doesn't need to be the main thread but you have to create the tray icon on the same thread as the event loop.
 - On macOS, an event loop must be running on the main thread so you also need to create the tray icon on the main thread.
 
+### Cargo Features
+
+- `libxdo` (disabled by default): Enables linking to `libxdo` which is used for the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu item, see https://github.com/tauri-apps/muda#cargo-features
+
 ## Dependencies (Linux Only)
 
 On Linux, `gtk` and `libappindicator` or `libayatnat-appindicator` are used to create the tray icon, so make sure to install them on your system.

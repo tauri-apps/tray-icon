@@ -8,8 +8,13 @@ repository = "https://github.com/tauri-apps/tray-icon"
 license = "MIT OR Apache-2.0"
 categories = [ "gui" ]
 
+[features]
+default = [ "libxdo" ]
+libxdo = [ "muda/libxdo" ]
+common-controls-v6 = [ "muda/common-controls-v6" ]
+
 [dependencies]
-muda = "0.5"
+muda = { version = "0.6", default-features = false }
 crossbeam-channel = "0.5"
 once_cell = "1"
 thiserror = "1.0"

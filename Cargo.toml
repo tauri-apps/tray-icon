@@ -1,6 +1,6 @@
 [package]
 name = "tray-icon"
-version = "0.5.2"
+version = "0.6.0"
 edition = "2021"
 description = "Create tray icons for desktop applications"
 homepage = "https://github.com/tauri-apps/tray-icon"

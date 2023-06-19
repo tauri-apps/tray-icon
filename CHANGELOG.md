@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.6.0]
+
+- [`934b927`](https://www.github.com/tauri-apps/tray-icon/commit/934b927e552641c3d319981cdeae84ca901ae399)([#49](https://www.github.com/tauri-apps/tray-icon/pull/49)) Expose `muda` crate feature flags.
+
 ## \[0.5.2]
 
 - [`9409f36`](https://www.github.com/tauri-apps/tray-icon/commit/9409f36c5293e7fb0c8dd7d0fd74a59472aedfcb)([#46](https://www.github.com/tauri-apps/tray-icon/pull/46)) Fix compiling on `i686-pc-windows-msvc` target

@@ -66,22 +66,22 @@
 //!
 //! # Processing tray events
 //!
-//! You can use [`TrayEvent::receiver`] to get a reference to the [`TrayEventReceiver`]
+//! You can use [`TrayIconEvent::receiver`] to get a reference to the [`TrayIconEventReceiver`]
 //! which you can use to listen to events when a click happens on the tray icon
 //! ```no_run
-//! use tray_icon::TrayEvent;
+//! use tray_icon::TrayIconEvent;
 //!
-//! if let Ok(event) = TrayEvent::receiver().try_recv() {
+//! if let Ok(event) = TrayIconEvent::receiver().try_recv() {
 //!     println!("{:?}", event);
 //! }
 //! ```
 //!
-//! You can also listen for the menu events using [`TrayEvent::receiver`] to get events for the tray context menu.
+//! You can also listen for the menu events using [`TrayIconEvent::receiver`] to get events for the tray context menu.
 //!
 //! ```no_run
-//! use tray_icon::{TrayEvent, menu::MenuEvent};
+//! use tray_icon::{TrayIconEvent, menu::MenuEvent};
 //!
-//! if let Ok(event) = TrayEvent::receiver().try_recv() {
+//! if let Ok(event) = TrayIconEvent::receiver().try_recv() {
 //!     println!("tray event: {:?}", event);
 //! }
 //!
@@ -398,20 +398,20 @@ pub struct Rectangle {
 }
 
 /// A reciever that could be used to listen to tray events.
-pub type TrayEventReceiver = Receiver<TrayIconEvent>;
-type TrayEventHandler = Box<dyn Fn(TrayIconEvent) + Send + Sync + 'static>;
+pub type TrayIconEventReceiver = Receiver<TrayIconEvent>;
+type TrayIconEventHandler = Box<dyn Fn(TrayIconEvent) + Send + Sync + 'static>;
 
-static TRAY_CHANNEL: Lazy<(Sender<TrayIconEvent>, TrayEventReceiver)> = Lazy::new(unbounded);
-static TRAY_EVENT_HANDLER: OnceCell<Option<TrayEventHandler>> = OnceCell::new();
+static TRAY_CHANNEL: Lazy<(Sender<TrayIconEvent>, TrayIconEventReceiver)> = Lazy::new(unbounded);
+static TRAY_EVENT_HANDLER: OnceCell<Option<TrayIconEventHandler>> = OnceCell::new();
 
 impl TrayIconEvent {
-    /// Gets a reference to the event channel's [`TrayEventReceiver`]
+    /// Gets a reference to the event channel's [`TrayIconEventReceiver`]
     /// which can be used to listen for tray events.
     ///
     /// ## Note
     ///
-    /// This will not receive any events if [`TrayEvent::set_event_handler`] has been called with a `Some` value.
-    pub fn receiver<'a>() -> &'a TrayEventReceiver {
+    /// This will not receive any events if [`TrayIconEvent::set_event_handler`] has been called with a `Some` value.
+    pub fn receiver<'a>() -> &'a TrayIconEventReceiver {
         &TRAY_CHANNEL.1
     }
 
@@ -420,7 +420,7 @@ impl TrayIconEvent {
     /// ## Note
     ///
     /// Calling this function with a `Some` value,
-    /// will not send new events to the channel associated with [`TrayEvent::receiver`]
+    /// will not send new events to the channel associated with [`TrayIconEvent::receiver`]
     pub fn set_event_handler<F: Fn(TrayIconEvent) + Send + Sync + 'static>(f: Option<F>) {
         if let Some(f) = f {
             let _ = TRAY_EVENT_HANDLER.set(Some(Box::new(f)));

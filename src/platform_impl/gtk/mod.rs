@@ -64,6 +64,7 @@ impl TrayIcon {
 
         Ok(())
     }
+
     pub fn set_menu(&mut self, menu: Option<Box<dyn crate::menu::ContextMenu>>) {
         if let Some(menu) = menu {
             self.indicator.set_menu(&mut menu.gtk_context_menu());

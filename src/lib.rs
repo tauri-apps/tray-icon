@@ -90,7 +90,11 @@
 //! }
 //! ```
 
-use std::path::{Path, PathBuf};
+use std::{
+    cell::RefCell,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 
 use counter::Counter;
 use crossbeam_channel::{unbounded, Receiver, Sender};
@@ -259,9 +263,12 @@ impl TrayIconBuilder {
 }
 
 /// Tray icon struct and associated methods.
+///
+/// This type is reference-counted and the icon is removed when the last instance is dropped.
+#[derive(Clone)]
 pub struct TrayIcon {
     id: u32,
-    tray: platform_impl::TrayIcon,
+    tray: Rc<RefCell<platform_impl::TrayIcon>>,
 }
 
 impl TrayIcon {
@@ -275,7 +282,7 @@ impl TrayIcon {
         let id = COUNTER.next();
         Ok(Self {
             id,
-            tray: platform_impl::TrayIcon::new(id, attrs)?,
+            tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(id, attrs)?)),
         })
     }
 
@@ -285,8 +292,8 @@ impl TrayIcon {
     }
 
     /// Set new tray icon. If `None` is provided, it will remove the icon.
-    pub fn set_icon(&mut self, icon: Option<Icon>) -> Result<()> {
-        self.tray.set_icon(icon)
+    pub fn set_icon(&self, icon: Option<Icon>) -> Result<()> {
+        self.tray.borrow_mut().set_icon(icon)
     }
 
     /// Set new tray menu.
@@ -294,8 +301,8 @@ impl TrayIcon {
     /// ## Platform-specific:
     ///
     /// - **Linux**: once a menu is set it cannot be removed so `None` has no effect
-    pub fn set_menu(&mut self, menu: Option<Box<dyn menu::ContextMenu>>) {
-        self.tray.set_menu(menu)
+    pub fn set_menu(&self, menu: Option<Box<dyn menu::ContextMenu>>) {
+        self.tray.borrow_mut().set_menu(menu)
     }
 
     /// Sets the tooltip for this tray icon.
@@ -303,8 +310,8 @@ impl TrayIcon {
     /// ## Platform-specific:
     ///
     /// - **Linux:** Unsupported
-    pub fn set_tooltip<S: AsRef<str>>(&mut self, tooltip: Option<S>) -> Result<()> {
-        self.tray.set_tooltip(tooltip)
+    pub fn set_tooltip<S: AsRef<str>>(&self, tooltip: Option<S>) -> Result<()> {
+        self.tray.borrow_mut().set_tooltip(tooltip)
     }
 
     /// Sets the tooltip for this tray icon.
@@ -317,46 +324,49 @@ impl TrayIcon {
     /// user requests it as it can take up a significant amount of space
     /// on the user's panel.  This may not be shown in all visualizations.
     /// - **Windows:** Unsupported
-    pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) {
-        self.tray.set_title(title)
+    pub fn set_title<S: AsRef<str>>(&self, title: Option<S>) {
+        self.tray.borrow_mut().set_title(title)
     }
 
     /// Show or hide this tray icon
-    pub fn set_visible(&mut self, visible: bool) -> Result<()> {
-        self.tray.set_visible(visible)
+    pub fn set_visible(&self, visible: bool) -> Result<()> {
+        self.tray.borrow_mut().set_visible(visible)
     }
 
     /// Sets the tray icon temp dir path. **Linux only**.
     ///
     /// On Linux, we need to write the icon to the disk and usually it will
     /// be `$XDG_RUNTIME_DIR/tray-icon` or `$TEMP/tray-icon`.
-    pub fn set_temp_dir_path<P: AsRef<Path>>(&mut self, path: Option<P>) {
+    pub fn set_temp_dir_path<P: AsRef<Path>>(&self, path: Option<P>) {
         #[cfg(target_os = "linux")]
-        self.tray.set_temp_dir_path(path);
+        self.tray.borrow_mut().set_temp_dir_path(path);
         #[cfg(not(target_os = "linux"))]
         let _ = path;
     }
 
     /// Set the current icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
-    pub fn set_icon_as_template(&mut self, is_template: bool) {
+    pub fn set_icon_as_template(&self, is_template: bool) {
         #[cfg(target_os = "macos")]
-        self.tray.set_icon_as_template(is_template);
+        self.tray.borrow_mut().set_icon_as_template(is_template);
         #[cfg(not(target_os = "macos"))]
         let _ = is_template;
     }
 
     /// Disable or enable showing the tray menu on left click. **macOS only**.
-    pub fn set_show_menu_on_left_click(&mut self, enable: bool) {
+    pub fn set_show_menu_on_left_click(&self, enable: bool) {
         #[cfg(target_os = "macos")]
-        self.tray.set_show_menu_on_left_click(enable);
+        self.tray
+            .lock()
+            .unwrap()
+            .set_show_menu_on_left_click(enable);
         #[cfg(not(target_os = "macos"))]
         let _ = enable;
     }
 }
 
-/// Describes a menu event emitted when a menu item is activated
-#[derive(Debug)]
-pub struct TrayEvent {
+/// Describes a tray event emitted when a tray icon is clicked
+#[derive(Debug, Clone, Copy, Default)]
+pub struct TrayIconEvent {
     /// Id of the tray icon which triggered this event
     pub id: u32,
     pub x: f64,
@@ -372,8 +382,14 @@ pub enum ClickEvent {
     Double,
 }
 
+impl Default for ClickEvent {
+    fn default() -> Self {
+        Self::Left
+    }
+}
+
 /// Describes a rectangle including position (x - y axis) and size.
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct Rectangle {
     pub left: f64,
     pub right: f64,
@@ -382,13 +398,13 @@ pub struct Rectangle {
 }
 
 /// A reciever that could be used to listen to tray events.
-pub type TrayEventReceiver = Receiver<TrayEvent>;
-type TrayEventHandler = Box<dyn Fn(TrayEvent) + Send + Sync + 'static>;
+pub type TrayEventReceiver = Receiver<TrayIconEvent>;
+type TrayEventHandler = Box<dyn Fn(TrayIconEvent) + Send + Sync + 'static>;
 
-static TRAY_CHANNEL: Lazy<(Sender<TrayEvent>, TrayEventReceiver)> = Lazy::new(unbounded);
+static TRAY_CHANNEL: Lazy<(Sender<TrayIconEvent>, TrayEventReceiver)> = Lazy::new(unbounded);
 static TRAY_EVENT_HANDLER: OnceCell<Option<TrayEventHandler>> = OnceCell::new();
 
-impl TrayEvent {
+impl TrayIconEvent {
     /// Gets a reference to the event channel's [`TrayEventReceiver`]
     /// which can be used to listen for tray events.
     ///
@@ -405,7 +421,7 @@ impl TrayEvent {
     ///
     /// Calling this function with a `Some` value,
     /// will not send new events to the channel associated with [`TrayEvent::receiver`]
-    pub fn set_event_handler<F: Fn(TrayEvent) + Send + Sync + 'static>(f: Option<F>) {
+    pub fn set_event_handler<F: Fn(TrayIconEvent) + Send + Sync + 'static>(f: Option<F>) {
         if let Some(f) = f {
             let _ = TRAY_EVENT_HANDLER.set(Some(Box::new(f)));
         } else {
@@ -414,7 +430,7 @@ impl TrayEvent {
     }
 
     #[allow(unused)]
-    pub(crate) fn send(event: TrayEvent) {
+    pub(crate) fn send(event: TrayIconEvent) {
         if let Some(handler) = TRAY_EVENT_HANDLER.get_or_init(|| None) {
             handler(event);
         } else {

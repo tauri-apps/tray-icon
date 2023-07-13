@@ -68,9 +68,9 @@ impl Default for MyApp {
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        use tray_icon::TrayEvent;
+        use tray_icon::TrayIconEvent;
 
-        if let Ok(event) = TrayEvent::receiver().try_recv() {
+        if let Ok(event) = TrayIconEvent::receiver().try_recv() {
             println!("tray event: {event:?}");
         }
 

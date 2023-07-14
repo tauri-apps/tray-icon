@@ -7,7 +7,7 @@
 use tao::event_loop::{ControlFlow, EventLoopBuilder};
 use tray_icon::{
     menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
-    TrayEvent, TrayIconBuilder,
+    TrayIconBuilder, TrayIconEvent,
 };
 
 fn main() {
@@ -42,7 +42,7 @@ fn main() {
     );
 
     let menu_channel = MenuEvent::receiver();
-    let tray_channel = TrayEvent::receiver();
+    let tray_channel = TrayIconEvent::receiver();
 
     event_loop.run(move |_event, _, control_flow| {
         *control_flow = ControlFlow::Poll;

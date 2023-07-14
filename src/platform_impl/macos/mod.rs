@@ -23,7 +23,7 @@ use objc::{
     sel, sel_impl,
 };
 
-use crate::{icon::Icon, menu, ClickEvent, Rectangle, TrayEvent, TrayIconAttributes};
+use crate::{icon::Icon, menu, ClickEvent, Rectangle, TrayIconAttributes, TrayIconEvent};
 
 const TRAY_ID: &str = "id";
 const TRAY_MENU: &str = "menu";
@@ -331,7 +331,7 @@ extern "C" fn perform_tray_click(this: &mut Object, _: Sel, button: id) {
         };
 
         if let Some(click_event) = click_type {
-            let event = TrayEvent {
+            let event = TrayIconEvent {
                 id,
                 x: mouse_location.x,
                 y: bottom_left_to_top_left_for_cursor(mouse_location),
@@ -344,7 +344,7 @@ extern "C" fn perform_tray_click(this: &mut Object, _: Sel, button: id) {
                 event: click_event,
             };
 
-            TrayEvent::send(event);
+            TrayIconEvent::send(event);
 
             let menu = this.get_ivar::<id>(TRAY_MENU);
             if *menu != nil {

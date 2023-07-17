@@ -178,15 +178,25 @@ impl Default for TrayIconAttributes {
 /// [`TrayIcon`] builder struct and associated methods.
 #[derive(Default)]
 pub struct TrayIconBuilder {
+    id: u32,
     attrs: TrayIconAttributes,
 }
 
 impl TrayIconBuilder {
     /// Creates a new [`TrayIconBuilder`] with default [`TrayIconAttributes`].
+    ///
+    /// See [`TrayIcon::new`] for more info.
     pub fn new() -> Self {
         Self {
+            id: COUNTER.next(),
             attrs: TrayIconAttributes::default(),
         }
+    }
+
+    /// Sets the unique id to build the tray icon with.
+    pub fn with_id(mut self, id: u32) -> Self {
+        self.id = id;
+        self
     }
 
     /// Set the a menu for this tray icon.
@@ -256,9 +266,15 @@ impl TrayIconBuilder {
         self
     }
 
+    /// Access the unique id that will be assigned to the tray icon
+    /// this builder will create.
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+
     /// Builds and adds a new [`TrayIcon`] to the system tray.
     pub fn build(self) -> Result<TrayIcon> {
-        TrayIcon::new(self.attrs)
+        TrayIcon::with_id(self.attrs, self.id)
     }
 }
 
@@ -280,6 +296,16 @@ impl TrayIcon {
     /// Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub fn new(attrs: TrayIconAttributes) -> Result<Self> {
         let id = COUNTER.next();
+        Ok(Self {
+            id,
+            tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(id, attrs)?)),
+        })
+    }
+
+    /// Builds and adds a new tray icon to the system tray with the specified Id.
+    ///
+    /// See [`TrayIcon::new`] for more info.
+    pub fn with_id(attrs: TrayIconAttributes, id: u32) -> Result<Self> {
         Ok(Self {
             id,
             tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(id, attrs)?)),

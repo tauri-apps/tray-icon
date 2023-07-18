@@ -390,7 +390,7 @@ impl TrayIcon {
 /// Describes a tray event emitted when a tray icon is clicked
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TrayIconEvent {
-    /// Id of the tray icon which triggered this event
+    /// Id of the tray icon which triggered this event.
     pub id: u32,
     pub x: f64,
     pub y: f64,
@@ -428,6 +428,11 @@ static TRAY_CHANNEL: Lazy<(Sender<TrayIconEvent>, TrayIconEventReceiver)> = Lazy
 static TRAY_EVENT_HANDLER: OnceCell<Option<TrayIconEventHandler>> = OnceCell::new();
 
 impl TrayIconEvent {
+    /// Returns the id of the tray icon which triggered this event.
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+
     /// Gets a reference to the event channel's [`TrayIconEventReceiver`]
     /// which can be used to listen for tray events.
     ///

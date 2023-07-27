@@ -28,7 +28,7 @@ use windows_sys::{
     },
 };
 
-use crate::{icon::Icon, menu, ClickEvent, Rectangle, TrayIconAttributes, TrayIconEvent};
+use crate::{icon::Icon, menu, ClickType, Rectangle, TrayIconAttributes, TrayIconEvent};
 
 pub(crate) use self::icon::WinIcon as PlatformIcon;
 
@@ -334,9 +334,9 @@ unsafe extern "system" fn tray_subclass_proc(
             let y = cursor.y as f64;
 
             let event = match lparam as u32 {
-                WM_LBUTTONUP => ClickEvent::Left,
-                WM_RBUTTONUP => ClickEvent::Right,
-                WM_LBUTTONDBLCLK => ClickEvent::Double,
+                WM_LBUTTONUP => ClickType::Left,
+                WM_RBUTTONUP => ClickType::Right,
+                WM_LBUTTONDBLCLK => ClickType::Double,
                 _ => unreachable!(),
             };
 
@@ -350,7 +350,7 @@ unsafe extern "system" fn tray_subclass_proc(
                     bottom: icon_rect.bottom as f64,
                     top: icon_rect.top as f64,
                 },
-                event,
+                click_type: event,
             });
 
             if lparam as u32 == WM_RBUTTONUP {

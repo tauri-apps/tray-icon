@@ -388,24 +388,33 @@ impl TrayIcon {
 }
 
 /// Describes a tray event emitted when a tray icon is clicked
+///
+/// ## Platform-specific:
+///
+/// - **Linux**: Unsupported. The event is not emmited even though the icon is shown,
+/// the icon will still show a context menu on right click.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TrayIconEvent {
     /// Id of the tray icon which triggered this event.
     pub id: u32,
+    /// Physical X Position of the click the triggered this event.
     pub x: f64,
+    /// Physical Y Position of the click the triggered this event.
     pub y: f64,
+    /// Position and size of the tray icon
     pub icon_rect: Rectangle,
-    pub event: ClickEvent,
+    /// The click type that triggered this event.
+    pub click_type: ClickType,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum ClickEvent {
+pub enum ClickType {
     Left,
     Right,
     Double,
 }
 
-impl Default for ClickEvent {
+impl Default for ClickType {
     fn default() -> Self {
         Self::Left
     }
@@ -466,3 +475,6 @@ impl TrayIconEvent {
         }
     }
 }
+
+unsafe impl Sync for TrayIcon {}
+unsafe impl Send for TrayIcon {}

@@ -23,7 +23,7 @@ use objc::{
     sel, sel_impl,
 };
 
-use crate::{icon::Icon, menu, ClickEvent, Rectangle, TrayIconAttributes, TrayIconEvent};
+use crate::{icon::Icon, menu, ClickType, Rectangle, TrayIconAttributes, TrayIconEvent};
 
 const TRAY_ID: &str = "id";
 const TRAY_MENU: &str = "menu";
@@ -323,10 +323,10 @@ extern "C" fn perform_tray_click(this: &mut Object, _: Sel, button: id) {
             NSEventType::NSLeftMouseDown
                 if key_code.contains(NSEventModifierFlags::NSControlKeyMask) =>
             {
-                Some(ClickEvent::Right)
+                Some(ClickType::Right)
             }
-            NSEventType::NSLeftMouseDown => Some(ClickEvent::Left),
-            NSEventType::NSRightMouseDown => Some(ClickEvent::Right),
+            NSEventType::NSLeftMouseDown => Some(ClickType::Left),
+            NSEventType::NSRightMouseDown => Some(ClickType::Right),
             _ => None,
         };
 
@@ -341,7 +341,7 @@ extern "C" fn perform_tray_click(this: &mut Object, _: Sel, button: id) {
                     top: tray_y,
                     bottom: tray_y + tray_height,
                 },
-                event: click_event,
+                click_type: click_event,
             };
 
             TrayIconEvent::send(event);
@@ -349,8 +349,8 @@ extern "C" fn perform_tray_click(this: &mut Object, _: Sel, button: id) {
             let menu = this.get_ivar::<id>(TRAY_MENU);
             if *menu != nil {
                 let menu_on_left_click = *this.get_ivar::<bool>(TRAY_MENU_ON_LEFT_CLICK);
-                if click_event == ClickEvent::Right
-                    || (menu_on_left_click && click_event == ClickEvent::Left)
+                if click_event == ClickType::Right
+                    || (menu_on_left_click && click_event == ClickType::Left)
                 {
                     let status_bar = this.get_ivar::<id>(TRAY_STATUS_BAR);
                     status_bar.setMenu_(*menu);

@@ -15,6 +15,7 @@ tray-icon lets you create tray icons for desktop applications.
 
 - `common-controls-v6`: Use `TaskDialogIndirect` API from `ComCtl32.dll` v6 on Windows for showing the predefined `About` menu item dialog.
 - `libxdo`: Enables linking to `libxdo` which is used for the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu item, see https://github.com/tauri-apps/muda#cargo-features
+- `serde`:Enables de/serializing the dpi types.
 
 ## Dependencies (Linux Only)
 
@@ -64,23 +65,23 @@ let tray_icon = TrayIconBuilder::new()
 
 ## Processing tray events
 
-You can use `TrayEvent::receiver` to get a reference to the `TrayEventReceiver`
+You can use `TrayIconEvent::receiver` to get a reference to the `TrayIconEventReceiver`
 which you can use to listen to events when a click happens on the tray icon
 
 ```rs
-use tray_icon::TrayEvent;
+use tray_icon::TrayIconEvent;
 
-if let Ok(event) = TrayEvent::receiver().try_recv() {
+if let Ok(event) = TrayIconEvent::receiver().try_recv() {
     println!("{:?}", event);
 }
 ```
 
-You can also listen for the menu events using `TrayEvent::receiver` to get events for the tray context menu.
+You can also listen for the menu events using `MenuEvent::receiver` to get events for the tray context menu.
 
 ```rs
-use tray_icon::{TrayEvent, menu::{MenuEvent}};
+use tray_icon::{TrayIconEvent, menu::{MenuEvent}};
 
-if let Ok(event) = TrayEvent::receiver().try_recv() {
+if let Ok(event) = TrayIconEvent::receiver().try_recv() {
     println!("tray event: {:?}", event);
 }
 

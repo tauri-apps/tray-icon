@@ -76,7 +76,7 @@
 //! }
 //! ```
 //!
-//! You can also listen for the menu events using [`TrayIconEvent::receiver`] to get events for the tray context menu.
+//! You can also listen for the menu events using [`MenuEvent::receiver`] to get events for the tray context menu.
 //!
 //! ```no_run
 //! use tray_icon::{TrayIconEvent, menu::MenuEvent};

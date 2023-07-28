@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.7.1]
+
+- [`04ed58f`](https://www.github.com/tauri-apps/tray-icon/commit/04ed58f954b113e1f4d52c161231d52c9f5c3546) Remove accidental impl of `Sync` and `Send` for `TrayIcon` where it is not.
+
 ## \[0.7.0]
 
 - [`d8d6082`](https://www.github.com/tauri-apps/tray-icon/commit/d8d6082c73b1fa6047ead13d228cf7de1ad0d71c)([#57](https://www.github.com/tauri-apps/tray-icon/pull/57)) Add `TrayIconBuilder::id` to access the unique id that will be assigend to the tray icon upon creation.

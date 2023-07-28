@@ -475,6 +475,3 @@ impl TrayIconEvent {
         }
     }
 }
-
-unsafe impl Sync for TrayIcon {}
-unsafe impl Send for TrayIcon {}

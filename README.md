@@ -30,7 +30,7 @@ pacman -S gtk3 libappindicator-gtk3 #or libayatana-appindicator
 #### Debian / Ubuntu:
 
 ```sh
-sudo apt install libgtk-3-dev libappindicator3-dev #or libayatana-appindicator3-dev
+sudo apt install libgtk-3-dev libxdo-dev libappindicator3-dev #or libayatana-appindicator3-dev
 ```
 
 if you use `tray_icon::muda` module, make sure to checkout https://github.com/tauri-apps/muda#dependencies

@@ -1,5 +1,10 @@
 # Changelog
 
+## \[0.7.2]
+
+- [`d0a25b0`](https://www.github.com/tauri-apps/tray-icon/commit/d0a25b0e980d01306344dd4903c1e2e8ef4519ac)([#61](https://www.github.com/tauri-apps/tray-icon/pull/61)) On Windows, fix dropping tray icon caused the whole process to close.
+- [`d0a25b0`](https://www.github.com/tauri-apps/tray-icon/commit/d0a25b0e980d01306344dd4903c1e2e8ef4519ac)([#61](https://www.github.com/tauri-apps/tray-icon/pull/61)) On Windows, fix `TrayIcon::set_menu` not firing events for the new menu.
+
 ## \[0.7.1]
 
 - [`04ed58f`](https://www.github.com/tauri-apps/tray-icon/commit/04ed58f954b113e1f4d52c161231d52c9f5c3546) Remove accidental impl of `Sync` and `Send` for `TrayIcon` where it is not.

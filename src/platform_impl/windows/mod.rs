@@ -176,6 +176,10 @@ impl TrayIcon {
             menu.detach_menu_subclass_from_hwnd(self.hwnd);
         }
 
+        if let Some(menu) = &menu {
+            menu.attach_menu_subclass_for_hwnd(self.hwnd);
+        }
+
         unsafe {
             // send the new menu to the subclass proc where we will update there
             SendMessageW(
@@ -269,6 +273,7 @@ unsafe extern "system" fn tray_subclass_proc(
     match msg {
         WM_DESTROY => {
             drop(Box::from_raw(subclass_input_ptr));
+            return 0;
         }
         WM_USER_UPDATE_TRAYMENU => {
             let hpopupmenu = Box::from_raw(wparam as *mut Option<isize>);

@@ -129,6 +129,7 @@ impl TrayIcon {
             unsafe {
                 let menu = menu.as_ref().map(|m| m.ns_menu() as _).unwrap_or(nil);
                 (*tray_target).set_ivar(TRAY_MENU, menu);
+                let () = msg_send![menu, setDelegate: tray_target];
             }
         }
         self.attrs.menu = menu;

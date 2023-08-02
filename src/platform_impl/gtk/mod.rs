@@ -54,7 +54,8 @@ impl TrayIcon {
 
         self.counter += 1;
 
-        let (parent_path, icon_path) = temp_icon_path(self.temp_dir_path.as_ref(), self.id, self.counter)?;
+        let (parent_path, icon_path) =
+            temp_icon_path(self.temp_dir_path.as_ref(), self.id, self.counter)?;
 
         if let Some(icon) = icon {
             icon.inner.write_to_png(&icon_path);
@@ -110,7 +111,11 @@ impl Drop for TrayIcon {
 /// 1. If `temp_icon_dir` is `Some` use that.
 /// 2. `$XDG_RUNTIME_DIR/tray-icon`
 /// 3. `/tmp/tray-icon`
-fn temp_icon_path(temp_icon_dir: Option<&PathBuf>, id: u32, counter: u32) -> std::io::Result<(PathBuf, PathBuf)> {
+fn temp_icon_path(
+    temp_icon_dir: Option<&PathBuf>,
+    id: u32,
+    counter: u32,
+) -> std::io::Result<(PathBuf, PathBuf)> {
     let parent_path = match temp_icon_dir.as_ref() {
         Some(path) => path.to_path_buf(),
         None => dirs_next::runtime_dir()

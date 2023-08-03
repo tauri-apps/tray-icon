@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.7.5]
+
+- [`54fc7de`](https://www.github.com/tauri-apps/tray-icon/commit/54fc7de37c3568312b27c30bdd22e830b1f15a3b)([#69](https://www.github.com/tauri-apps/tray-icon/pull/69)) Refactor macOS implementation to fix missing click issues.
+
 ## \[0.7.4]
 
 - [`71d25a1`](https://www.github.com/tauri-apps/tray-icon/commit/71d25a14ecd2bf0996223127b2fa01ec7f915fce)([#66](https://www.github.com/tauri-apps/tray-icon/pull/66)) On Linux, fix the issue that gtk caches the icon if you use `TrayIcon::set_icon` repeatedly.

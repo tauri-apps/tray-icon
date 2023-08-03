@@ -314,7 +314,7 @@ fn make_tray_target_class() -> *const Class {
             unsafe {
                 let ns_status_item = this.get_ivar::<id>(TRAY_STATUS_ITEM);
                 let button: id = msg_send![*ns_status_item, button];
-                let _: () = msg_send![button, hightlight: NO];
+                let _: () = msg_send![button, highlight: NO];
             }
         }
 
@@ -386,7 +386,7 @@ fn make_tray_target_class() -> *const Class {
                 if has_items {
                     let _: () = msg_send![button, performClick: nil];
                 } else {
-                    let _: () = msg_send![button, highlight];
+                    let _: () = msg_send![button, highlight: YES];
                 }
             }
         }

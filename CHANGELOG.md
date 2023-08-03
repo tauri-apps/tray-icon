@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.7.7]
+
+- [`197f431`](https://www.github.com/tauri-apps/tray-icon/commit/197f43161cd1806fcae15b19b4f8335d9b3492b6)([#73](https://www.github.com/tauri-apps/tray-icon/pull/73)) Always highlight tray icon on click on macOS.
+
 ## \[0.7.6]
 
 - [`a458317`](https://www.github.com/tauri-apps/tray-icon/commit/a458317ad1d85ac9477a019f86580a14d4082c7f)([#71](https://www.github.com/tauri-apps/tray-icon/pull/71)) Fixes a crash on mouse events on macOS.

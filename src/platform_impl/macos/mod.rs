@@ -369,13 +369,13 @@ fn make_tray_target_class() -> *const Class {
 
             TrayIconEvent::send(event);
 
+            let status_item = *this.get_ivar::<id>(TRAY_STATUS_ITEM);
+            let button: id = msg_send![status_item, button];
+
             let menu_on_left_click = *this.get_ivar::<bool>(TRAY_MENU_ON_LEFT_CLICK);
             if click_event == ClickType::Right
                 || (menu_on_left_click && click_event == ClickType::Left)
             {
-                let status_item = *this.get_ivar::<id>(TRAY_STATUS_ITEM);
-                let button: id = msg_send![status_item, button];
-
                 let menu = *this.get_ivar::<id>(TRAY_MENU);
                 let has_items = if menu == nil {
                     false
@@ -388,6 +388,8 @@ fn make_tray_target_class() -> *const Class {
                 } else {
                     let _: () = msg_send![button, highlight: YES];
                 }
+            } else {
+                let _: () = msg_send![button, highlight: YES];
             }
         }
 

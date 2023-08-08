@@ -38,7 +38,7 @@
 //! #### Create a tray icon without a menu.
 //!
 //! ```no_run
-//! use tray_icon::{TrayIconBuilder, icon::Icon};
+//! use tray_icon::{TrayIconBuilder, Icon};
 //!
 //! # let icon = Icon::from_rgba(Vec::new(), 0, 0).unwrap();
 //! let tray_icon = TrayIconBuilder::new()
@@ -51,7 +51,7 @@
 //! #### Create a tray icon with a menu.
 //!
 //! ```no_run
-//! use tray_icon::{TrayIconBuilder, menu::Menu, icon::Icon};
+//! use tray_icon::{TrayIconBuilder, menu::Menu,Icon};
 //!
 //! # let icon = Icon::from_rgba(Vec::new(), 0, 0).unwrap();
 //! let tray_menu = Menu::new();

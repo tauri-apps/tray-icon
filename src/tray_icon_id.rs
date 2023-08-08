@@ -39,24 +39,40 @@ impl FromStr for TrayIconId {
 
 impl PartialEq<&str> for TrayIconId {
     fn eq(&self, other: &&str) -> bool {
-        other == &self.0
+        self.0 == *other
     }
 }
 
 impl PartialEq<String> for TrayIconId {
     fn eq(&self, other: &String) -> bool {
-        other == &self.0
+        self.0 == *other
     }
 }
 
 impl PartialEq<&String> for TrayIconId {
     fn eq(&self, other: &&String) -> bool {
-        other == &&self.0
+        self.0 == **other
     }
 }
 
 impl PartialEq<&TrayIconId> for TrayIconId {
     fn eq(&self, other: &&TrayIconId) -> bool {
         other.0 == self.0
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::TrayIconId;
+
+    #[test]
+    fn is_eq() {
+        assert_eq!(TrayIconId::new("t"), "t",);
+        assert_eq!(TrayIconId::new("t"), String::from("t"));
+        assert_eq!(TrayIconId::new("t"), &String::from("t"));
+        assert_eq!(TrayIconId::new("t"), TrayIconId::new("t"));
+        assert_eq!(TrayIconId::new("t"), &TrayIconId::new("t"));
+        assert_eq!(&TrayIconId::new("t"), &TrayIconId::new("t"));
+        assert_eq!(TrayIconId::new("t").as_ref(), "t");
     }
 }

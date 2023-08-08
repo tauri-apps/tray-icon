@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.8.1]
+
+- [`0cf36ad`](https://www.github.com/tauri-apps/tray-icon/commit/0cf36ad6afd1ddd93b7087e8eb4475410fb9be8a)([#77](https://www.github.com/tauri-apps/tray-icon/pull/77)) Add `TrayIconId::new` convenience method.
+
 ## \[0.8.0]
 
 - [`95c1be8`](https://www.github.com/tauri-apps/tray-icon/commit/95c1be8a459f2ef146ccaccfe858c427678613af)([#75](https://www.github.com/tauri-apps/tray-icon/pull/75)) Th `icon` module has been removed and instead its types are exported from crate root.

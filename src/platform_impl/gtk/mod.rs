@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use crate::icon::Icon;
 pub(crate) use icon::PlatformIcon;
 
-use crate::TrayIconAttributes;
+use crate::{TrayIconAttributes, TrayIconId, COUNTER};
 use libappindicator::{AppIndicator, AppIndicatorStatus};
 
 pub struct TrayIcon {
@@ -20,7 +20,8 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
-    pub fn new(id: u32, attrs: TrayIconAttributes) -> crate::Result<Self> {
+    pub fn new(_id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
+        let id = COUNTER.next();
         let mut indicator = AppIndicator::new("tray-icon tray app", "");
         indicator.set_status(AppIndicatorStatus::Active);
 

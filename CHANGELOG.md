@@ -1,5 +1,12 @@
 # Changelog
 
+## \[0.8.0]
+
+- [`95c1be8`](https://www.github.com/tauri-apps/tray-icon/commit/95c1be8a459f2ef146ccaccfe858c427678613af)([#75](https://www.github.com/tauri-apps/tray-icon/pull/75)) Th `icon` module has been removed and instead its types are exported from crate root.
+- [`95c1be8`](https://www.github.com/tauri-apps/tray-icon/commit/95c1be8a459f2ef146ccaccfe858c427678613af)([#75](https://www.github.com/tauri-apps/tray-icon/pull/75)) Update to `muda@0.8`
+- [`f93b57d`](https://www.github.com/tauri-apps/tray-icon/commit/f93b57d08a84a8c7ff7f9035f8cc73a3e48e90b9) Add `TrayIconId` struct an changed all `.id()` methods to return `TrayIconId` instead of a u32.
+- [`95c1be8`](https://www.github.com/tauri-apps/tray-icon/commit/95c1be8a459f2ef146ccaccfe858c427678613af)([#75](https://www.github.com/tauri-apps/tray-icon/pull/75)) Changed the order of arguments for `TrayIcon::with_id` function to take the `id` as the first argument instead of the second.
+
 ## \[0.7.7]
 
 - [`197f431`](https://www.github.com/tauri-apps/tray-icon/commit/197f43161cd1806fcae15b19b4f8335d9b3492b6)([#73](https://www.github.com/tauri-apps/tray-icon/pull/73)) Always highlight tray icon on click on macOS.

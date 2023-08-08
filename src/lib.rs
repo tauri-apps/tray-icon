@@ -99,15 +99,15 @@ use std::{
 
 use counter::Counter;
 use crossbeam_channel::{unbounded, Receiver, Sender};
-use icon::Icon;
 use once_cell::sync::{Lazy, OnceCell};
 
 mod counter;
 mod error;
-pub mod icon;
+mod icon;
 mod platform_impl;
 
 pub use self::error::*;
+pub use self::icon::{BadIcon, Icon};
 
 /// Re-export of [muda](::muda) crate and used for tray context menu.
 pub mod menu {

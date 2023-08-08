@@ -20,7 +20,9 @@ use objc::{
     sel, sel_impl,
 };
 
-use crate::{icon::Icon, menu, ClickType, Rectangle, TrayIconAttributes, TrayIconEvent};
+use crate::{
+    icon::Icon, menu, ClickType, Rectangle, TrayIconAttributes, TrayIconEvent, TrayIconId,
+};
 
 const TRAY_ID: &str = "id";
 const TRAY_STATUS_ITEM: &str = "status_item";
@@ -30,13 +32,13 @@ const TRAY_MENU_ON_LEFT_CLICK: &str = "menu_on_left_click";
 pub struct TrayIcon {
     ns_status_item: Option<id>,
     tray_target: Option<id>,
-    id: u32,
+    id: TrayIconId,
     attrs: TrayIconAttributes,
 }
 
 impl TrayIcon {
-    pub fn new(id: u32, attrs: TrayIconAttributes) -> crate::Result<Self> {
-        let (ns_status_item, tray_target) = Self::create(id, &attrs)?;
+    pub fn new(id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
+        let (ns_status_item, tray_target) = Self::create(&id, &attrs)?;
 
         let tray_icon = Self {
             ns_status_item: Some(ns_status_item),
@@ -48,7 +50,7 @@ impl TrayIcon {
         Ok(tray_icon)
     }
 
-    fn create(id: u32, attrs: &TrayIconAttributes) -> crate::Result<(id, id)> {
+    fn create(id: &TrayIconId, attrs: &TrayIconAttributes) -> crate::Result<(id, id)> {
         let ns_status_item = unsafe {
             let ns_status_item =
                 NSStatusBar::systemStatusBar(nil).statusItemWithLength_(NSVariableStatusItemLength);
@@ -80,6 +82,8 @@ impl TrayIcon {
             let tray_target: id = msg_send![target, initWithFrame: frame];
             let _: () = msg_send![tray_target, retain];
             let _: () = msg_send![tray_target, setWantsLayer: YES];
+
+            let id = NSString::alloc(nil).init_str(&id.0);
 
             (*tray_target).set_ivar(TRAY_ID, id);
             (*tray_target).set_ivar(TRAY_STATUS_ITEM, ns_status_item);
@@ -184,7 +188,7 @@ impl TrayIcon {
     pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {
         if visible {
             if self.ns_status_item.is_none() {
-                let (ns_status_item, tray_target) = Self::create(self.id, &self.attrs)?;
+                let (ns_status_item, tray_target) = Self::create(&self.id, &self.attrs)?;
                 self.ns_status_item = Some(ns_status_item);
                 self.tray_target = Some(tray_target);
             }
@@ -270,7 +274,7 @@ fn make_tray_target_class() -> *const Class {
         let superclass = class!(NSView);
         let mut decl = ClassDecl::new("TaoTrayTarget", superclass).unwrap();
 
-        decl.add_ivar::<u32>(TRAY_ID);
+        decl.add_ivar::<id>(TRAY_ID);
         decl.add_ivar::<id>(TRAY_MENU);
         decl.add_ivar::<id>(TRAY_STATUS_ITEM);
         decl.add_ivar::<bool>(TRAY_MENU_ON_LEFT_CLICK);
@@ -335,7 +339,13 @@ fn make_tray_target_class() -> *const Class {
         }
 
         unsafe fn on_tray_click(this: &mut Object, event: id, click_event: ClickType) {
-            let id = *this.get_ivar::<u32>(TRAY_ID);
+            const UTF8_ENCODING: usize = 4;
+
+            let id_ns_str = *this.get_ivar::<id>(TRAY_ID);
+            let bytes: *const std::ffi::c_char = msg_send![id_ns_str, UTF8String];
+            let len = msg_send![id_ns_str, lengthOfBytesUsingEncoding: UTF8_ENCODING];
+            let bytes = std::slice::from_raw_parts(bytes as *const u8, len);
+            let id_str = std::str::from_utf8_unchecked(bytes);
 
             // icon position & size
             let window: id = msg_send![event, window];
@@ -355,7 +365,7 @@ fn make_tray_target_class() -> *const Class {
             let mouse_location: NSPoint = msg_send![class!(NSEvent), mouseLocation];
 
             let event = TrayIconEvent {
-                id,
+                id: TrayIconId(id_str.to_string()),
                 x: mouse_location.x,
                 y: bottom_left_to_top_left_for_cursor(mouse_location),
                 icon_rect: Rectangle {

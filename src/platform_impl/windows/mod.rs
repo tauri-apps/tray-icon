@@ -28,7 +28,9 @@ use windows_sys::{
     },
 };
 
-use crate::{icon::Icon, menu, ClickType, Rectangle, TrayIconAttributes, TrayIconEvent};
+use crate::{
+    icon::Icon, menu, ClickType, Rectangle, TrayIconAttributes, TrayIconEvent, TrayIconId, COUNTER,
+};
 
 pub(crate) use self::icon::WinIcon as PlatformIcon;
 
@@ -46,7 +48,8 @@ static S_U_TASKBAR_RESTART: Lazy<u32> =
     Lazy::new(|| unsafe { RegisterWindowMessageA(s!("TaskbarCreated")) });
 
 struct TrayLoopData {
-    id: u32,
+    internal_id: u32,
+    id: TrayIconId,
     hwnd: HWND,
     hpopupmenu: Option<HMENU>,
     icon: Option<Icon>,
@@ -56,11 +59,13 @@ struct TrayLoopData {
 pub struct TrayIcon {
     hwnd: HWND,
     menu: Option<Box<dyn menu::ContextMenu>>,
-    id: u32,
+    internal_id: u32,
 }
 
 impl TrayIcon {
-    pub fn new(id: u32, attrs: TrayIconAttributes) -> crate::Result<Self> {
+    pub fn new(id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
+        let internal_id = COUNTER.next();
+
         let class_name = util::encode_wide("tray_icon_app");
         unsafe {
             let hinstance = util::get_instance_handle();
@@ -111,7 +116,7 @@ impl TrayIcon {
 
             let hicon = attrs.icon.as_ref().map(|i| i.inner.as_raw_handle());
 
-            if !register_tray_icon(hwnd, id, &hicon, &attrs.tooltip) {
+            if !register_tray_icon(hwnd, internal_id, &hicon, &attrs.tooltip) {
                 return Err(crate::Error::OsError(std::io::Error::last_os_error()));
             }
 
@@ -122,6 +127,7 @@ impl TrayIcon {
             // tray-icon event handler
             let traydata = TrayLoopData {
                 id,
+                internal_id,
                 hwnd,
                 hpopupmenu: attrs.menu.as_ref().map(|m| m.hpopupmenu()),
                 icon: attrs.icon,
@@ -136,7 +142,7 @@ impl TrayIcon {
 
             Ok(Self {
                 hwnd,
-                id,
+                internal_id,
                 menu: attrs.menu,
             })
         }
@@ -147,7 +153,7 @@ impl TrayIcon {
             let mut nid = NOTIFYICONDATAW {
                 uFlags: NIF_ICON,
                 hWnd: self.hwnd,
-                uID: self.id,
+                uID: self.internal_id,
                 ..std::mem::zeroed()
             };
 
@@ -198,7 +204,7 @@ impl TrayIcon {
             let mut nid = NOTIFYICONDATAW {
                 uFlags: NIF_TIP,
                 hWnd: self.hwnd,
-                uID: self.id,
+                uID: self.internal_id,
                 ..std::mem::zeroed()
             };
             if let Some(tooltip) = &tooltip {
@@ -247,7 +253,7 @@ impl TrayIcon {
 impl Drop for TrayIcon {
     fn drop(&mut self) {
         unsafe {
-            remove_tray_icon(self.hwnd, self.id);
+            remove_tray_icon(self.hwnd, self.internal_id);
 
             if let Some(menu) = &self.menu {
                 menu.detach_menu_subclass_from_hwnd(self.hwnd);
@@ -286,7 +292,7 @@ unsafe extern "system" fn tray_subclass_proc(
         WM_USER_SHOW_TRAYICON => {
             register_tray_icon(
                 subclass_input.hwnd,
-                subclass_input.id,
+                subclass_input.internal_id,
                 &subclass_input
                     .icon
                     .as_ref()
@@ -295,7 +301,7 @@ unsafe extern "system" fn tray_subclass_proc(
             );
         }
         WM_USER_HIDE_TRAYICON => {
-            remove_tray_icon(subclass_input.hwnd, subclass_input.id);
+            remove_tray_icon(subclass_input.hwnd, subclass_input.internal_id);
         }
         WM_USER_UPDATE_TRAYTOOLTIP => {
             let tooltip = Box::from_raw(wparam as *mut Option<String>);
@@ -304,7 +310,7 @@ unsafe extern "system" fn tray_subclass_proc(
         _ if msg == *S_U_TASKBAR_RESTART => {
             register_tray_icon(
                 subclass_input.hwnd,
-                subclass_input.id,
+                subclass_input.internal_id,
                 &subclass_input
                     .icon
                     .as_ref()
@@ -321,7 +327,7 @@ unsafe extern "system" fn tray_subclass_proc(
             let nid = NOTIFYICONIDENTIFIER {
                 hWnd: hwnd,
                 cbSize: std::mem::size_of::<NOTIFYICONIDENTIFIER>() as _,
-                uID: subclass_input.id,
+                uID: subclass_input.internal_id,
                 ..std::mem::zeroed()
             };
             let mut icon_rect = RECT {
@@ -346,7 +352,7 @@ unsafe extern "system" fn tray_subclass_proc(
             };
 
             TrayIconEvent::send(crate::TrayIconEvent {
-                id: subclass_input.id,
+                id: subclass_input.id.clone(),
                 x,
                 y,
                 icon_rect: Rectangle {

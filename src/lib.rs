@@ -75,7 +75,7 @@
 //! }
 //! ```
 //!
-//! You can also listen for the menu events using [`MenuEvent::receiver`] to get events for the tray context menu.
+//! You can also listen for the menu events using [`MenuEvent::receiver`](crate::menu::MenuEvent::receiver) to get events for the tray context menu.
 //!
 //! ```no_run
 //! use tray_icon::{TrayIconEvent, menu::MenuEvent};
@@ -91,8 +91,10 @@
 
 use std::{
     cell::RefCell,
+    convert::Infallible,
     path::{Path, PathBuf},
     rc::Rc,
+    str::FromStr,
 };
 
 use counter::Counter;
@@ -113,6 +115,54 @@ pub mod menu {
 }
 
 static COUNTER: Counter = Counter::new();
+
+/// An unique id that is associated with a tray icon.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
+pub struct TrayIconId(pub String);
+
+impl AsRef<str> for TrayIconId {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl From<String> for TrayIconId {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&str> for TrayIconId {
+    fn from(value: &str) -> Self {
+        Self(value.to_string())
+    }
+}
+
+impl PartialEq<&str> for TrayIconId {
+    fn eq(&self, other: &&str) -> bool {
+        other == &self.0
+    }
+}
+
+impl PartialEq<String> for TrayIconId {
+    fn eq(&self, other: &String) -> bool {
+        other == &self.0
+    }
+}
+
+impl PartialEq<&TrayIconId> for TrayIconId {
+    fn eq(&self, other: &&TrayIconId) -> bool {
+        other.0 == self.0
+    }
+}
+
+impl FromStr for TrayIconId {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(Self(s.to_string()))
+    }
+}
 
 /// Attributes to use when creating a tray icon.
 pub struct TrayIconAttributes {
@@ -177,7 +227,7 @@ impl Default for TrayIconAttributes {
 /// [`TrayIcon`] builder struct and associated methods.
 #[derive(Default)]
 pub struct TrayIconBuilder {
-    id: u32,
+    id: TrayIconId,
     attrs: TrayIconAttributes,
 }
 
@@ -187,14 +237,14 @@ impl TrayIconBuilder {
     /// See [`TrayIcon::new`] for more info.
     pub fn new() -> Self {
         Self {
-            id: COUNTER.next(),
+            id: TrayIconId(COUNTER.next().to_string()),
             attrs: TrayIconAttributes::default(),
         }
     }
 
     /// Sets the unique id to build the tray icon with.
-    pub fn with_id(mut self, id: u32) -> Self {
-        self.id = id;
+    pub fn with_id<I: Into<TrayIconId>>(mut self, id: I) -> Self {
+        self.id = id.into();
         self
     }
 
@@ -267,13 +317,13 @@ impl TrayIconBuilder {
 
     /// Access the unique id that will be assigned to the tray icon
     /// this builder will create.
-    pub fn id(&self) -> u32 {
-        self.id
+    pub fn id(&self) -> &TrayIconId {
+        &self.id
     }
 
     /// Builds and adds a new [`TrayIcon`] to the system tray.
     pub fn build(self) -> Result<TrayIcon> {
-        TrayIcon::with_id(self.attrs, self.id)
+        TrayIcon::with_id(self.id, self.attrs)
     }
 }
 
@@ -282,7 +332,7 @@ impl TrayIconBuilder {
 /// This type is reference-counted and the icon is removed when the last instance is dropped.
 #[derive(Clone)]
 pub struct TrayIcon {
-    id: u32,
+    id: TrayIconId,
     tray: Rc<RefCell<platform_impl::TrayIcon>>,
 }
 
@@ -294,26 +344,33 @@ impl TrayIcon {
     /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
     /// Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub fn new(attrs: TrayIconAttributes) -> Result<Self> {
-        let id = COUNTER.next();
+        let id = TrayIconId(COUNTER.next().to_string());
         Ok(Self {
+            tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(
+                id.clone(),
+                attrs,
+            )?)),
             id,
-            tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(id, attrs)?)),
         })
     }
 
     /// Builds and adds a new tray icon to the system tray with the specified Id.
     ///
     /// See [`TrayIcon::new`] for more info.
-    pub fn with_id(attrs: TrayIconAttributes, id: u32) -> Result<Self> {
+    pub fn with_id<I: Into<TrayIconId>>(id: I, attrs: TrayIconAttributes) -> Result<Self> {
+        let id = id.into();
         Ok(Self {
+            tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(
+                id.clone(),
+                attrs,
+            )?)),
             id,
-            tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(id, attrs)?)),
         })
     }
 
     /// Returns the id associated with this tray icon.
-    pub fn id(&self) -> u32 {
-        self.id
+    pub fn id(&self) -> &TrayIconId {
+        &self.id
     }
 
     /// Set new tray icon. If `None` is provided, it will remove the icon.
@@ -392,10 +449,10 @@ impl TrayIcon {
 ///
 /// - **Linux**: Unsupported. The event is not emmited even though the icon is shown,
 /// the icon will still show a context menu on right click.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct TrayIconEvent {
     /// Id of the tray icon which triggered this event.
-    pub id: u32,
+    pub id: TrayIconId,
     /// Physical X Position of the click the triggered this event.
     pub x: f64,
     /// Physical Y Position of the click the triggered this event.
@@ -437,8 +494,8 @@ static TRAY_EVENT_HANDLER: OnceCell<Option<TrayIconEventHandler>> = OnceCell::ne
 
 impl TrayIconEvent {
     /// Returns the id of the tray icon which triggered this event.
-    pub fn id(&self) -> u32 {
-        self.id
+    pub fn id(&self) -> &TrayIconId {
+        &self.id
     }
 
     /// Gets a reference to the event channel's [`TrayIconEventReceiver`]

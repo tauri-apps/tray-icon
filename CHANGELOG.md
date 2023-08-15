@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.8.2]
+
+- [`cd6fb13`](https://www.github.com/tauri-apps/tray-icon/commit/cd6fb1300e2b2bf78781777de45302c98cfcabd4)([#80](https://www.github.com/tauri-apps/tray-icon/pull/80)) Add `PartialEq<&str> for &TrayIconId` and `PartialEq<String> for &TrayIconId` implementations. Also add a blanket `From<T> for TrayIconId` where `T: ToString` implementation.
+
 ## \[0.8.1]
 
 - [`0cf36ad`](https://www.github.com/tauri-apps/tray-icon/commit/0cf36ad6afd1ddd93b7087e8eb4475410fb9be8a)([#77](https://www.github.com/tauri-apps/tray-icon/pull/77)) Add `TrayIconId::new` convenience method.

@@ -402,6 +402,7 @@ impl TrayIcon {
 /// - **Linux**: Unsupported. The event is not emmited even though the icon is shown,
 /// the icon will still show a context menu on right click.
 #[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TrayIconEvent {
     /// Id of the tray icon which triggered this event.
     pub id: TrayIconId,
@@ -416,6 +417,7 @@ pub struct TrayIconEvent {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ClickType {
     Left,
     Right,
@@ -430,6 +432,7 @@ impl Default for ClickType {
 
 /// Describes a rectangle including position (x - y axis) and size.
 #[derive(Debug, PartialEq, Clone, Copy, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rectangle {
     pub left: f64,
     pub right: f64,

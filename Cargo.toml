@@ -1,6 +1,6 @@
 [package]
 name = "tray-icon"
-version = "0.8.2"
+version = "0.8.3"
 edition = "2021"
 description = "Create tray icons for desktop applications"
 homepage = "https://github.com/tauri-apps/tray-icon"
@@ -28,7 +28,7 @@ features = [
   "Win32_Foundation",
   "Win32_System_SystemServices",
   "Win32_Graphics_Gdi",
-  "Win32_UI_Shell",
+  "Win32_UI_Shell"
 ]
 
 [target."cfg(target_os = \"linux\")".dependencies]

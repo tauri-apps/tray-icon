@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.8.3]
+
+- [`75fed4a`](https://www.github.com/tauri-apps/tray-icon/commit/75fed4aeca82c5614777865a9f6fa2d4457f47a1) Derive `serde` for more types.
+
 ## \[0.8.2]
 
 - [`cd6fb13`](https://www.github.com/tauri-apps/tray-icon/commit/cd6fb1300e2b2bf78781777de45302c98cfcabd4)([#80](https://www.github.com/tauri-apps/tray-icon/pull/80)) Add `PartialEq<&str> for &TrayIconId` and `PartialEq<String> for &TrayIconId` implementations. Also add a blanket `From<T> for TrayIconId` where `T: ToString` implementation.

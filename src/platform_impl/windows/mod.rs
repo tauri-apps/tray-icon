@@ -274,7 +274,7 @@ unsafe extern "system" fn tray_subclass_proc(
     subclass_input_ptr: usize,
 ) -> LRESULT {
     let subclass_input_ptr = subclass_input_ptr as *mut TrayLoopData;
-    let mut subclass_input = &mut *(subclass_input_ptr);
+    let subclass_input = &mut *(subclass_input_ptr);
 
     match msg {
         WM_DESTROY => {

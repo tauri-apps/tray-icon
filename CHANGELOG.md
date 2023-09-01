@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.9.0]
+
+- [`32b3523`](https://www.github.com/tauri-apps/tray-icon/commit/32b352371b6da730abbb024730015492f87205c0) Update `muda` crate to `0.9`
+
 ## \[0.8.3]
 
 - [`75fed4a`](https://www.github.com/tauri-apps/tray-icon/commit/75fed4aeca82c5614777865a9f6fa2d4457f47a1) Derive `serde` for more types.

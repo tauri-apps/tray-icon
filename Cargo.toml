@@ -32,7 +32,7 @@ features = [
 ]
 
 [target."cfg(target_os = \"linux\")".dependencies]
-libappindicator = "0.8"
+libappindicator = "0.9"
 dirs-next = "2.0"
 
 [target."cfg(target_os = \"linux\")".dev-dependencies]

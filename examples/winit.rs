@@ -31,7 +31,7 @@ fn main() {
         gtk::main();
     });
 
-    let event_loop = EventLoopBuilder::new().build();
+    let event_loop = EventLoopBuilder::new().build().unwrap();
 
     #[cfg(not(target_os = "linux"))]
     let mut tray_icon = Some(
@@ -46,13 +46,13 @@ fn main() {
     let menu_channel = MenuEvent::receiver();
     let tray_channel = TrayIconEvent::receiver();
 
-    event_loop.run(move |_event, _, control_flow| {
-        *control_flow = ControlFlow::Poll;
+    event_loop.run(move |_event, event_loop| {
+        event_loop.set_control_flow(ControlFlow::Poll);
 
         if let Ok(event) = tray_channel.try_recv() {
             println!("{event:?}");
         }
-    })
+    });
 }
 
 fn load_icon(path: &std::path::Path) -> tray_icon::Icon {

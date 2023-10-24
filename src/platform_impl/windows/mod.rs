@@ -209,6 +209,7 @@ impl TrayIcon {
             };
             if let Some(tooltip) = &tooltip {
                 let tip = util::encode_wide(tooltip.as_ref());
+                #[allow(clippy::manual_memcpy)]
                 for i in 0..tip.len().min(128) {
                     nid.szTip[i] = tip[i];
                 }
@@ -410,6 +411,7 @@ unsafe fn register_tray_icon(
     if let Some(tooltip) = tooltip {
         flags |= NIF_TIP;
         let tip = util::encode_wide(tooltip);
+        #[allow(clippy::manual_memcpy)]
         for i in 0..tip.len().min(128) {
             sz_tip[i] = tip[i];
         }

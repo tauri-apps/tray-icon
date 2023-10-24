@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.10.0]
+
+- [`8463328`](https://www.github.com/tauri-apps/tray-icon/commit/84633285a0b465fe4c261ff0c7be035ce7615715)([#92](https://www.github.com/tauri-apps/tray-icon/pull/92)) Upgraded `gtk` to 0.18 and bumped MSRV to 1.70.0.
+
 ## \[0.9.0]
 
 - [`32b3523`](https://www.github.com/tauri-apps/tray-icon/commit/32b352371b6da730abbb024730015492f87205c0) Update `muda` crate to `0.9`

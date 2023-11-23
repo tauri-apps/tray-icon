@@ -32,14 +32,9 @@ fn main() -> Result<(), eframe::Error> {
     #[cfg(not(target_os = "linux"))]
     let tray_c = _tray_icon.clone();
 
-    let options = eframe::NativeOptions {
-        initial_window_size: Some(egui::vec2(320.0, 240.0)),
-        ..Default::default()
-    };
-
     eframe::run_native(
         "My egui App",
-        options,
+        eframe::NativeOptions::default(),
         Box::new(move |_cc| {
             #[cfg(not(target_os = "linux"))]
             {

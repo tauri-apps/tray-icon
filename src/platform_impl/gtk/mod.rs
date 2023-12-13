@@ -17,6 +17,7 @@ pub struct TrayIcon {
     temp_dir_path: Option<PathBuf>,
     path: PathBuf,
     counter: u32,
+    menu: Option<Box<dyn muda::ContextMenu>>,
 }
 
 impl TrayIcon {
@@ -34,7 +35,7 @@ impl TrayIcon {
         indicator.set_icon_theme_path(&parent_path.to_string_lossy());
         indicator.set_icon_full(&icon_path.to_string_lossy(), "icon");
 
-        if let Some(menu) = attrs.menu {
+        if let Some(menu) = &attrs.menu {
             indicator.set_menu(&mut menu.gtk_context_menu());
         }
 
@@ -48,6 +49,7 @@ impl TrayIcon {
             path: icon_path,
             temp_dir_path: attrs.temp_dir_path,
             counter: 0,
+            menu: attrs.menu,
         })
     }
     pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
@@ -72,9 +74,10 @@ impl TrayIcon {
     }
 
     pub fn set_menu(&mut self, menu: Option<Box<dyn crate::menu::ContextMenu>>) {
-        if let Some(menu) = menu {
+        if let Some(menu) = &menu {
             self.indicator.set_menu(&mut menu.gtk_context_menu());
         }
+        self.menu = menu;
     }
 
     pub fn set_tooltip<S: AsRef<str>>(&mut self, _tooltip: Option<S>) -> crate::Result<()> {

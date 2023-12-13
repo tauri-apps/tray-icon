@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.11.1]
+
+- [`6382ea5`](https://www.github.com/tauri-apps/tray-icon/commit/6382ea5b47813ce1546dff6e8a69ca053dc6f145)([#103](https://www.github.com/tauri-apps/tray-icon/pull/103)) On Linux, fix tray menu failing to show.
+
 ## \[0.11.0]
 
 - [`6e8374a`](https://www.github.com/tauri-apps/tray-icon/commit/6e8374a81a2e84bf38c8678085986e569e517e76) Update `muda` crate to `0.11`

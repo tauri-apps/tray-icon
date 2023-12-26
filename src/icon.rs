@@ -163,4 +163,11 @@ impl Icon {
         let win_icon = PlatformIcon::from_resource(ordinal, size)?;
         Ok(Icon { inner: win_icon })
     }
+
+    /// Create an icon from a hicon
+    #[cfg(windows)]
+    pub fn from_handle(handle: windows_sys::Win32::UI::WindowsAndMessaging::HICON) -> Self {
+        let win_icon = PlatformIcon::from_handle(handle);
+        Icon { inner: win_icon }
+    }
 }

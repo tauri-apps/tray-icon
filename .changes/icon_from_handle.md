@@ -2,4 +2,4 @@
 "tray-icon": "patch"
 ---
 
-Add `Icon::from_hicon`
+On Windows, add `Icon::from_handle`

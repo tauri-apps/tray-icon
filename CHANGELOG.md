@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.11.2]
+
+- [`ca3bed5`](https://www.github.com/tauri-apps/tray-icon/commit/ca3bed51b5d6e8b7e04429f8f90a2d514393b034)([#109](https://www.github.com/tauri-apps/tray-icon/pull/109)) On Windows, add `Icon::from_handle`
+
 ## \[0.11.1]
 
 - [`6382ea5`](https://www.github.com/tauri-apps/tray-icon/commit/6382ea5b47813ce1546dff6e8a69ca053dc6f145)([#103](https://www.github.com/tauri-apps/tray-icon/pull/103)) On Linux, fix tray menu failing to show.

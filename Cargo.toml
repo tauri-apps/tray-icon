@@ -48,6 +48,6 @@ png = "0.17"
 
 [dev-dependencies]
 winit = "0.29"
-tao = "0.24"
+tao = "0.25"
 image = "0.24"
 eframe = "0.25"

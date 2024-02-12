@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.11.3]
+
+- [`5407f14`](https://www.github.com/tauri-apps/tray-icon/commit/5407f140e12aa83984f6a5402ab99e70a4d4f82c)([#114](https://www.github.com/tauri-apps/tray-icon/pull/114)) On Linux, fix `TrayIcon::set_visible` incorrect inverted behavior.
+
 ## \[0.11.2]
 
 - [`ca3bed5`](https://www.github.com/tauri-apps/tray-icon/commit/ca3bed51b5d6e8b7e04429f8f90a2d514393b034)([#109](https://www.github.com/tauri-apps/tray-icon/pull/109)) On Windows, add `Icon::from_handle`

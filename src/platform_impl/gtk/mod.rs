@@ -91,9 +91,9 @@ impl TrayIcon {
 
     pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {
         if visible {
-            self.indicator.set_status(AppIndicatorStatus::Passive);
-        } else {
             self.indicator.set_status(AppIndicatorStatus::Active);
+        } else {
+            self.indicator.set_status(AppIndicatorStatus::Passive);
         }
 
         Ok(())

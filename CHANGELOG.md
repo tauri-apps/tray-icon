@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.12.0]
+
+- [`91a5bf6`](https://www.github.com/tauri-apps/tray-icon/commit/91a5bf65d7e3895e9f2eedf4e7ffaf7cc9d082ad)([#119](https://www.github.com/tauri-apps/tray-icon/pull/119)) Updated `muda` dependency to `0.12`
+
 ## \[0.11.3]
 
 - [`5407f14`](https://www.github.com/tauri-apps/tray-icon/commit/5407f140e12aa83984f6a5402ab99e70a4d4f82c)([#114](https://www.github.com/tauri-apps/tray-icon/pull/114)) On Linux, fix `TrayIcon::set_visible` incorrect inverted behavior.

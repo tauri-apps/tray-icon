@@ -22,6 +22,8 @@ fn main() {
     std::thread::spawn(|| {
         use tray_icon::menu::Menu;
 
+        let icon = load_icon(std::path::Path::new(path));
+
         gtk::init().unwrap();
         let _tray_icon = TrayIconBuilder::new()
             .with_menu(Box::new(Menu::new()))

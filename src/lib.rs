@@ -15,7 +15,7 @@
 //! # Platform-specific notes:
 //!
 //! - On Windows and Linux, an event loop must be running on the thread, on Windows, a win32 event loop and on Linux, a gtk event loop. It doesn't need to be the main thread but you have to create the tray icon on the same thread as the event loop.
-//! - On macOS, an event loop must be running on the main thread so you also need to create the tray icon on the main thread.
+//! - On macOS, an event loop must be running on the main thread so you also need to create the tray icon on the main thread. You must make sure that the event loop is already running and not just created before creating a TrayIcon to prevent issues with fullscreen apps. In Winit for example the earliest you can create icons is on [`StartCause::Init`](https://docs.rs/winit/latest/winit/event/enum.StartCause.html#variant.Init).
 //!
 //! # Dependencies (Linux Only)
 //!

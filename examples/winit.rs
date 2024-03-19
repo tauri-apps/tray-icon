@@ -4,6 +4,7 @@
 
 #![allow(unused)]
 
+#[cfg(target_os = "macos")]
 use core_foundation::runloop::{CFRunLoopGetMain, CFRunLoopWakeUp};
 
 use tray_icon::{

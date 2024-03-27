@@ -29,7 +29,7 @@ use windows_sys::{
 };
 
 use crate::{
-    icon::Icon, menu, ClickType, Rectangle, TrayIconAttributes, TrayIconEvent, TrayIconId, COUNTER,
+    icon::Icon, menu, ClickType, Rect, TrayIconAttributes, TrayIconEvent, TrayIconId, COUNTER,
 };
 
 pub(crate) use self::icon::WinIcon as PlatformIcon;
@@ -352,15 +352,20 @@ unsafe extern "system" fn tray_subclass_proc(
                 _ => unreachable!(),
             };
 
+            let dpi = util::hwnd_dpi(hwnd);
+            let scale_factor = util::dpi_to_scale_factor(dpi);
+
             TrayIconEvent::send(crate::TrayIconEvent {
                 id: subclass_input.id.clone(),
-                x,
-                y,
-                icon_rect: Rectangle {
-                    left: icon_rect.left as f64,
-                    right: icon_rect.right as f64,
-                    bottom: icon_rect.bottom as f64,
-                    top: icon_rect.top as f64,
+                position: crate::dpi::LogicalPosition::new(x, y).to_physical(scale_factor),
+                icon_rect: Rect {
+                    position: crate::dpi::LogicalPosition::new(icon_rect.left, icon_rect.top)
+                        .to_physical(scale_factor),
+                    size: crate::dpi::LogicalSize::new(
+                        icon_rect.right.saturating_sub(icon_rect.left),
+                        icon_rect.bottom.saturating_sub(icon_rect.top),
+                    )
+                    .to_physical(scale_factor),
                 },
                 click_type: event,
             });

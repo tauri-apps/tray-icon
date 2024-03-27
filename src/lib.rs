@@ -113,6 +113,7 @@ pub use self::tray_icon_id::TrayIconId;
 pub mod menu {
     pub use muda::*;
 }
+pub use muda::dpi;
 
 static COUNTER: Counter = Counter::new();
 
@@ -399,19 +400,17 @@ impl TrayIcon {
 ///
 /// ## Platform-specific:
 ///
-/// - **Linux**: Unsupported. The event is not emmited even though the icon is shown,
-/// the icon will still show a context menu on right click.
+/// - **Linux**: Unsupported. The event is not emmited even though the icon is shown.
+/// However, The icon will still show a context menu on right click.
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TrayIconEvent {
     /// Id of the tray icon which triggered this event.
     pub id: TrayIconId,
-    /// Physical X Position of the click the triggered this event.
-    pub x: f64,
-    /// Physical Y Position of the click the triggered this event.
-    pub y: f64,
+    /// Physical Position of the click the triggered this event.
+    pub position: dpi::PhysicalPosition<f64>,
     /// Position and size of the tray icon
-    pub icon_rect: Rectangle,
+    pub icon_rect: Rect,
     /// The click type that triggered this event.
     pub click_type: ClickType,
 }
@@ -431,13 +430,20 @@ impl Default for ClickType {
 }
 
 /// Describes a rectangle including position (x - y axis) and size.
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Rectangle {
-    pub left: f64,
-    pub right: f64,
-    pub top: f64,
-    pub bottom: f64,
+pub struct Rect {
+    pub size: dpi::PhysicalSize<u32>,
+    pub position: dpi::PhysicalPosition<f64>,
+}
+
+impl Default for Rect {
+    fn default() -> Self {
+        Self {
+            size: dpi::PhysicalSize::new(0, 0),
+            position: dpi::PhysicalPosition::new(0., 0.),
+        }
+    }
 }
 
 /// A reciever that could be used to listen to tray events.

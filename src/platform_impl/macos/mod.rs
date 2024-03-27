@@ -20,9 +20,7 @@ use objc::{
     sel, sel_impl,
 };
 
-use crate::{
-    icon::Icon, menu, ClickType, Rectangle, TrayIconAttributes, TrayIconEvent, TrayIconId,
-};
+use crate::{icon::Icon, menu, ClickType, Rect, TrayIconAttributes, TrayIconEvent, TrayIconId};
 
 const TRAY_ID: &str = "id";
 const TRAY_STATUS_ITEM: &str = "status_item";
@@ -351,29 +349,27 @@ fn make_tray_target_class() -> *const Class {
             let window: id = msg_send![event, window];
             let frame = NSWindow::frame(window);
             let scale_factor = NSWindow::backingScaleFactor(window);
-            let (tray_x, tray_y) = (
-                frame.origin.x * scale_factor,
-                bottom_left_to_top_left_for_tray(frame) * scale_factor,
-            );
 
-            let (tray_width, tray_height) = (
-                frame.size.width * scale_factor,
-                frame.size.height * scale_factor,
-            );
+            let icon_rect = Rect {
+                size: crate::dpi::LogicalSize::new(frame.origin.x, frame.origin.y)
+                    .to_physical(scale_factor),
+                position: crate::dpi::LogicalPosition::new(
+                    frame.origin.x,
+                    flip_window_screen_coordinates(frame.origin.y),
+                )
+                .to_physical(scale_factor),
+            };
 
             // cursor position
             let mouse_location: NSPoint = msg_send![class!(NSEvent), mouseLocation];
 
             let event = TrayIconEvent {
                 id: TrayIconId(id_str.to_string()),
-                x: mouse_location.x,
-                y: bottom_left_to_top_left_for_cursor(mouse_location),
-                icon_rect: Rectangle {
-                    left: tray_x,
-                    right: tray_x + tray_width,
-                    top: tray_y,
-                    bottom: tray_y + tray_height,
-                },
+                position: crate::dpi::PhysicalPosition::new(
+                    mouse_location.x,
+                    flip_window_screen_coordinates(mouse_location.y),
+                ),
+                icon_rect,
                 click_type: click_event,
             };
 
@@ -403,20 +399,23 @@ fn make_tray_target_class() -> *const Class {
             }
         }
 
-        /// Get the icon Y-axis correctly aligned with tao based on the tray icon `NSRect`.
-        /// Available only with the `tray` feature flag.
-        fn bottom_left_to_top_left_for_tray(rect: NSRect) -> f64 {
-            CGDisplay::main().pixels_high() as f64 - rect.origin.y
-        }
-
-        /// Get the cursor Y-axis correctly aligned with tao when we click on the tray icon.
-        /// Available only with the `tray` feature flag.
-        fn bottom_left_to_top_left_for_cursor(point: NSPoint) -> f64 {
-            CGDisplay::main().pixels_high() as f64 - point.y
-        }
-
         TRAY_CLASS = decl.register();
     });
 
     unsafe { TRAY_CLASS }
+}
+
+/// Core graphics screen coordinates are relative to the top-left corner of
+/// the so-called "main" display, with y increasing downwards - which is
+/// exactly what we want in Winit.
+///
+/// However, `NSWindow` and `NSScreen` changes these coordinates to:
+/// 1. Be relative to the bottom-left corner of the "main" screen.
+/// 2. Be relative to the bottom-left corner of the window/screen itself.
+/// 3. Have y increasing upwards.
+///
+/// This conversion happens to be symmetric, so we only need this one function
+/// to convert between the two coordinate systems.
+fn flip_window_screen_coordinates(y: f64) -> f64 {
+    CGDisplay::main().pixels_high() as f64 - y
 }

@@ -4,9 +4,6 @@
 
 #![allow(unused)]
 
-#[cfg(target_os = "macos")]
-use core_foundation::runloop::{CFRunLoopGetMain, CFRunLoopWakeUp};
-
 use tray_icon::{
     menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
     TrayIconBuilder, TrayIconEvent,
@@ -65,6 +62,8 @@ fn main() {
             // Winit only exposes a redraw method on the Window so we use core-foundation directly.
             #[cfg(target_os = "macos")]
             unsafe {
+                use core_foundation::runloop::{CFRunLoopGetMain, CFRunLoopWakeUp};
+
                 let rl = CFRunLoopGetMain();
                 CFRunLoopWakeUp(rl);
             }

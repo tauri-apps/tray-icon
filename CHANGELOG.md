@@ -1,5 +1,13 @@
 # Changelog
 
+## \[0.13.0]
+
+- [`63abc69`](https://www.github.com/tauri-apps/tray-icon/commit/63abc69affffdd2849d3d42178d76b9bf1ea994a)([#127](https://www.github.com/tauri-apps/tray-icon/pull/127)) Update `muda` dependency to `0.13`
+- [`63abc69`](https://www.github.com/tauri-apps/tray-icon/commit/63abc69affffdd2849d3d42178d76b9bf1ea994a)([#127](https://www.github.com/tauri-apps/tray-icon/pull/127)) Added `dpi` module and changed position and sizes in `TrayIconEvent` to use the new `dpi` module:
+
+  - Removed `TrayIconEvent.x` and `TrayIconEvent.y` and replaced with `TrayIconEvent.position`
+  - Replaced `Rectangle` type with `Rect` which has just two fields `position` and `size`.
+
 ## \[0.12.0]
 
 - [`91a5bf6`](https://www.github.com/tauri-apps/tray-icon/commit/91a5bf65d7e3895e9f2eedf4e7ffaf7cc9d082ad)([#119](https://www.github.com/tauri-apps/tray-icon/pull/119)) Updated `muda` dependency to `0.12`

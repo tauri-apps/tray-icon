@@ -12,7 +12,6 @@ use tray_icon::{
 
 fn main() {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/icon.png");
-    let icon = load_icon(std::path::Path::new(path));
 
     let event_loop = EventLoopBuilder::new().build();
 
@@ -32,20 +31,38 @@ fn main() {
         &quit_i,
     ]);
 
-    let mut tray_icon = Some(
-        TrayIconBuilder::new()
-            .with_menu(Box::new(tray_menu))
-            .with_tooltip("tao - awesome windowing lib")
-            .with_icon(icon)
-            .build()
-            .unwrap(),
-    );
+    let mut tray_icon = None;
 
     let menu_channel = MenuEvent::receiver();
     let tray_channel = TrayIconEvent::receiver();
 
-    event_loop.run(move |_event, _, control_flow| {
+    event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
+
+        if let tao::event::Event::NewEvents(tao::event::StartCause::Init) = event {
+            let icon = load_icon(std::path::Path::new(path));
+
+            // We create the icon once the event loop is actually running
+            // to prevent issues like https://github.com/tauri-apps/tray-icon/issues/90
+            tray_icon = Some(
+                TrayIconBuilder::new()
+                    .with_menu(Box::new(tray_menu.clone()))
+                    .with_tooltip("tao - awesome windowing lib")
+                    .with_icon(icon)
+                    .build()
+                    .unwrap(),
+            );
+
+            // We have to request a redraw here to have the icon actually show up.
+            // Tao only exposes a redraw method on the Window so we use core-foundation directly.
+            #[cfg(target_os = "macos")]
+            unsafe {
+                use core_foundation::runloop::{CFRunLoopGetMain, CFRunLoopWakeUp};
+
+                let rl = CFRunLoopGetMain();
+                CFRunLoopWakeUp(rl);
+            }
+        }
 
         if let Ok(event) = menu_channel.try_recv() {
             if event.id == quit_i.id() {

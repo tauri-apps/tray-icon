@@ -203,6 +203,7 @@ impl TrayIcon {
                 let button = ns_status_item.button();
                 let nsimage: id = msg_send![button, image];
                 let _: () = msg_send![nsimage, setTemplate: is_template as i8];
+                button.setImage_(nsimage);
             }
         }
         self.attrs.icon_is_template = is_template;

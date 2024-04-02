@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.13.1]
+
+- [`784e01e`](https://www.github.com/tauri-apps/tray-icon/commit/784e01e5b4392a39fbec47f17cdcbee7f27af2bc)([#130](https://www.github.com/tauri-apps/tray-icon/pull/130)) On macOS, reset the tray icon when using `setIconAsTemplate` to avoid artifacts.
+
 ## \[0.13.0]
 
 - [`63abc69`](https://www.github.com/tauri-apps/tray-icon/commit/63abc69affffdd2849d3d42178d76b9bf1ea994a)([#127](https://www.github.com/tauri-apps/tray-icon/pull/127)) Update `muda` dependency to `0.13`

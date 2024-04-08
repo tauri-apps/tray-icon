@@ -60,7 +60,7 @@ impl TrayIcon {
             ns_status_item,
             attrs.icon.clone(),
             attrs.icon_is_template,
-        );
+        )?;
 
         if let Some(menu) = &attrs.menu {
             unsafe {
@@ -115,7 +115,7 @@ impl TrayIcon {
 
     pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
         if let (Some(ns_status_item), Some(tray_target)) = (self.ns_status_item, self.tray_target) {
-            set_icon_for_ns_status_item_button(ns_status_item, icon.clone(), false);
+            set_icon_for_ns_status_item_button(ns_status_item, icon.clone(), false)?;
             unsafe {
                 let _: () = msg_send![tray_target, updateDimensions];
             }
@@ -229,14 +229,14 @@ fn set_icon_for_ns_status_item_button(
     ns_status_item: id,
     icon: Option<Icon>,
     icon_is_template: bool,
-) {
+) -> crate::Result<()> {
     let button = unsafe { ns_status_item.button() };
 
     if let Some(icon) = icon {
         // The image is to the right of the title https://developer.apple.com/documentation/appkit/nscellimageposition/nsimageleft
         const NSIMAGE_LEFT: i32 = 2;
 
-        let png_icon = icon.inner.to_png();
+        let png_icon = icon.inner.to_png()?;
 
         let (width, height) = icon.inner.get_size();
 
@@ -262,6 +262,8 @@ fn set_icon_for_ns_status_item_button(
     } else {
         unsafe { button.setImage_(nil) };
     }
+
+    Ok(())
 }
 
 /// Create a `TaoTrayTarget` Class that handle events.
@@ -271,7 +273,8 @@ fn make_tray_target_class() -> *const Class {
 
     INIT.call_once(|| unsafe {
         let superclass = class!(NSView);
-        let mut decl = ClassDecl::new("TaoTrayTarget", superclass).unwrap();
+        let mut decl =
+            ClassDecl::new("TaoTrayTarget", superclass).expect("TaoTrayTarget already registered?");
 
         decl.add_ivar::<id>(TRAY_ID);
         decl.add_ivar::<id>(TRAY_MENU);

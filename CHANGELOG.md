@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.13.3]
+
+- [`646f56c`](https://www.github.com/tauri-apps/tray-icon/commit/646f56cb6786377b8dbae1e742bb94e7b6f1bb09)([#138](https://www.github.com/tauri-apps/tray-icon/pull/138)) Fix unexpected crashes on I/O or Png encoding errors on macOS and Linux.
+
 ## \[0.13.2]
 
 - [`c368bbc`](https://www.github.com/tauri-apps/tray-icon/commit/c368bbc6a24b24767c902508651d856413039108)([#134](https://www.github.com/tauri-apps/tray-icon/pull/134)) Fix incorrect icon size reported in events on macOS

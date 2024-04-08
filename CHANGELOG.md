@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.13.2]
+
+- [`c368bbc`](https://www.github.com/tauri-apps/tray-icon/commit/c368bbc6a24b24767c902508651d856413039108)([#134](https://www.github.com/tauri-apps/tray-icon/pull/134)) Fix incorrect icon size reported in events on macOS
+
 ## \[0.13.1]
 
 - [`784e01e`](https://www.github.com/tauri-apps/tray-icon/commit/784e01e5b4392a39fbec47f17cdcbee7f27af2bc)([#130](https://www.github.com/tauri-apps/tray-icon/pull/130)) On macOS, reset the tray icon when using `setIconAsTemplate` to avoid artifacts.

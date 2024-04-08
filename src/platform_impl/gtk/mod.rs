@@ -29,7 +29,7 @@ impl TrayIcon {
         let (parent_path, icon_path) = temp_icon_path(attrs.temp_dir_path.as_ref(), id, 0)?;
 
         if let Some(icon) = attrs.icon {
-            icon.inner.write_to_png(&icon_path);
+            icon.inner.write_to_png(&icon_path)?;
         }
 
         indicator.set_icon_theme_path(&parent_path.to_string_lossy());
@@ -61,7 +61,7 @@ impl TrayIcon {
             temp_icon_path(self.temp_dir_path.as_ref(), self.id, self.counter)?;
 
         if let Some(icon) = icon {
-            icon.inner.write_to_png(&icon_path);
+            icon.inner.write_to_png(&icon_path)?;
         }
 
         self.indicator

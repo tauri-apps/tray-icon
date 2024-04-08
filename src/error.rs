@@ -10,6 +10,9 @@ use thiserror::Error;
 pub enum Error {
     #[error(transparent)]
     OsError(#[from] std::io::Error),
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[error(transparent)]
+    PngEncodingError(#[from] png::EncodingError),
 }
 
 /// Convenient type alias of Result type for tray-icon.

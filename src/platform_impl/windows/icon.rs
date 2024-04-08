@@ -4,7 +4,8 @@
 
 // taken from https://github.com/rust-windowing/winit/blob/92fdf5ba85f920262a61cee4590f4a11ad5738d1/src/platform_impl/windows/icon.rs
 
-use std::{fmt, io, mem, path::Path, sync::Arc};
+use std::os::windows::ffi::OsStrExt;
+use std::{ffi::OsString, fmt, io, mem, path::Path, sync::Arc};
 
 use windows_sys::{
     core::PCWSTR,
@@ -108,16 +109,13 @@ impl WinIcon {
         }
     }
 
-    pub(crate) fn from_resource(
-        resource_id: u16,
-        size: Option<(u32, u32)>,
-    ) -> Result<Self, BadIcon> {
+    fn from_resource_inner_name(name: PCWSTR, size: Option<(u32, u32)>) -> Result<Self, BadIcon> {
         // width / height of 0 along with LR_DEFAULTSIZE tells windows to load the default icon size
         let (width, height) = size.unwrap_or((0, 0));
         let handle = unsafe {
             LoadImageW(
                 util::get_instance_handle(),
-                resource_id as PCWSTR,
+                name,
                 IMAGE_ICON,
                 width as i32,
                 height as i32,
@@ -129,6 +127,22 @@ impl WinIcon {
         } else {
             Err(BadIcon::OsError(io::Error::last_os_error()))
         }
+    }
+
+    pub(crate) fn from_resource(
+        resource_id: u16,
+        size: Option<(u32, u32)>,
+    ) -> Result<Self, BadIcon> {
+        Self::from_resource_inner_name(resource_id as PCWSTR, size)
+    }
+
+    pub(crate) fn from_resource_name(
+        resource_name: &str,
+        size: Option<(u32, u32)>,
+    ) -> Result<Self, BadIcon> {
+        let name = OsString::from(resource_name);
+        let wide_name: Vec<u16> = name.encode_wide().collect();
+        Self::from_resource_inner_name(wide_name.as_ptr(), size)
     }
 }
 

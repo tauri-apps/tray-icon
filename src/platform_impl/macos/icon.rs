@@ -30,6 +30,6 @@ impl PlatformIcon {
             writer.write_image_data(&self.0.rgba)?;
         }
 
-        png
+        Ok(png)
     }
 }

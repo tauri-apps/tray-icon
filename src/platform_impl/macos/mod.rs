@@ -352,7 +352,7 @@ fn make_tray_target_class() -> *const Class {
             let scale_factor = NSWindow::backingScaleFactor(window);
 
             let icon_rect = Rect {
-                size: crate::dpi::LogicalSize::new(frame.origin.x, frame.origin.y)
+                size: crate::dpi::LogicalSize::new(frame.size.width, frame.size.height)
                     .to_physical(scale_factor),
                 position: crate::dpi::LogicalPosition::new(
                     frame.origin.x,

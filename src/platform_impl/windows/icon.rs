@@ -108,16 +108,13 @@ impl WinIcon {
         }
     }
 
-    pub(crate) fn from_resource(
-        resource_id: u16,
-        size: Option<(u32, u32)>,
-    ) -> Result<Self, BadIcon> {
+    fn from_resource_inner_name(name: PCWSTR, size: Option<(u32, u32)>) -> Result<Self, BadIcon> {
         // width / height of 0 along with LR_DEFAULTSIZE tells windows to load the default icon size
         let (width, height) = size.unwrap_or((0, 0));
         let handle = unsafe {
             LoadImageW(
                 util::get_instance_handle(),
-                resource_id as PCWSTR,
+                name,
                 IMAGE_ICON,
                 width as i32,
                 height as i32,
@@ -129,6 +126,21 @@ impl WinIcon {
         } else {
             Err(BadIcon::OsError(io::Error::last_os_error()))
         }
+    }
+
+    pub(crate) fn from_resource(
+        resource_id: u16,
+        size: Option<(u32, u32)>,
+    ) -> Result<Self, BadIcon> {
+        Self::from_resource_inner_name(resource_id as PCWSTR, size)
+    }
+
+    pub(crate) fn from_resource_name(
+        resource_name: &str,
+        size: Option<(u32, u32)>,
+    ) -> Result<Self, BadIcon> {
+        let wide_name = util::encode_wide(resource_name);
+        Self::from_resource_inner_name(wide_name.as_ptr(), size)
     }
 }
 

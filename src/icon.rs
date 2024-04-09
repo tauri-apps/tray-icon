@@ -164,6 +164,17 @@ impl Icon {
         Ok(Icon { inner: win_icon })
     }
 
+    /// This is basically the same as from_resource, but takes a resource name
+    /// rather than oridinal id.
+    #[cfg(windows)]
+    pub fn from_resource_name(
+        resource_name: &str,
+        size: Option<(u32, u32)>,
+    ) -> Result<Self, BadIcon> {
+        let win_icon = PlatformIcon::from_resource_name(resource_name, size)?;
+        Ok(Icon { inner: win_icon })
+    }
+
     /// Create an icon from an HICON
     #[cfg(windows)]
     pub fn from_handle(handle: isize) -> Self {

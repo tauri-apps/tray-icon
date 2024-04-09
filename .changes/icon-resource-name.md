@@ -2,4 +2,4 @@
 "tray-icon": patch
 ---
 
-Support icon resource without a ordinal id on Windows
+Add `Icon::from_resource_name` to support icon resource without a ordinal id on Windows

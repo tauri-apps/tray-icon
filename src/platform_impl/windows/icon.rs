@@ -4,8 +4,7 @@
 
 // taken from https://github.com/rust-windowing/winit/blob/92fdf5ba85f920262a61cee4590f4a11ad5738d1/src/platform_impl/windows/icon.rs
 
-use std::os::windows::ffi::OsStrExt;
-use std::{ffi::OsString, fmt, io, mem, path::Path, sync::Arc};
+use std::{fmt, io, mem, path::Path, sync::Arc};
 
 use windows_sys::{
     core::PCWSTR,
@@ -140,7 +139,7 @@ impl WinIcon {
         resource_name: &str,
         size: Option<(u32, u32)>,
     ) -> Result<Self, BadIcon> {
-        let wide_name= util::encode_wide(resource_name);
+        let wide_name = util::encode_wide(resource_name);
         Self::from_resource_inner_name(wide_name.as_ptr(), size)
     }
 }

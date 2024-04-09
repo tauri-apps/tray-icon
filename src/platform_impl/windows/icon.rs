@@ -140,8 +140,7 @@ impl WinIcon {
         resource_name: &str,
         size: Option<(u32, u32)>,
     ) -> Result<Self, BadIcon> {
-        let name = OsString::from(resource_name);
-        let wide_name: Vec<u16> = name.encode_wide().collect();
+        let wide_name= util::encode_wide(resource_name);
         Self::from_resource_inner_name(wide_name.as_ptr(), size)
     }
 }

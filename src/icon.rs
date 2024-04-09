@@ -164,7 +164,7 @@ impl Icon {
         Ok(Icon { inner: win_icon })
     }
 
-    /// This is basically the same as from_resource, except accept an resource name
+    /// This is basically the same as from_resource, but takes a resource name
     /// rather than oridinal id.
     #[cfg(windows)]
     pub fn from_resource_name(

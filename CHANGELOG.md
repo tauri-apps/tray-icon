@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.13.4]
+
+- [`6b09b8e`](https://www.github.com/tauri-apps/tray-icon/commit/6b09b8e920e79d7768c3a55324431cbd0acadb27)([#136](https://www.github.com/tauri-apps/tray-icon/pull/136)) Add `Icon::from_resource_name` to support icon resource without a ordinal id on Windows
+
 ## \[0.13.3]
 
 - [`646f56c`](https://www.github.com/tauri-apps/tray-icon/commit/646f56cb6786377b8dbae1e742bb94e7b6f1bb09)([#138](https://www.github.com/tauri-apps/tray-icon/pull/138)) Fix unexpected crashes on I/O or Png encoding errors on macOS and Linux.

@@ -72,6 +72,13 @@ fn main() {
         if let Ok(event) = tray_channel.try_recv() {
             println!("{event:?}");
         }
+
+    // We add delay of 16 ms (60fps) to event_loop to reduce cpu load.
+    // This can be removed to allow ControlFlow::Poll to poll on each cpu cycle
+    // Alternatively, you can set ControlFlow::Wait or use MenuEvent::set_event_handler,
+    // see https://github.com/tauri-apps/tray-icon/issues/83#issuecomment-1697773065
+    std::thread::sleep(core::time::Duration::from_millis(16));
+
     });
 }
 

@@ -10,7 +10,7 @@ use once_cell::sync::Lazy;
 use windows_sys::{
     s,
     Win32::{
-        Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM},
+        Foundation::{FALSE, HWND, LPARAM, LRESULT, POINT, RECT, TRUE, WPARAM},
         UI::{
             Shell::{
                 DefSubclassProc, SetWindowSubclass, Shell_NotifyIconGetRect, Shell_NotifyIconW,
@@ -309,6 +309,7 @@ unsafe extern "system" fn tray_subclass_proc(
             subclass_input.tooltip = *tooltip;
         }
         _ if msg == *S_U_TASKBAR_RESTART => {
+            remove_tray_icon(subclass_input.hwnd, subclass_input.internal_id);
             register_tray_icon(
                 subclass_input.hwnd,
                 subclass_input.internal_id,
@@ -432,7 +433,7 @@ unsafe fn register_tray_icon(
         ..std::mem::zeroed()
     };
 
-    Shell_NotifyIconW(NIM_ADD, &mut nid as _) == 1
+    Shell_NotifyIconW(NIM_ADD, &mut nid as _) == TRUE
 }
 
 unsafe fn remove_tray_icon(hwnd: HWND, id: u32) {
@@ -443,7 +444,7 @@ unsafe fn remove_tray_icon(hwnd: HWND, id: u32) {
         ..std::mem::zeroed()
     };
 
-    if Shell_NotifyIconW(NIM_DELETE, &mut nid as _) == 0 {
+    if Shell_NotifyIconW(NIM_DELETE, &mut nid as _) == FALSE {
         eprintln!("Error removing system tray icon");
     }
 }

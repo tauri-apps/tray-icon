@@ -395,17 +395,13 @@ impl TrayIcon {
         let _ = enable;
     }
 
-    /// Get tray icon frame when available, otherwise `None`. **macOS only**.
-    pub fn get_frame_rect(&self) -> Option<Rect> {
-        #[cfg(target_os = "macos")]
-        {
-            self.tray.borrow().get_frame_rect()
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            None
-        }
+    /// Get tray icon rect.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux**: Unsupported.
+    pub fn rect(&self) -> Option<Rect> {
+        self.tray.borrow().rect()
     }
 }
 

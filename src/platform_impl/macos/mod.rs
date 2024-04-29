@@ -221,7 +221,7 @@ impl TrayIcon {
         self.attrs.menu_on_left_click = enable;
     }
 
-    pub fn get_frame_rect(&self) -> Option<Rect> {
+    pub fn rect(&self) -> Option<Rect> {
         let ns_status_item = self.ns_status_item?;
         unsafe {
             let button = ns_status_item.button();

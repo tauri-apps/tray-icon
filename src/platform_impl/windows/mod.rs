@@ -249,6 +249,36 @@ impl TrayIcon {
 
         Ok(())
     }
+
+    pub fn rect(&self) -> Option<Rect> {
+        let nid = NOTIFYICONIDENTIFIER {
+            hWnd: self.hwnd,
+            cbSize: std::mem::size_of::<NOTIFYICONIDENTIFIER>() as _,
+            uID: self.internal_id,
+            ..unsafe { std::mem::zeroed() }
+        };
+
+        let mut icon_rect = RECT {
+            left: 0,
+            bottom: 0,
+            right: 0,
+            top: 0,
+        };
+        unsafe { Shell_NotifyIconGetRect(&nid, &mut icon_rect) };
+
+        let dpi = unsafe { util::hwnd_dpi(self.hwnd) };
+        let scale_factor = util::dpi_to_scale_factor(dpi);
+
+        Some(Rect {
+            position: crate::dpi::LogicalPosition::new(icon_rect.left, icon_rect.top)
+                .to_physical(scale_factor),
+            size: crate::dpi::LogicalSize::new(
+                icon_rect.right.saturating_sub(icon_rect.left),
+                icon_rect.bottom.saturating_sub(icon_rect.top),
+            )
+            .to_physical(scale_factor),
+        })
+    }
 }
 
 impl Drop for TrayIcon {

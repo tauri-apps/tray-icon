@@ -7,8 +7,7 @@ use std::sync::Once;
 
 use cocoa::{
     appkit::{
-        NSButton, NSEvent, NSImage, NSStatusBar, NSStatusItem, NSVariableStatusItemLength, NSView,
-        NSWindow,
+        NSButton, NSEvent, NSImage, NSStatusBar, NSStatusItem, NSVariableStatusItemLength, NSWindow,
     },
     base::{id, nil},
     foundation::{NSData, NSInteger, NSPoint, NSRect, NSSize, NSString},
@@ -229,20 +228,17 @@ impl TrayIcon {
             if window.is_null() {
                 None
             } else {
-                let rect_in_window: NSRect =
-                    msg_send![button, convertRect:button.bounds() toView:nil];
-                let screen_rect = window.convertRectToScreen_(rect_in_window);
+                let frame = NSWindow::frame(window);
+                let scale_factor = NSWindow::backingScaleFactor(window);
 
                 Some(Rect {
-                    position: crate::dpi::PhysicalPosition::new(
-                        screen_rect.origin.x,
-                        screen_rect.origin.y,
-                    ),
-                    size: crate::dpi::PhysicalSize::new(
-                        screen_rect.size.width,
-                        screen_rect.size.height,
+                    size: crate::dpi::LogicalSize::new(frame.size.width, frame.size.height)
+                        .to_physical(scale_factor),
+                    position: crate::dpi::LogicalPosition::new(
+                        frame.origin.x,
+                        flip_window_screen_coordinates(frame.origin.y),
                     )
-                    .cast(),
+                    .to_physical(scale_factor),
                 })
             }
         }

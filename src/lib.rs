@@ -394,6 +394,19 @@ impl TrayIcon {
         #[cfg(not(target_os = "macos"))]
         let _ = enable;
     }
+
+    /// Get tray icon frame when available, otherwise `None`. **macOS only**.
+    pub fn get_frame_rect(&self) -> Option<Rect> {
+        #[cfg(target_os = "macos")]
+        {
+            self.tray.borrow().get_frame_rect()
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            None
+        }
+    }
 }
 
 /// Describes a tray event emitted when a tray icon is clicked

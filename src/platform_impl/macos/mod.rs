@@ -6,7 +6,10 @@ mod icon;
 use std::sync::Once;
 
 use cocoa::{
-    appkit::{NSButton, NSImage, NSStatusBar, NSStatusItem, NSVariableStatusItemLength, NSWindow},
+    appkit::{
+        NSButton, NSEvent, NSImage, NSStatusBar, NSStatusItem, NSVariableStatusItemLength, NSView,
+        NSWindow,
+    },
     base::{id, nil},
     foundation::{NSData, NSInteger, NSPoint, NSRect, NSSize, NSString},
 };
@@ -216,6 +219,33 @@ impl TrayIcon {
             }
         }
         self.attrs.menu_on_left_click = enable;
+    }
+
+    pub fn get_frame_rect(&self) -> Option<Rect> {
+        let ns_status_item = self.ns_status_item?;
+        unsafe {
+            let button = ns_status_item.button();
+            let window: id = button.window();
+            if window.is_null() {
+                None
+            } else {
+                let rect_in_window: NSRect =
+                    msg_send![button, convertRect:button.bounds() toView:nil];
+                let screen_rect = window.convertRectToScreen_(rect_in_window);
+
+                Some(Rect {
+                    position: crate::dpi::PhysicalPosition::new(
+                        screen_rect.origin.x,
+                        screen_rect.origin.y,
+                    ),
+                    size: crate::dpi::PhysicalSize::new(
+                        screen_rect.size.width,
+                        screen_rect.size.height,
+                    )
+                    .cast(),
+                })
+            }
+        }
     }
 }
 

@@ -48,7 +48,7 @@ fn main() {
         event_loop.set_control_flow(ControlFlow::WaitUntil(
             std::time::Instant::now() + std::time::Duration::from_millis(16),
         ));
-        
+
         #[cfg(not(target_os = "linux"))]
         if let winit::event::Event::NewEvents(winit::event::StartCause::Init) = event {
             let icon = load_icon(std::path::Path::new(path));

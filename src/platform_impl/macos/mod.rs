@@ -422,7 +422,7 @@ fn get_tray_rect(window: id) -> Rect {
             .to_physical(scale_factor),
         position: crate::dpi::LogicalPosition::new(
             frame.origin.x,
-            flip_window_screen_coordinates(frame.origin.y),
+            flip_window_screen_coordinates(frame.origin.y) - frame.size.height,
         )
         .to_physical(scale_factor),
     }

@@ -370,13 +370,15 @@ fn make_tray_target_class() -> *const Class {
 
             // cursor position
             let mouse_location: NSPoint = msg_send![class!(NSEvent), mouseLocation];
+            let scale_factor = unsafe { NSWindow::backingScaleFactor(window) };
 
             let event = TrayIconEvent {
                 id: TrayIconId(id_str.to_string()),
-                position: crate::dpi::PhysicalPosition::new(
+                position: crate::dpi::LogicalPosition::new(
                     mouse_location.x,
                     flip_window_screen_coordinates(mouse_location.y),
-                ),
+                )
+                .to_physical(scale_factor),
                 icon_rect,
                 click_type: click_event,
             };

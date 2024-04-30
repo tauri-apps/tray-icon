@@ -1,5 +1,12 @@
 # Changelog
 
+## \[0.13.5]
+
+- [`a1cd50e`](https://www.github.com/tauri-apps/tray-icon/commit/a1cd50e53021474ad87cdf2e269acfb56d36cc14)([#145](https://www.github.com/tauri-apps/tray-icon/pull/145)) Fix tray icon gets blurry after changing dpi on Windows
+- [`ad317c7`](https://www.github.com/tauri-apps/tray-icon/commit/ad317c7dab271145c641f0c4c22e283bb2aa0c91)([#150](https://www.github.com/tauri-apps/tray-icon/pull/150)) On macOS, fix tray event position not scaled properly.
+- [`6d099ee`](https://www.github.com/tauri-apps/tray-icon/commit/6d099ee2a4c455561f4c6f86ea995df267469eca)([#149](https://www.github.com/tauri-apps/tray-icon/pull/149)) On macOS, fix the `y` position of the tray icon to be top-left not bottom-left of the icon.
+- [`599bb8f`](https://www.github.com/tauri-apps/tray-icon/commit/599bb8f55546d674892a80051766d36656975e86)([#147](https://www.github.com/tauri-apps/tray-icon/pull/147)) Add `TrayIcon::rect` method to retrieve the tray icon rectangle on Windows and macOS.
+
 ## \[0.13.4]
 
 - [`6b09b8e`](https://www.github.com/tauri-apps/tray-icon/commit/6b09b8e920e79d7768c3a55324431cbd0acadb27)([#136](https://www.github.com/tauri-apps/tray-icon/pull/136)) Add `Icon::from_resource_name` to support icon resource without a ordinal id on Windows

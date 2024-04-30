@@ -2,4 +2,4 @@
 "tray-icon": patch
 ---
 
-On macOS, set y position of the tray icon to the top of the item.
+On macOS, fix the `y` position of the tray icon to be top-left not bottom-left of the icon.

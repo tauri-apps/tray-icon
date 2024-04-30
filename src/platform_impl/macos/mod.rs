@@ -228,18 +228,7 @@ impl TrayIcon {
             if window.is_null() {
                 None
             } else {
-                let frame = NSWindow::frame(window);
-                let scale_factor = NSWindow::backingScaleFactor(window);
-
-                Some(Rect {
-                    size: crate::dpi::LogicalSize::new(frame.size.width, frame.size.height)
-                        .to_physical(scale_factor),
-                    position: crate::dpi::LogicalPosition::new(
-                        frame.origin.x,
-                        flip_window_screen_coordinates(frame.origin.y),
-                    )
-                    .to_physical(scale_factor),
-                })
+                Some(get_tray_rect(window))
             }
         }
     }
@@ -377,18 +366,7 @@ fn make_tray_target_class() -> *const Class {
 
             // icon position & size
             let window: id = msg_send![event, window];
-            let frame = NSWindow::frame(window);
-            let scale_factor = NSWindow::backingScaleFactor(window);
-
-            let icon_rect = Rect {
-                size: crate::dpi::LogicalSize::new(frame.size.width, frame.size.height)
-                    .to_physical(scale_factor),
-                position: crate::dpi::LogicalPosition::new(
-                    frame.origin.x,
-                    flip_window_screen_coordinates(frame.origin.y),
-                )
-                .to_physical(scale_factor),
-            };
+            let icon_rect = get_tray_rect(window);
 
             // cursor position
             let mouse_location: NSPoint = msg_send![class!(NSEvent), mouseLocation];
@@ -433,6 +411,21 @@ fn make_tray_target_class() -> *const Class {
     });
 
     unsafe { TRAY_CLASS }
+}
+
+fn get_tray_rect(window: id) -> Rect {
+    let frame = unsafe { NSWindow::frame(window) };
+    let scale_factor = unsafe { NSWindow::backingScaleFactor(window) };
+
+    Rect {
+        size: crate::dpi::LogicalSize::new(frame.size.width, frame.size.height)
+            .to_physical(scale_factor),
+        position: crate::dpi::LogicalPosition::new(
+            frame.origin.x,
+            flip_window_screen_coordinates(frame.origin.y),
+        )
+        .to_physical(scale_factor),
+    }
 }
 
 /// Core graphics screen coordinates are relative to the top-left corner of

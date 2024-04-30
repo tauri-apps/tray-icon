@@ -249,6 +249,12 @@ impl TrayIcon {
 
         Ok(())
     }
+
+    pub fn rect(&self) -> Option<Rect> {
+        let dpi = unsafe { util::hwnd_dpi(self.hwnd) };
+        let scale_factor = util::dpi_to_scale_factor(dpi);
+        Some(get_tray_rect(self.internal_id, self.hwnd, scale_factor))
+    }
 }
 
 impl Drop for TrayIcon {
@@ -326,20 +332,6 @@ unsafe extern "system" fn tray_subclass_proc(
                 WM_LBUTTONUP | WM_RBUTTONUP | WM_LBUTTONDBLCLK
             ) =>
         {
-            let nid = NOTIFYICONIDENTIFIER {
-                hWnd: hwnd,
-                cbSize: std::mem::size_of::<NOTIFYICONIDENTIFIER>() as _,
-                uID: subclass_input.internal_id,
-                ..std::mem::zeroed()
-            };
-            let mut icon_rect = RECT {
-                left: 0,
-                bottom: 0,
-                right: 0,
-                top: 0,
-            };
-            Shell_NotifyIconGetRect(&nid, &mut icon_rect);
-
             let mut cursor = POINT { x: 0, y: 0 };
             GetCursorPos(&mut cursor as _);
 
@@ -359,15 +351,7 @@ unsafe extern "system" fn tray_subclass_proc(
             TrayIconEvent::send(crate::TrayIconEvent {
                 id: subclass_input.id.clone(),
                 position: crate::dpi::LogicalPosition::new(x, y).to_physical(scale_factor),
-                icon_rect: Rect {
-                    position: crate::dpi::LogicalPosition::new(icon_rect.left, icon_rect.top)
-                        .to_physical(scale_factor),
-                    size: crate::dpi::LogicalSize::new(
-                        icon_rect.right.saturating_sub(icon_rect.left),
-                        icon_rect.bottom.saturating_sub(icon_rect.top),
-                    )
-                    .to_physical(scale_factor),
-                },
+                icon_rect: get_tray_rect(subclass_input.internal_id, hwnd, scale_factor),
                 click_type: event,
             });
 
@@ -383,6 +367,7 @@ unsafe extern "system" fn tray_subclass_proc(
     DefSubclassProc(hwnd, msg, wparam, lparam)
 }
 
+#[inline]
 unsafe fn show_tray_menu(hwnd: HWND, menu: HMENU, x: i32, y: i32) {
     // bring the hidden window to the foreground so the pop up menu
     // would automatically hide on click outside
@@ -399,6 +384,7 @@ unsafe fn show_tray_menu(hwnd: HWND, menu: HMENU, x: i32, y: i32) {
     );
 }
 
+#[inline]
 unsafe fn register_tray_icon(
     hwnd: HWND,
     tray_id: u32,
@@ -436,6 +422,7 @@ unsafe fn register_tray_icon(
     Shell_NotifyIconW(NIM_ADD, &mut nid as _) == TRUE
 }
 
+#[inline]
 unsafe fn remove_tray_icon(hwnd: HWND, id: u32) {
     let mut nid = NOTIFYICONDATAW {
         uFlags: NIF_ICON,
@@ -446,5 +433,33 @@ unsafe fn remove_tray_icon(hwnd: HWND, id: u32) {
 
     if Shell_NotifyIconW(NIM_DELETE, &mut nid as _) == FALSE {
         eprintln!("Error removing system tray icon");
+    }
+}
+
+#[inline]
+fn get_tray_rect(id: u32, hwnd: HWND, scale_factor: f64) -> Rect {
+    let nid = NOTIFYICONIDENTIFIER {
+        hWnd: hwnd,
+        cbSize: std::mem::size_of::<NOTIFYICONIDENTIFIER>() as _,
+        uID: id,
+        ..unsafe { std::mem::zeroed() }
+    };
+
+    let mut icon_rect = RECT {
+        left: 0,
+        bottom: 0,
+        right: 0,
+        top: 0,
+    };
+    unsafe { Shell_NotifyIconGetRect(&nid, &mut icon_rect) };
+
+    Rect {
+        position: crate::dpi::LogicalPosition::new(icon_rect.left, icon_rect.top)
+            .to_physical(scale_factor),
+        size: crate::dpi::LogicalSize::new(
+            icon_rect.right.saturating_sub(icon_rect.left),
+            icon_rect.bottom.saturating_sub(icon_rect.top),
+        )
+        .to_physical(scale_factor),
     }
 }

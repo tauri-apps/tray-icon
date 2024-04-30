@@ -102,6 +102,10 @@ impl TrayIcon {
     pub fn set_temp_dir_path<P: AsRef<Path>>(&mut self, path: Option<P>) {
         self.temp_dir_path = path.map(|p| p.as_ref().to_path_buf());
     }
+
+    pub fn rect(&self) -> Option<crate::Rect> {
+        None
+    }
 }
 
 impl Drop for TrayIcon {

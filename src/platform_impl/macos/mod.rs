@@ -6,7 +6,9 @@ mod icon;
 use std::sync::Once;
 
 use cocoa::{
-    appkit::{NSButton, NSImage, NSStatusBar, NSStatusItem, NSVariableStatusItemLength, NSWindow},
+    appkit::{
+        NSButton, NSEvent, NSImage, NSStatusBar, NSStatusItem, NSVariableStatusItemLength, NSWindow,
+    },
     base::{id, nil},
     foundation::{NSData, NSInteger, NSPoint, NSRect, NSSize, NSString},
 };
@@ -217,6 +219,19 @@ impl TrayIcon {
         }
         self.attrs.menu_on_left_click = enable;
     }
+
+    pub fn rect(&self) -> Option<Rect> {
+        let ns_status_item = self.ns_status_item?;
+        unsafe {
+            let button = ns_status_item.button();
+            let window: id = button.window();
+            if window.is_null() {
+                None
+            } else {
+                Some(get_tray_rect(window))
+            }
+        }
+    }
 }
 
 impl Drop for TrayIcon {
@@ -351,18 +366,7 @@ fn make_tray_target_class() -> *const Class {
 
             // icon position & size
             let window: id = msg_send![event, window];
-            let frame = NSWindow::frame(window);
-            let scale_factor = NSWindow::backingScaleFactor(window);
-
-            let icon_rect = Rect {
-                size: crate::dpi::LogicalSize::new(frame.size.width, frame.size.height)
-                    .to_physical(scale_factor),
-                position: crate::dpi::LogicalPosition::new(
-                    frame.origin.x,
-                    flip_window_screen_coordinates(frame.origin.y),
-                )
-                .to_physical(scale_factor),
-            };
+            let icon_rect = get_tray_rect(window);
 
             // cursor position
             let mouse_location: NSPoint = msg_send![class!(NSEvent), mouseLocation];
@@ -407,6 +411,21 @@ fn make_tray_target_class() -> *const Class {
     });
 
     unsafe { TRAY_CLASS }
+}
+
+fn get_tray_rect(window: id) -> Rect {
+    let frame = unsafe { NSWindow::frame(window) };
+    let scale_factor = unsafe { NSWindow::backingScaleFactor(window) };
+
+    Rect {
+        size: crate::dpi::LogicalSize::new(frame.size.width, frame.size.height)
+            .to_physical(scale_factor),
+        position: crate::dpi::LogicalPosition::new(
+            frame.origin.x,
+            flip_window_screen_coordinates(frame.origin.y),
+        )
+        .to_physical(scale_factor),
+    }
 }
 
 /// Core graphics screen coordinates are relative to the top-left corner of

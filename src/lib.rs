@@ -394,6 +394,15 @@ impl TrayIcon {
         #[cfg(not(target_os = "macos"))]
         let _ = enable;
     }
+
+    /// Get tray icon rect.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux**: Unsupported.
+    pub fn rect(&self) -> Option<Rect> {
+        self.tray.borrow().rect()
+    }
 }
 
 /// Describes a tray event emitted when a tray icon is clicked

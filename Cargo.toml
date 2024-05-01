@@ -36,7 +36,7 @@ libappindicator = "0.9"
 dirs-next = "2.0"
 
 [target."cfg(target_os = \"linux\")".dev-dependencies]
-gtk = "0.18"
+gtk = "0.18.1"
 
 [target."cfg(target_os = \"macos\")".dependencies]
 cocoa = "0.25"

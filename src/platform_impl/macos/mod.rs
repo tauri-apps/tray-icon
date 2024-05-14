@@ -319,6 +319,14 @@ fn make_tray_target_class() -> *const Class {
             on_right_mouse_up as extern "C" fn(&mut Object, _, id),
         );
         decl.add_method(
+            sel!(otherMouseDown:),
+            on_other_mouse_down as extern "C" fn(&mut Object, _, id),
+        );
+        decl.add_method(
+            sel!(otherMouseUp:),
+            on_other_mouse_up as extern "C" fn(&mut Object, _, id),
+        );
+        decl.add_method(
             sel!(mouseEntered:),
             on_mouse_entered as extern "C" fn(&Object, _, id),
         );
@@ -401,6 +409,34 @@ fn make_tray_target_class() -> *const Class {
                     state: MouseButtonState::Up,
                 }),
             );
+        }
+        extern "C" fn on_other_mouse_down(this: &mut Object, _: Sel, event: id) {
+            let button_number: NSInteger = unsafe { msg_send![event, buttonNumber] };
+            if button_number == 2 {
+                send_mouse_event(
+                    this,
+                    event,
+                    MouseEventType::Click,
+                    Some(MouseClickEvent {
+                        button: MouseButton::Middle,
+                        state: MouseButtonState::Down,
+                    }),
+                );
+            }
+        }
+        extern "C" fn on_other_mouse_up(this: &mut Object, _: Sel, event: id) {
+            let button_number: NSInteger = unsafe { msg_send![event, buttonNumber] };
+            if button_number == 2 {
+                send_mouse_event(
+                    this,
+                    event,
+                    MouseEventType::Click,
+                    Some(MouseClickEvent {
+                        button: MouseButton::Middle,
+                        state: MouseButtonState::Up,
+                    }),
+                );
+            }
         }
         extern "C" fn on_mouse_entered(this: &Object, _: Sel, event: id) {
             send_mouse_event(this, event, MouseEventType::Enter, None);

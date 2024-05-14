@@ -415,41 +415,45 @@ impl TrayIcon {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[non_exhaustive]
 pub enum TrayIconEvent {
+    /// A click happened on the tray icon.
     Click {
         /// Id of the tray icon which triggered this event.
         id: TrayIconId,
         /// Physical Position of this event.
         position: dpi::PhysicalPosition<f64>,
-        /// Position and size of the tray icon
-        icon_rect: Rect,
+        /// Position and size of the tray icon.
+        rect: Rect,
         /// Mouse button that triggered this event.
         button: MouseButton,
         /// Mouse button state when this event was triggered.
         button_state: MouseButtonState,
     },
+    /// The mouse entered the tray icon region.
     Enter {
         /// Id of the tray icon which triggered this event.
         id: TrayIconId,
         /// Physical Position of this event.
         position: dpi::PhysicalPosition<f64>,
-        /// Position and size of the tray icon
-        icon_rect: Rect,
+        /// Position and size of the tray icon.
+        rect: Rect,
     },
+    /// The mouse moved over the tray icon region.
     Move {
         /// Id of the tray icon which triggered this event.
         id: TrayIconId,
         /// Physical Position of this event.
         position: dpi::PhysicalPosition<f64>,
-        /// Position and size of the tray icon
-        icon_rect: Rect,
+        /// Position and size of the tray icon.
+        rect: Rect,
     },
+    /// The mouse left the tray icon region.
     Leave {
         /// Id of the tray icon which triggered this event.
         id: TrayIconId,
         /// Physical Position of this event.
         position: dpi::PhysicalPosition<f64>,
-        /// Position and size of the tray icon
-        icon_rect: Rect,
+        /// Position and size of the tray icon.
+        rect: Rect,
     },
 }
 

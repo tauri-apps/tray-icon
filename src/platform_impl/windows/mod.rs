@@ -351,51 +351,49 @@ unsafe extern "system" fn tray_proc(
             let position = PhysicalPosition::new(cursor.x as f64, cursor.y as f64);
 
             let rect = match get_tray_rect(userdata.internal_id, hwnd) {
-                Some(r) => r,
+                Some(rect) => Rect::from_win32(rect, scale_factor),
                 None => return 0,
             };
-
-            let icon_rect = Rect::from_win32(rect, scale_factor);
 
             let event = match lparam as u32 {
                 WM_LBUTTONDOWN => TrayIconEvent::Click {
                     id,
-                    icon_rect,
+                    rect,
                     position,
                     button: MouseButton::Left,
                     button_state: MouseButtonState::Down,
                 },
                 WM_RBUTTONDOWN => TrayIconEvent::Click {
                     id,
-                    icon_rect,
+                    rect,
                     position,
                     button: MouseButton::Right,
                     button_state: MouseButtonState::Down,
                 },
                 WM_MBUTTONDOWN => TrayIconEvent::Click {
                     id,
-                    icon_rect,
+                    rect,
                     position,
                     button: MouseButton::Middle,
                     button_state: MouseButtonState::Down,
                 },
                 WM_LBUTTONUP => TrayIconEvent::Click {
                     id,
-                    icon_rect,
+                    rect,
                     position,
                     button: MouseButton::Left,
                     button_state: MouseButtonState::Up,
                 },
                 WM_RBUTTONUP => TrayIconEvent::Click {
                     id,
-                    icon_rect,
+                    rect,
                     position,
                     button: MouseButton::Right,
                     button_state: MouseButtonState::Up,
                 },
                 WM_MBUTTONUP => TrayIconEvent::Click {
                     id,
-                    icon_rect,
+                    rect,
                     position,
                     button: MouseButton::Middle,
                     button_state: MouseButtonState::Up,
@@ -403,26 +401,17 @@ unsafe extern "system" fn tray_proc(
 
                 WM_MOUSEMOVE if !userdata.entered => {
                     userdata.entered = true;
-                    TrayIconEvent::Enter {
-                        id,
-                        icon_rect,
-                        position,
-                    }
+                    TrayIconEvent::Enter { id, rect, position }
                 }
                 WM_MOUSEMOVE if userdata.entered => {
                     // handle extra WM_MOUSEMOVE events, ignore if position hasn't changed
                     let cursor_moved = userdata.last_position != Some(position);
                     userdata.last_position = Some(position);
                     if cursor_moved {
-                        // Set or update existing timer, where we check if
-                        // cursor is no longer on icon
+                        // Set or update existing timer, where we check if cursor left
                         SetTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _, 15, Some(tray_timer_proc));
 
-                        TrayIconEvent::Move {
-                            id,
-                            icon_rect,
-                            position,
-                        }
+                        TrayIconEvent::Move { id, rect, position }
                     } else {
                         return 0;
                     }
@@ -463,7 +452,7 @@ unsafe extern "system" fn tray_proc(
 
                     TrayIconEvent::send(TrayIconEvent::Leave {
                         id: userdata.id.clone(),
-                        icon_rect: Rect::from_win32(rect, scale_factor),
+                        rect: Rect::from_win32(rect, scale_factor),
                         position,
                     });
                 }

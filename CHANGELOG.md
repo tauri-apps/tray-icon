@@ -1,5 +1,14 @@
 # Changelog
 
+## \[0.14.0]
+
+- [`587292b`](https://www.github.com/tauri-apps/tray-icon/commit/587292b2e7bfbebdd2677c51b34c6362730d5111)([#161](https://www.github.com/tauri-apps/tray-icon/pull/161)) This release contains **breaking change** to the event structs in order to be able to add new `Enter`, `Move` and `Leave` events:
+
+  - Changed `TrayIconEvent` to be an enum instead of a struct.
+  - Added new events for when the mouse enters, moves or leaves the tray icon region.
+  - Removed `ClickType` enum and replaced it with `MouseButton` enum.
+  - Added `MouseButtonState` enum.
+
 ## \[0.13.5]
 
 - [`a1cd50e`](https://www.github.com/tauri-apps/tray-icon/commit/a1cd50e53021474ad87cdf2e269acfb56d36cc14)([#145](https://www.github.com/tauri-apps/tray-icon/pull/145)) Fix tray icon gets blurry after changing dpi on Windows

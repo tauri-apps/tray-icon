@@ -405,7 +405,7 @@ impl TrayIcon {
     }
 }
 
-/// Describes a tray event emitted when a tray icon is clicked
+/// Describes a tray icon event.
 ///
 /// ## Platform-specific:
 ///
@@ -457,6 +457,7 @@ pub enum TrayIconEvent {
     },
 }
 
+/// Describes the mouse button state.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum MouseButtonState {
@@ -470,6 +471,7 @@ impl Default for MouseButtonState {
     }
 }
 
+/// Describes which mouse button triggered the event..
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum MouseButton {

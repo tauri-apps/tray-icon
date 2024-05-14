@@ -7,12 +7,13 @@ use std::sync::Once;
 
 use cocoa::{
     appkit::{
-        NSButton, NSEvent, NSImage, NSStatusBar, NSStatusItem, NSVariableStatusItemLength, NSWindow,
+        CGPoint, NSButton, NSEvent, NSImage, NSStatusBar, NSStatusItem, NSVariableStatusItemLength,
+        NSWindow,
     },
     base::{id, nil},
-    foundation::{NSData, NSInteger, NSPoint, NSRect, NSSize, NSString},
+    foundation::{NSArray, NSData, NSInteger, NSPoint, NSRect, NSSize, NSString, NSUInteger},
 };
-use core_graphics::display::CGDisplay;
+use core_graphics::display::{CGDisplay, CGRect, CGSize};
 pub(crate) use icon::PlatformIcon;
 use objc::{
     class,
@@ -22,7 +23,10 @@ use objc::{
     sel, sel_impl,
 };
 
-use crate::{icon::Icon, menu, ClickType, Rect, TrayIconAttributes, TrayIconEvent, TrayIconId};
+use crate::{
+    icon::Icon, menu, MouseButton, MouseButtonState, Rect, TrayIconAttributes, TrayIconEvent,
+    TrayIconId,
+};
 
 const TRAY_ID: &str = "id";
 const TRAY_STATUS_ITEM: &str = "status_item";
@@ -310,6 +314,36 @@ fn make_tray_target_class() -> *const Class {
             sel!(rightMouseDown:),
             on_right_mouse_down as extern "C" fn(&mut Object, _, id),
         );
+        decl.add_method(
+            sel!(rightMouseUp:),
+            on_right_mouse_up as extern "C" fn(&mut Object, _, id),
+        );
+        decl.add_method(
+            sel!(otherMouseDown:),
+            on_other_mouse_down as extern "C" fn(&mut Object, _, id),
+        );
+        decl.add_method(
+            sel!(otherMouseUp:),
+            on_other_mouse_up as extern "C" fn(&mut Object, _, id),
+        );
+        decl.add_method(
+            sel!(mouseEntered:),
+            on_mouse_entered as extern "C" fn(&Object, _, id),
+        );
+        decl.add_method(
+            sel!(mouseExited:),
+            on_mouse_exited as extern "C" fn(&Object, _, id),
+        );
+        decl.add_method(
+            sel!(mouseMoved:),
+            on_mouse_moved as extern "C" fn(&Object, _, id),
+        );
+
+        // for tracking mouse enter/exit/move events
+        decl.add_method(
+            sel!(updateTrackingAreas),
+            update_tracking_areas as extern "C" fn(&Object, _),
+        );
 
         decl.add_method(
             sel!(updateDimensions),
@@ -325,23 +359,117 @@ fn make_tray_target_class() -> *const Class {
             }
         }
 
-        extern "C" fn on_right_mouse_down(this: &mut Object, _: Sel, event: id) {
-            unsafe {
-                on_tray_click(this, event, ClickType::Right);
-            }
+        extern "C" fn on_mouse_down(this: &mut Object, _: Sel, event: id) {
+            send_mouse_event(
+                this,
+                event,
+                MouseEventType::Click,
+                Some(MouseClickEvent {
+                    button: MouseButton::Left,
+                    state: MouseButtonState::Down,
+                }),
+            );
+            on_tray_click(this, MouseButton::Left);
         }
-
-        extern "C" fn on_mouse_up(this: &mut Object, _: Sel, _event: id) {
+        extern "C" fn on_mouse_up(this: &mut Object, _: Sel, event: id) {
             unsafe {
                 let ns_status_item = this.get_ivar::<id>(TRAY_STATUS_ITEM);
                 let button: id = msg_send![*ns_status_item, button];
                 let _: () = msg_send![button, highlight: NO];
             }
+            send_mouse_event(
+                this,
+                event,
+                MouseEventType::Click,
+                Some(MouseClickEvent {
+                    button: MouseButton::Left,
+                    state: MouseButtonState::Up,
+                }),
+            );
+        }
+        extern "C" fn on_right_mouse_down(this: &mut Object, _: Sel, event: id) {
+            send_mouse_event(
+                this,
+                event,
+                MouseEventType::Click,
+                Some(MouseClickEvent {
+                    button: MouseButton::Right,
+                    state: MouseButtonState::Down,
+                }),
+            );
+            on_tray_click(this, MouseButton::Right);
+        }
+        extern "C" fn on_right_mouse_up(this: &mut Object, _: Sel, event: id) {
+            send_mouse_event(
+                this,
+                event,
+                MouseEventType::Click,
+                Some(MouseClickEvent {
+                    button: MouseButton::Right,
+                    state: MouseButtonState::Up,
+                }),
+            );
+        }
+        extern "C" fn on_other_mouse_down(this: &mut Object, _: Sel, event: id) {
+            let button_number: NSInteger = unsafe { msg_send![event, buttonNumber] };
+            if button_number == 2 {
+                send_mouse_event(
+                    this,
+                    event,
+                    MouseEventType::Click,
+                    Some(MouseClickEvent {
+                        button: MouseButton::Middle,
+                        state: MouseButtonState::Down,
+                    }),
+                );
+            }
+        }
+        extern "C" fn on_other_mouse_up(this: &mut Object, _: Sel, event: id) {
+            let button_number: NSInteger = unsafe { msg_send![event, buttonNumber] };
+            if button_number == 2 {
+                send_mouse_event(
+                    this,
+                    event,
+                    MouseEventType::Click,
+                    Some(MouseClickEvent {
+                        button: MouseButton::Middle,
+                        state: MouseButtonState::Up,
+                    }),
+                );
+            }
+        }
+        extern "C" fn on_mouse_entered(this: &Object, _: Sel, event: id) {
+            send_mouse_event(this, event, MouseEventType::Enter, None);
+        }
+        extern "C" fn on_mouse_exited(this: &Object, _: Sel, event: id) {
+            send_mouse_event(this, event, MouseEventType::Leave, None);
+        }
+        extern "C" fn on_mouse_moved(this: &Object, _: Sel, event: id) {
+            send_mouse_event(this, event, MouseEventType::Move, None);
         }
 
-        extern "C" fn on_mouse_down(this: &mut Object, _: Sel, event: id) {
+        extern "C" fn update_tracking_areas(this: &Object, _: Sel) {
             unsafe {
-                on_tray_click(this, event, ClickType::Left);
+                let areas: id /* NSArray */ = msg_send![this, trackingAreas];
+                for idx in 0..areas.count() {
+                    let area: id = msg_send![areas, objectAtIndex: idx];
+                    let () = msg_send![this, removeTrackingArea: area];
+                }
+
+                let () = msg_send![super(this, class!(NSView)), updateTrackingAreas];
+
+                let options: NSUInteger = 0x01 | 0x02 | 0x80 | 0x200;
+                let rect = CGRect {
+                    origin: CGPoint { x: 0.0, y: 0.0 },
+                    size: CGSize {
+                        width: 0.0,
+                        height: 0.0,
+                    },
+                };
+                let area: id = msg_send![class!(NSTrackingArea), alloc];
+                let area: id =
+                    msg_send![area, initWithRect:rect options:options owner:this userInfo:nil];
+                let () = msg_send![this, addTrackingArea: area];
             }
         }
 
@@ -355,57 +483,30 @@ fn make_tray_target_class() -> *const Class {
             }
         }
 
-        unsafe fn on_tray_click(this: &mut Object, event: id, click_event: ClickType) {
-            const UTF8_ENCODING: usize = 4;
+        fn on_tray_click(this: &mut Object, button: MouseButton) {
+            unsafe {
+                let status_item = *this.get_ivar::<id>(TRAY_STATUS_ITEM);
+                let ns_button: id = msg_send![status_item, button];
 
-            let id_ns_str = *this.get_ivar::<id>(TRAY_ID);
-            let bytes: *const std::ffi::c_char = msg_send![id_ns_str, UTF8String];
-            let len = msg_send![id_ns_str, lengthOfBytesUsingEncoding: UTF8_ENCODING];
-            let bytes = std::slice::from_raw_parts(bytes as *const u8, len);
-            let id_str = std::str::from_utf8_unchecked(bytes);
-
-            // icon position & size
-            let window: id = msg_send![event, window];
-            let icon_rect = get_tray_rect(window);
-
-            // cursor position
-            let mouse_location: NSPoint = msg_send![class!(NSEvent), mouseLocation];
-            let scale_factor = unsafe { NSWindow::backingScaleFactor(window) };
-
-            let event = TrayIconEvent {
-                id: TrayIconId(id_str.to_string()),
-                position: crate::dpi::LogicalPosition::new(
-                    mouse_location.x,
-                    flip_window_screen_coordinates(mouse_location.y),
-                )
-                .to_physical(scale_factor),
-                icon_rect,
-                click_type: click_event,
-            };
-
-            TrayIconEvent::send(event);
-
-            let status_item = *this.get_ivar::<id>(TRAY_STATUS_ITEM);
-            let button: id = msg_send![status_item, button];
-
-            let menu_on_left_click = *this.get_ivar::<bool>(TRAY_MENU_ON_LEFT_CLICK);
-            if click_event == ClickType::Right
-                || (menu_on_left_click && click_event == ClickType::Left)
-            {
-                let menu = *this.get_ivar::<id>(TRAY_MENU);
-                let has_items = if menu == nil {
-                    false
+                let menu_on_left_click = *this.get_ivar::<bool>(TRAY_MENU_ON_LEFT_CLICK);
+                if button == MouseButton::Right
+                    || (menu_on_left_click && button == MouseButton::Left)
+                {
+                    let menu = *this.get_ivar::<id>(TRAY_MENU);
+                    let has_items = if menu == nil {
+                        false
+                    } else {
+                        let num: NSInteger = msg_send![menu, numberOfItems];
+                        num > 0
+                    };
+                    if has_items {
+                        let _: () = msg_send![ns_button, performClick: nil];
+                    } else {
+                        let _: () = msg_send![ns_button, highlight: YES];
+                    }
                 } else {
-                    let num: NSInteger = msg_send![menu, numberOfItems];
-                    num > 0
-                };
-                if has_items {
-                    let _: () = msg_send![button, performClick: nil];
-                } else {
-                    let _: () = msg_send![button, highlight: YES];
+                    let _: () = msg_send![ns_button, highlight: YES];
                 }
-            } else {
-                let _: () = msg_send![button, highlight: YES];
             }
         }
 
@@ -428,6 +529,81 @@ fn get_tray_rect(window: id) -> Rect {
         )
         .to_physical(scale_factor),
     }
+}
+
+fn send_mouse_event(
+    this: &Object,
+    event: id,
+    mouse_event_type: MouseEventType,
+    click_event: Option<MouseClickEvent>,
+) {
+    unsafe {
+        const UTF8_ENCODING: usize = 4;
+
+        let id_ns_str = *this.get_ivar::<id>(TRAY_ID);
+        let bytes: *const std::ffi::c_char = msg_send![id_ns_str, UTF8String];
+        let len = msg_send![id_ns_str, lengthOfBytesUsingEncoding: UTF8_ENCODING];
+        let bytes = std::slice::from_raw_parts(bytes as *const u8, len);
+        let id_str = std::str::from_utf8_unchecked(bytes);
+        let tray_id = TrayIconId(id_str.to_string());
+
+        // icon position & size
+        let window: id = msg_send![event, window];
+        let icon_rect = get_tray_rect(window);
+
+        // cursor position
+        let mouse_location: NSPoint = msg_send![class!(NSEvent), mouseLocation];
+        let scale_factor = NSWindow::backingScaleFactor(window);
+        let cursor_position = crate::dpi::LogicalPosition::new(
+            mouse_location.x,
+            flip_window_screen_coordinates(mouse_location.y),
+        )
+        .to_physical(scale_factor);
+
+        let event = match mouse_event_type {
+            MouseEventType::Click => {
+                let click_event = click_event.unwrap();
+                TrayIconEvent::Click {
+                    id: tray_id,
+                    position: cursor_position,
+                    rect: icon_rect,
+                    button: click_event.button,
+                    button_state: click_event.state,
+                }
+            }
+            MouseEventType::Enter => TrayIconEvent::Enter {
+                id: tray_id,
+                position: cursor_position,
+                rect: icon_rect,
+            },
+            MouseEventType::Leave => TrayIconEvent::Leave {
+                id: tray_id,
+                position: cursor_position,
+                rect: icon_rect,
+            },
+            MouseEventType::Move => TrayIconEvent::Move {
+                id: tray_id,
+                position: cursor_position,
+                rect: icon_rect,
+            },
+        };
+
+        TrayIconEvent::send(event);
+    }
+}
+
+#[derive(Debug)]
+enum MouseEventType {
+    Click,
+    Enter,
+    Leave,
+    Move,
+}
+
+#[derive(Debug)]
+struct MouseClickEvent {
+    button: MouseButton,
+    state: MouseButtonState,
 }
 
 /// Core graphics screen coordinates are relative to the top-left corner of

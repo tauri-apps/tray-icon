@@ -10,50 +10,54 @@ use once_cell::sync::Lazy;
 use windows_sys::{
     s,
     Win32::{
-        Foundation::{FALSE, HWND, LPARAM, LRESULT, POINT, RECT, TRUE, WPARAM},
+        Foundation::{FALSE, HWND, LPARAM, LRESULT, POINT, RECT, S_OK, TRUE, WPARAM},
         UI::{
             Shell::{
-                DefSubclassProc, SetWindowSubclass, Shell_NotifyIconGetRect, Shell_NotifyIconW,
-                NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NOTIFYICONDATAW,
-                NOTIFYICONIDENTIFIER,
+                Shell_NotifyIconGetRect, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP,
+                NIM_ADD, NIM_DELETE, NIM_MODIFY, NOTIFYICONDATAW, NOTIFYICONIDENTIFIER,
             },
             WindowsAndMessaging::{
-                CreateWindowExW, DefWindowProcW, DestroyWindow, GetCursorPos, RegisterClassW,
-                RegisterWindowMessageA, SendMessageW, SetForegroundWindow, TrackPopupMenu,
-                CW_USEDEFAULT, HICON, HMENU, TPM_BOTTOMALIGN, TPM_LEFTALIGN, WM_DESTROY,
-                WM_LBUTTONDBLCLK, WM_LBUTTONUP, WM_RBUTTONUP, WNDCLASSW, WS_EX_LAYERED,
-                WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_OVERLAPPED,
+                CreateWindowExW, DefWindowProcW, DestroyWindow, GetCursorPos, KillTimer,
+                RegisterClassW, RegisterWindowMessageA, SendMessageW, SetForegroundWindow,
+                SetTimer, TrackPopupMenu, CREATESTRUCTW, CW_USEDEFAULT, GWL_USERDATA, HICON, HMENU,
+                TPM_BOTTOMALIGN, TPM_LEFTALIGN, WM_CREATE, WM_DESTROY, WM_LBUTTONDOWN,
+                WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE, WM_NCCREATE,
+                WM_RBUTTONDOWN, WM_RBUTTONUP, WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE,
+                WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_OVERLAPPED,
             },
         },
     },
 };
 
 use crate::{
-    icon::Icon, menu, ClickType, Rect, TrayIconAttributes, TrayIconEvent, TrayIconId, COUNTER,
+    dpi::PhysicalPosition, icon::Icon, menu, MouseButton, MouseButtonState, Rect,
+    TrayIconAttributes, TrayIconEvent, TrayIconId, COUNTER,
 };
 
 pub(crate) use self::icon::WinIcon as PlatformIcon;
 
-const TRAY_SUBCLASS_ID: usize = 6001;
 const WM_USER_TRAYICON: u32 = 6002;
 const WM_USER_UPDATE_TRAYMENU: u32 = 6003;
 const WM_USER_UPDATE_TRAYICON: u32 = 6004;
 const WM_USER_SHOW_TRAYICON: u32 = 6005;
 const WM_USER_HIDE_TRAYICON: u32 = 6006;
 const WM_USER_UPDATE_TRAYTOOLTIP: u32 = 6007;
+const WM_USER_LEAVE_TIMER_ID: u32 = 6008;
 
 /// When the taskbar is created, it registers a message with the "TaskbarCreated" string and then broadcasts this message to all top-level windows
 /// When the application receives this message, it should assume that any taskbar icons it added have been removed and add them again.
 static S_U_TASKBAR_RESTART: Lazy<u32> =
     Lazy::new(|| unsafe { RegisterWindowMessageA(s!("TaskbarCreated")) });
 
-struct TrayLoopData {
+struct TrayUserData {
     internal_id: u32,
     id: TrayIconId,
     hwnd: HWND,
     hpopupmenu: Option<HMENU>,
     icon: Option<Icon>,
     tooltip: Option<String>,
+    entered: bool,
+    last_position: Option<PhysicalPosition<f64>>,
 }
 
 pub struct TrayIcon {
@@ -70,23 +74,25 @@ impl TrayIcon {
         unsafe {
             let hinstance = util::get_instance_handle();
 
-            unsafe extern "system" fn call_default_window_proc(
-                hwnd: HWND,
-                msg: u32,
-                wparam: WPARAM,
-                lparam: LPARAM,
-            ) -> LRESULT {
-                DefWindowProcW(hwnd, msg, wparam, lparam)
-            }
-
             let wnd_class = WNDCLASSW {
-                lpfnWndProc: Some(call_default_window_proc),
+                lpfnWndProc: Some(tray_proc),
                 lpszClassName: class_name.as_ptr(),
                 hInstance: hinstance,
                 ..std::mem::zeroed()
             };
 
             RegisterClassW(&wnd_class);
+
+            let traydata = TrayUserData {
+                id,
+                internal_id,
+                hwnd: 0,
+                hpopupmenu: attrs.menu.as_ref().map(|m| m.hpopupmenu()),
+                icon: attrs.icon.clone(),
+                tooltip: attrs.tooltip.clone(),
+                entered: false,
+                last_position: None,
+            };
 
             let hwnd = CreateWindowExW(
                 WS_EX_NOACTIVATE | WS_EX_TRANSPARENT | WS_EX_LAYERED |
@@ -108,7 +114,7 @@ impl TrayIcon {
                 HWND::default(),
                 HMENU::default(),
                 hinstance,
-                std::ptr::null_mut(),
+                Box::into_raw(Box::new(traydata)) as _,
             );
             if hwnd == 0 {
                 return Err(crate::Error::OsError(std::io::Error::last_os_error()));
@@ -123,22 +129,6 @@ impl TrayIcon {
             if let Some(menu) = &attrs.menu {
                 menu.attach_menu_subclass_for_hwnd(hwnd);
             }
-
-            // tray-icon event handler
-            let traydata = TrayLoopData {
-                id,
-                internal_id,
-                hwnd,
-                hpopupmenu: attrs.menu.as_ref().map(|m| m.hpopupmenu()),
-                icon: attrs.icon,
-                tooltip: attrs.tooltip,
-            };
-            SetWindowSubclass(
-                hwnd,
-                Some(tray_subclass_proc),
-                TRAY_SUBCLASS_ID,
-                Box::into_raw(Box::new(traydata)) as _,
-            );
 
             Ok(Self {
                 hwnd,
@@ -251,9 +241,11 @@ impl TrayIcon {
     }
 
     pub fn rect(&self) -> Option<Rect> {
-        let dpi = unsafe { util::hwnd_dpi(self.hwnd) };
-        let scale_factor = util::dpi_to_scale_factor(dpi);
-        Some(get_tray_rect(self.internal_id, self.hwnd, scale_factor))
+        get_tray_rect(self.internal_id, self.hwnd).map(|rect| {
+            let dpi = unsafe { util::hwnd_dpi(self.hwnd) };
+            let scale_factor = util::dpi_to_scale_factor(dpi);
+            Rect::from_win32(rect, scale_factor)
+        })
     }
 }
 
@@ -272,99 +264,211 @@ impl Drop for TrayIcon {
     }
 }
 
-unsafe extern "system" fn tray_subclass_proc(
+unsafe extern "system" fn tray_proc(
     hwnd: HWND,
     msg: u32,
     wparam: WPARAM,
     lparam: LPARAM,
-    _id: usize,
-    subclass_input_ptr: usize,
 ) -> LRESULT {
-    let subclass_input_ptr = subclass_input_ptr as *mut TrayLoopData;
-    let subclass_input = &mut *(subclass_input_ptr);
+    let userdata_ptr = unsafe { util::get_window_long(hwnd, GWL_USERDATA) };
+    let userdata_ptr = match (userdata_ptr, msg) {
+        (0, WM_NCCREATE) => {
+            let createstruct = unsafe { &mut *(lparam as *mut CREATESTRUCTW) };
+            let userdata = unsafe { &mut *(createstruct.lpCreateParams as *mut TrayUserData) };
+            userdata.hwnd = hwnd;
+            util::set_window_long(hwnd, GWL_USERDATA, createstruct.lpCreateParams as _);
+            return DefWindowProcW(hwnd, msg, wparam, lparam);
+        }
+        // Getting here should quite frankly be impossible,
+        // but we'll make window creation fail here just in case.
+        (0, WM_CREATE) => return -1,
+        (_, WM_CREATE) => return DefWindowProcW(hwnd, msg, wparam, lparam),
+        (0, _) => return DefWindowProcW(hwnd, msg, wparam, lparam),
+        _ => userdata_ptr as *mut TrayUserData,
+    };
+
+    let userdata = &mut *(userdata_ptr);
 
     match msg {
         WM_DESTROY => {
-            drop(Box::from_raw(subclass_input_ptr));
+            drop(Box::from_raw(userdata_ptr));
             return 0;
         }
         WM_USER_UPDATE_TRAYMENU => {
             let hpopupmenu = Box::from_raw(wparam as *mut Option<isize>);
-            subclass_input.hpopupmenu = *hpopupmenu;
+            userdata.hpopupmenu = *hpopupmenu;
         }
         WM_USER_UPDATE_TRAYICON => {
             let icon = Box::from_raw(wparam as *mut Option<Icon>);
-            subclass_input.icon = *icon;
+            userdata.icon = *icon;
         }
         WM_USER_SHOW_TRAYICON => {
             register_tray_icon(
-                subclass_input.hwnd,
-                subclass_input.internal_id,
-                &subclass_input
-                    .icon
-                    .as_ref()
-                    .map(|i| i.inner.as_raw_handle()),
-                &subclass_input.tooltip,
+                userdata.hwnd,
+                userdata.internal_id,
+                &userdata.icon.as_ref().map(|i| i.inner.as_raw_handle()),
+                &userdata.tooltip,
             );
         }
         WM_USER_HIDE_TRAYICON => {
-            remove_tray_icon(subclass_input.hwnd, subclass_input.internal_id);
+            remove_tray_icon(userdata.hwnd, userdata.internal_id);
         }
         WM_USER_UPDATE_TRAYTOOLTIP => {
             let tooltip = Box::from_raw(wparam as *mut Option<String>);
-            subclass_input.tooltip = *tooltip;
+            userdata.tooltip = *tooltip;
         }
         _ if msg == *S_U_TASKBAR_RESTART => {
-            remove_tray_icon(subclass_input.hwnd, subclass_input.internal_id);
+            remove_tray_icon(userdata.hwnd, userdata.internal_id);
             register_tray_icon(
-                subclass_input.hwnd,
-                subclass_input.internal_id,
-                &subclass_input
-                    .icon
-                    .as_ref()
-                    .map(|i| i.inner.as_raw_handle()),
-                &subclass_input.tooltip,
+                userdata.hwnd,
+                userdata.internal_id,
+                &userdata.icon.as_ref().map(|i| i.inner.as_raw_handle()),
+                &userdata.tooltip,
             );
         }
+
         WM_USER_TRAYICON
             if matches!(
                 lparam as u32,
-                WM_LBUTTONUP | WM_RBUTTONUP | WM_LBUTTONDBLCLK
+                WM_LBUTTONDOWN
+                    | WM_RBUTTONDOWN
+                    | WM_MBUTTONDOWN
+                    | WM_LBUTTONUP
+                    | WM_RBUTTONUP
+                    | WM_MBUTTONUP
+                    | WM_MOUSEMOVE
             ) =>
         {
             let mut cursor = POINT { x: 0, y: 0 };
-            GetCursorPos(&mut cursor as _);
-
-            let x = cursor.x as f64;
-            let y = cursor.y as f64;
-
-            let event = match lparam as u32 {
-                WM_LBUTTONUP => ClickType::Left,
-                WM_RBUTTONUP => ClickType::Right,
-                WM_LBUTTONDBLCLK => ClickType::Double,
-                _ => unreachable!(),
-            };
+            if GetCursorPos(&mut cursor as _) == 0 {
+                return 0;
+            }
 
             let dpi = util::hwnd_dpi(hwnd);
             let scale_factor = util::dpi_to_scale_factor(dpi);
 
-            TrayIconEvent::send(crate::TrayIconEvent {
-                id: subclass_input.id.clone(),
-                position: crate::dpi::LogicalPosition::new(x, y).to_physical(scale_factor),
-                icon_rect: get_tray_rect(subclass_input.internal_id, hwnd, scale_factor),
-                click_type: event,
-            });
+            let id = userdata.id.clone();
+            let position = PhysicalPosition::new(cursor.x as f64, cursor.y as f64);
 
-            if lparam as u32 == WM_RBUTTONUP {
-                if let Some(menu) = subclass_input.hpopupmenu {
+            let rect = match get_tray_rect(userdata.internal_id, hwnd) {
+                Some(rect) => Rect::from_win32(rect, scale_factor),
+                None => return 0,
+            };
+
+            let event = match lparam as u32 {
+                WM_LBUTTONDOWN => TrayIconEvent::Click {
+                    id,
+                    rect,
+                    position,
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Down,
+                },
+                WM_RBUTTONDOWN => TrayIconEvent::Click {
+                    id,
+                    rect,
+                    position,
+                    button: MouseButton::Right,
+                    button_state: MouseButtonState::Down,
+                },
+                WM_MBUTTONDOWN => TrayIconEvent::Click {
+                    id,
+                    rect,
+                    position,
+                    button: MouseButton::Middle,
+                    button_state: MouseButtonState::Down,
+                },
+                WM_LBUTTONUP => TrayIconEvent::Click {
+                    id,
+                    rect,
+                    position,
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                },
+                WM_RBUTTONUP => TrayIconEvent::Click {
+                    id,
+                    rect,
+                    position,
+                    button: MouseButton::Right,
+                    button_state: MouseButtonState::Up,
+                },
+                WM_MBUTTONUP => TrayIconEvent::Click {
+                    id,
+                    rect,
+                    position,
+                    button: MouseButton::Middle,
+                    button_state: MouseButtonState::Up,
+                },
+
+                WM_MOUSEMOVE if !userdata.entered => {
+                    userdata.entered = true;
+                    TrayIconEvent::Enter { id, rect, position }
+                }
+                WM_MOUSEMOVE if userdata.entered => {
+                    // handle extra WM_MOUSEMOVE events, ignore if position hasn't changed
+                    let cursor_moved = userdata.last_position != Some(position);
+                    userdata.last_position = Some(position);
+                    if cursor_moved {
+                        // Set or update existing timer, where we check if cursor left
+                        SetTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _, 15, Some(tray_timer_proc));
+
+                        TrayIconEvent::Move { id, rect, position }
+                    } else {
+                        return 0;
+                    }
+                }
+
+                _ => unreachable!(),
+            };
+
+            TrayIconEvent::send(event);
+
+            if lparam as u32 == WM_RBUTTONDOWN {
+                if let Some(menu) = userdata.hpopupmenu {
                     show_tray_menu(hwnd, menu, cursor.x, cursor.y);
                 }
             }
         }
+
+        WM_TIMER if wparam as u32 == WM_USER_LEAVE_TIMER_ID => {
+            if let Some(position) = userdata.last_position.take() {
+                let mut cursor = POINT { x: 0, y: 0 };
+                if GetCursorPos(&mut cursor as _) == 0 {
+                    return 0;
+                }
+
+                let rect = match get_tray_rect(userdata.internal_id, hwnd) {
+                    Some(r) => r,
+                    None => return 0,
+                };
+
+                let in_x = (rect.left..rect.right).contains(&cursor.x);
+                let in_y = (rect.top..rect.bottom).contains(&cursor.y);
+
+                if !in_x || !in_y {
+                    let dpi = util::hwnd_dpi(hwnd);
+                    let scale_factor = util::dpi_to_scale_factor(dpi);
+
+                    KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
+
+                    TrayIconEvent::send(TrayIconEvent::Leave {
+                        id: userdata.id.clone(),
+                        rect: Rect::from_win32(rect, scale_factor),
+                        position,
+                    });
+                }
+            }
+
+            return 0;
+        }
+
         _ => {}
     }
 
-    DefSubclassProc(hwnd, msg, wparam, lparam)
+    DefWindowProcW(hwnd, msg, wparam, lparam)
+}
+
+unsafe extern "system" fn tray_timer_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: u32) {
+    tray_proc(hwnd, msg, wparam, lparam as _);
 }
 
 #[inline]
@@ -437,7 +541,7 @@ unsafe fn remove_tray_icon(hwnd: HWND, id: u32) {
 }
 
 #[inline]
-fn get_tray_rect(id: u32, hwnd: HWND, scale_factor: f64) -> Rect {
+fn get_tray_rect(id: u32, hwnd: HWND) -> Option<RECT> {
     let nid = NOTIFYICONIDENTIFIER {
         hWnd: hwnd,
         cbSize: std::mem::size_of::<NOTIFYICONIDENTIFIER>() as _,
@@ -445,21 +549,29 @@ fn get_tray_rect(id: u32, hwnd: HWND, scale_factor: f64) -> Rect {
         ..unsafe { std::mem::zeroed() }
     };
 
-    let mut icon_rect = RECT {
+    let mut rect = RECT {
         left: 0,
         bottom: 0,
         right: 0,
         top: 0,
     };
-    unsafe { Shell_NotifyIconGetRect(&nid, &mut icon_rect) };
+    if unsafe { Shell_NotifyIconGetRect(&nid, &mut rect) } == S_OK {
+        Some(rect)
+    } else {
+        None
+    }
+}
 
-    Rect {
-        position: crate::dpi::LogicalPosition::new(icon_rect.left, icon_rect.top)
+impl Rect {
+    fn from_win32(rect: RECT, scale_factor: f64) -> Self {
+        Self {
+            position: crate::dpi::LogicalPosition::new(rect.left, rect.top)
+                .to_physical(scale_factor),
+            size: crate::dpi::LogicalSize::new(
+                rect.right.saturating_sub(rect.left),
+                rect.bottom.saturating_sub(rect.top),
+            )
             .to_physical(scale_factor),
-        size: crate::dpi::LogicalSize::new(
-            icon_rect.right.saturating_sub(icon_rect.left),
-            icon_rect.bottom.saturating_sub(icon_rect.top),
-        )
-        .to_physical(scale_factor),
+        }
     }
 }

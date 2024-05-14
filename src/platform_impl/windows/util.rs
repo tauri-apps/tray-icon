@@ -15,7 +15,7 @@ use windows_sys::{
         System::LibraryLoader::{GetProcAddress, LoadLibraryW},
         UI::{
             HiDpi::{MDT_EFFECTIVE_DPI, MONITOR_DPI_TYPE},
-            WindowsAndMessaging::{IsProcessDPIAware, ACCEL},
+            WindowsAndMessaging::{IsProcessDPIAware, ACCEL, WINDOW_LONG_PTR_INDEX},
         },
     },
 };
@@ -145,4 +145,31 @@ pub unsafe fn hwnd_dpi(hwnd: HWND) -> u32 {
             BASE_DPI
         }
     }
+}
+
+#[inline(always)]
+pub unsafe fn get_window_long(hwnd: HWND, nindex: WINDOW_LONG_PTR_INDEX) -> isize {
+    #[cfg(target_pointer_width = "64")]
+    return unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetWindowLongPtrW(hwnd, nindex) };
+    #[cfg(target_pointer_width = "32")]
+    return unsafe {
+        windows_sys::Win32::UI::WindowsAndMessaging::GetWindowLongW(hwnd, nindex) as isize
+    };
+}
+
+#[inline(always)]
+pub unsafe fn set_window_long(
+    hwnd: HWND,
+    nindex: WINDOW_LONG_PTR_INDEX,
+    dwnewlong: isize,
+) -> isize {
+    #[cfg(target_pointer_width = "64")]
+    return unsafe {
+        windows_sys::Win32::UI::WindowsAndMessaging::SetWindowLongPtrW(hwnd, nindex, dwnewlong)
+    };
+    #[cfg(target_pointer_width = "32")]
+    return unsafe {
+        windows_sys::Win32::UI::WindowsAndMessaging::SetWindowLongW(hwnd, nindex, dwnewlong as i32)
+            as isize
+    };
 }

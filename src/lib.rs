@@ -409,30 +409,72 @@ impl TrayIcon {
 ///
 /// ## Platform-specific:
 ///
-/// - **Linux**: Unsupported. The event is not emmited even though the icon is shown.
-/// However, The icon will still show a context menu on right click.
-#[derive(Debug, Clone, Default)]
+/// - **Linux**: Unsupported. The event is not emmited even though the icon is shown
+/// and will still show a context menu on right click.
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct TrayIconEvent {
-    /// Id of the tray icon which triggered this event.
-    pub id: TrayIconId,
-    /// Physical Position of the click the triggered this event.
-    pub position: dpi::PhysicalPosition<f64>,
-    /// Position and size of the tray icon
-    pub icon_rect: Rect,
-    /// The click type that triggered this event.
-    pub click_type: ClickType,
+#[non_exhaustive]
+pub enum TrayIconEvent {
+    Click {
+        /// Id of the tray icon which triggered this event.
+        id: TrayIconId,
+        /// Physical Position of this event.
+        position: dpi::PhysicalPosition<f64>,
+        /// Position and size of the tray icon
+        icon_rect: Rect,
+        /// Mouse button that triggered this event.
+        button: MouseButton,
+        /// Mouse button state when this event was triggered.
+        button_state: MouseButtonState,
+    },
+    Enter {
+        /// Id of the tray icon which triggered this event.
+        id: TrayIconId,
+        /// Physical Position of this event.
+        position: dpi::PhysicalPosition<f64>,
+        /// Position and size of the tray icon
+        icon_rect: Rect,
+    },
+    Move {
+        /// Id of the tray icon which triggered this event.
+        id: TrayIconId,
+        /// Physical Position of this event.
+        position: dpi::PhysicalPosition<f64>,
+        /// Position and size of the tray icon
+        icon_rect: Rect,
+    },
+    Leave {
+        /// Id of the tray icon which triggered this event.
+        id: TrayIconId,
+        /// Physical Position of this event.
+        position: dpi::PhysicalPosition<f64>,
+        /// Position and size of the tray icon
+        icon_rect: Rect,
+    },
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum ClickType {
-    Left,
-    Right,
-    Double,
+pub enum MouseButtonState {
+    Up,
+    Down,
 }
 
-impl Default for ClickType {
+impl Default for MouseButtonState {
+    fn default() -> Self {
+        Self::Up
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum MouseButton {
+    Left,
+    Right,
+    Middle,
+}
+
+impl Default for MouseButton {
     fn default() -> Self {
         Self::Left
     }
@@ -465,7 +507,12 @@ static TRAY_EVENT_HANDLER: OnceCell<Option<TrayIconEventHandler>> = OnceCell::ne
 impl TrayIconEvent {
     /// Returns the id of the tray icon which triggered this event.
     pub fn id(&self) -> &TrayIconId {
-        &self.id
+        match self {
+            TrayIconEvent::Click { id, .. } => id,
+            TrayIconEvent::Enter { id, .. } => id,
+            TrayIconEvent::Move { id, .. } => id,
+            TrayIconEvent::Leave { id, .. } => id,
+        }
     }
 
     /// Gets a reference to the event channel's [`TrayIconEventReceiver`]

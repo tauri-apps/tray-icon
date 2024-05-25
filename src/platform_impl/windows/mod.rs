@@ -241,11 +241,7 @@ impl TrayIcon {
     }
 
     pub fn rect(&self) -> Option<Rect> {
-        get_tray_rect(self.internal_id, self.hwnd).map(|rect| {
-            let dpi = unsafe { util::hwnd_dpi(self.hwnd) };
-            let scale_factor = util::dpi_to_scale_factor(dpi);
-            Rect::from_win32(rect, scale_factor)
-        })
+        get_tray_rect(self.internal_id, self.hwnd).map(Into::into)
     }
 }
 
@@ -344,14 +340,11 @@ unsafe extern "system" fn tray_proc(
                 return 0;
             }
 
-            let dpi = util::hwnd_dpi(hwnd);
-            let scale_factor = util::dpi_to_scale_factor(dpi);
-
             let id = userdata.id.clone();
             let position = PhysicalPosition::new(cursor.x as f64, cursor.y as f64);
 
             let rect = match get_tray_rect(userdata.internal_id, hwnd) {
-                Some(rect) => Rect::from_win32(rect, scale_factor),
+                Some(rect) => Rect::from(rect),
                 None => return 0,
             };
 
@@ -445,14 +438,11 @@ unsafe extern "system" fn tray_proc(
                 let in_y = (rect.top..rect.bottom).contains(&cursor.y);
 
                 if !in_x || !in_y {
-                    let dpi = util::hwnd_dpi(hwnd);
-                    let scale_factor = util::dpi_to_scale_factor(dpi);
-
                     KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
 
                     TrayIconEvent::send(TrayIconEvent::Leave {
                         id: userdata.id.clone(),
-                        rect: Rect::from_win32(rect, scale_factor),
+                        rect: rect.into(),
                         position,
                     });
                 }
@@ -562,16 +552,14 @@ fn get_tray_rect(id: u32, hwnd: HWND) -> Option<RECT> {
     }
 }
 
-impl Rect {
-    fn from_win32(rect: RECT, scale_factor: f64) -> Self {
+impl From<RECT> for Rect {
+    fn from(rect: RECT) -> Self {
         Self {
-            position: crate::dpi::LogicalPosition::new(rect.left, rect.top)
-                .to_physical(scale_factor),
-            size: crate::dpi::LogicalSize::new(
-                rect.right.saturating_sub(rect.left),
-                rect.bottom.saturating_sub(rect.top),
-            )
-            .to_physical(scale_factor),
+            position: crate::dpi::PhysicalPosition::new(rect.left.into(), rect.top.into()),
+            size: crate::dpi::PhysicalSize::new(
+                rect.right.saturating_sub(rect.left) as u32,
+                rect.bottom.saturating_sub(rect.top) as u32,
+            ),
         }
     }
 }

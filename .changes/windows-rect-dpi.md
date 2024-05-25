@@ -2,4 +2,4 @@
 "tray-icon": "patch"
 ---
 
-Fix tray icon rect size scaled by dpi on Windows
+Fix tray icon rect scaled by dpi on Windows

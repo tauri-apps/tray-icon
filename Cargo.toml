@@ -33,7 +33,7 @@ features = [
 
 [target."cfg(target_os = \"linux\")".dependencies]
 libappindicator = "0.9"
-dirs-next = "2.0"
+dirs = "5"
 
 [target."cfg(target_os = \"linux\")".dev-dependencies]
 gtk = "0.18"

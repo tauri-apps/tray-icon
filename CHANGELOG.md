@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.14.3]
+
+- [`e257d6b`](https://www.github.com/tauri-apps/tray-icon/commit/e257d6bf510b34707d48964a2914ee5c91b13570) ([#169](https://www.github.com/tauri-apps/tray-icon/pull/169)) On Windows, fix `Enter` event emitted only once and never emitted again.
+
 ## \[0.14.2]
 
 - [`f1f3adb`](https://www.github.com/tauri-apps/tray-icon/commit/f1f3adb5ec726335226ab8ec1d8c6c41012cb9c5)([#166](https://www.github.com/tauri-apps/tray-icon/pull/166)) Switch from `dirs_next` to `dirs` as `dirs_next` is now unmaintained while `dirs` is

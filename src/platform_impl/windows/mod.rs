@@ -439,6 +439,7 @@ unsafe extern "system" fn tray_proc(
 
                 if !in_x || !in_y {
                     KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
+                    userdata.entered = false;
 
                     TrayIconEvent::send(TrayIconEvent::Leave {
                         id: userdata.id.clone(),

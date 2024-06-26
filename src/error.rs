@@ -13,6 +13,8 @@ pub enum Error {
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     #[error(transparent)]
     PngEncodingError(#[from] png::EncodingError),
+    #[error("not on the main thread")]
+    NotMainThread,
 }
 
 /// Convenient type alias of Result type for tray-icon.

@@ -6,13 +6,13 @@ description = "Create tray icons for desktop applications"
 homepage = "https://github.com/tauri-apps/tray-icon"
 repository = "https://github.com/tauri-apps/tray-icon"
 license = "MIT OR Apache-2.0"
-categories = [ "gui" ]
+categories = ["gui"]
 
 [features]
-default = [ "libxdo" ]
-libxdo = [ "muda/libxdo" ]
-serde = [ "muda/serde", "dep:serde" ]
-common-controls-v6 = [ "muda/common-controls-v6" ]
+default = ["libxdo"]
+libxdo = ["muda/libxdo"]
+serde = ["muda/serde", "dep:serde"]
+common-controls-v6 = ["muda/common-controls-v6"]
 
 [dependencies]
 muda = { version = "0.13", default-features = false }
@@ -28,7 +28,7 @@ features = [
   "Win32_Foundation",
   "Win32_System_SystemServices",
   "Win32_Graphics_Gdi",
-  "Win32_UI_Shell"
+  "Win32_UI_Shell",
 ]
 
 [target."cfg(target_os = \"linux\")".dependencies]
@@ -39,8 +39,31 @@ dirs = "5"
 gtk = "0.18"
 
 [target."cfg(target_os = \"macos\")".dependencies]
-cocoa = "0.25"
-objc = "0.2"
+objc2 = "0.5.2"
+objc2-foundation = { version = "0.2.2", features = [
+  "block2",
+  "NSArray",
+  "NSData",
+  "NSEnumerator",
+  "NSGeometry",
+  "NSString",
+  "NSThread",
+] }
+objc2-app-kit = { version = "0.2.2", features = [
+  "NSButton",
+  "NSCell",
+  "NSControl",
+  "NSEvent",
+  "NSImage",
+  "NSMenu",
+  "NSResponder",
+  "NSStatusBar",
+  "NSStatusBarButton",
+  "NSStatusItem",
+  "NSTrackingArea",
+  "NSView",
+  "NSWindow",
+] }
 core-graphics = "0.23"
 
 [target."cfg(target_os = \"macos\")".dev-dependencies]

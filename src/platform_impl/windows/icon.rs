@@ -37,7 +37,7 @@ impl RgbaIcon {
         assert_eq!(and_mask.len(), pixel_count);
         let handle = unsafe {
             CreateIcon(
-                0,
+                std::ptr::null_mut(),
                 self.width as i32,
                 self.height as i32,
                 1,
@@ -46,7 +46,7 @@ impl RgbaIcon {
                 rgba.as_ptr(),
             )
         };
-        if handle != 0 {
+        if !handle.is_null() {
             Ok(WinIcon::from_handle(handle))
         } else {
             Err(BadIcon::OsError(io::Error::last_os_error()))
@@ -78,6 +78,7 @@ impl WinIcon {
 
     pub(crate) fn from_handle(handle: HICON) -> Self {
         Self {
+            #[allow(clippy::arc_with_non_send_sync)]
             inner: Arc::new(RaiiIcon { handle }),
         }
     }
@@ -93,7 +94,7 @@ impl WinIcon {
 
         let handle = unsafe {
             LoadImageW(
-                0,
+                std::ptr::null_mut(),
                 wide_path.as_ptr(),
                 IMAGE_ICON,
                 width as i32,
@@ -101,7 +102,7 @@ impl WinIcon {
                 LR_DEFAULTSIZE | LR_LOADFROMFILE,
             )
         };
-        if handle != 0 {
+        if !handle.is_null() {
             Ok(WinIcon::from_handle(handle as HICON))
         } else {
             Err(BadIcon::OsError(io::Error::last_os_error()))
@@ -121,7 +122,7 @@ impl WinIcon {
                 LR_DEFAULTSIZE,
             )
         };
-        if handle != 0 {
+        if !handle.is_null() {
             Ok(WinIcon::from_handle(handle as HICON))
         } else {
             Err(BadIcon::OsError(io::Error::last_os_error()))

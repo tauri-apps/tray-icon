@@ -86,8 +86,8 @@ impl TrayIcon {
             let traydata = TrayUserData {
                 id,
                 internal_id,
-                hwnd: 0,
-                hpopupmenu: attrs.menu.as_ref().map(|m| m.hpopupmenu()),
+                hwnd: std::ptr::null_mut(),
+                hpopupmenu: attrs.menu.as_ref().map(|m| m.hpopupmenu() as _),
                 icon: attrs.icon.clone(),
                 tooltip: attrs.tooltip.clone(),
                 entered: false,
@@ -111,12 +111,12 @@ impl TrayIcon {
                 0,
                 CW_USEDEFAULT,
                 0,
-                HWND::default(),
-                HMENU::default(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
                 hinstance,
                 Box::into_raw(Box::new(traydata)) as _,
             );
-            if hwnd == 0 {
+            if hwnd.is_null() {
                 return Err(crate::Error::OsError(std::io::Error::last_os_error()));
             }
 
@@ -127,7 +127,7 @@ impl TrayIcon {
             }
 
             if let Some(menu) = &attrs.menu {
-                menu.attach_menu_subclass_for_hwnd(hwnd);
+                menu.attach_menu_subclass_for_hwnd(hwnd as _);
             }
 
             Ok(Self {
@@ -169,11 +169,11 @@ impl TrayIcon {
 
     pub fn set_menu(&mut self, menu: Option<Box<dyn menu::ContextMenu>>) {
         if let Some(menu) = &self.menu {
-            menu.detach_menu_subclass_from_hwnd(self.hwnd);
+            menu.detach_menu_subclass_from_hwnd(self.hwnd as _);
         }
 
         if let Some(menu) = &menu {
-            menu.attach_menu_subclass_for_hwnd(self.hwnd);
+            menu.attach_menu_subclass_for_hwnd(self.hwnd as _);
         }
 
         unsafe {
@@ -251,7 +251,7 @@ impl Drop for TrayIcon {
             remove_tray_icon(self.hwnd, self.internal_id);
 
             if let Some(menu) = &self.menu {
-                menu.detach_menu_subclass_from_hwnd(self.hwnd);
+                menu.detach_menu_subclass_from_hwnd(self.hwnd as _);
             }
 
             // destroy the hidden window used by the tray
@@ -292,7 +292,7 @@ unsafe extern "system" fn tray_proc(
         }
         WM_USER_UPDATE_TRAYMENU => {
             let hpopupmenu = Box::from_raw(wparam as *mut Option<isize>);
-            userdata.hpopupmenu = *hpopupmenu;
+            userdata.hpopupmenu = (*hpopupmenu).map(|h| h as *mut _);
         }
         WM_USER_UPDATE_TRAYICON => {
             let icon = Box::from_raw(wparam as *mut Option<Icon>);
@@ -486,7 +486,7 @@ unsafe fn register_tray_icon(
     hicon: &Option<HICON>,
     tooltip: &Option<String>,
 ) -> bool {
-    let mut h_icon = 0;
+    let mut h_icon = std::ptr::null_mut();
     let mut flags = NIF_MESSAGE;
     let mut sz_tip: [u16; 128] = [0; 128];
 

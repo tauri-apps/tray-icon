@@ -155,10 +155,10 @@ pub struct TrayIconAttributes {
     /// ## Platform-specific
     ///
     /// - **Linux:** The title will not be shown unless there is an icon
-    /// as well.  The title is useful for numerical and other frequently
-    /// updated information.  In general, it shouldn't be shown unless a
-    /// user requests it as it can take up a significant amount of space
-    /// on the user's panel.  This may not be shown in all visualizations.
+    ///   as well.  The title is useful for numerical and other frequently
+    ///   updated information.  In general, it shouldn't be shown unless a
+    ///   user requests it as it can take up a significant amount of space
+    ///   on the user's panel.  This may not be shown in all visualizations.
     /// - **Windows:** Unsupported.
     pub title: Option<String>,
 }
@@ -216,7 +216,7 @@ impl TrayIconBuilder {
     /// ## Platform-specific:
     ///
     /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
-    /// Setting an empty [`Menu`](crate::menu::Menu) is enough.
+    ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub fn with_icon(mut self, icon: Icon) -> Self {
         self.attrs.icon = Some(icon);
         self
@@ -237,10 +237,10 @@ impl TrayIconBuilder {
     /// ## Platform-specific
     ///
     /// - **Linux:** The title will not be shown unless there is an icon
-    /// as well.  The title is useful for numerical and other frequently
-    /// updated information.  In general, it shouldn't be shown unless a
-    /// user requests it as it can take up a significant amount of space
-    /// on the user's panel.  This may not be shown in all visualizations.
+    ///   as well.  The title is useful for numerical and other frequently
+    ///   updated information.  In general, it shouldn't be shown unless a
+    ///   user requests it as it can take up a significant amount of space
+    ///   on the user's panel.  This may not be shown in all visualizations.
     /// - **Windows:** Unsupported.
     pub fn with_title<S: AsRef<str>>(mut self, title: S) -> Self {
         self.attrs.title.replace(title.as_ref().to_string());
@@ -295,7 +295,7 @@ impl TrayIcon {
     /// ## Platform-specific:
     ///
     /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
-    /// Setting an empty [`Menu`](crate::menu::Menu) is enough.
+    ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub fn new(attrs: TrayIconAttributes) -> Result<Self> {
         let id = TrayIconId(COUNTER.next().to_string());
         Ok(Self {
@@ -354,10 +354,10 @@ impl TrayIcon {
     /// ## Platform-specific:
     ///
     /// - **Linux:** The title will not be shown unless there is an icon
-    /// as well.  The title is useful for numerical and other frequently
-    /// updated information.  In general, it shouldn't be shown unless a
-    /// user requests it as it can take up a significant amount of space
-    /// on the user's panel.  This may not be shown in all visualizations.
+    ///   as well.  The title is useful for numerical and other frequently
+    ///   updated information.  In general, it shouldn't be shown unless a
+    ///   user requests it as it can take up a significant amount of space
+    ///   on the user's panel.  This may not be shown in all visualizations.
     /// - **Windows:** Unsupported
     pub fn set_title<S: AsRef<str>>(&self, title: Option<S>) {
         self.tray.borrow_mut().set_title(title)
@@ -410,7 +410,7 @@ impl TrayIcon {
 /// ## Platform-specific:
 ///
 /// - **Linux**: Unsupported. The event is not emmited even though the icon is shown
-/// and will still show a context menu on right click.
+///   and will still show a context menu on right click.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[non_exhaustive]

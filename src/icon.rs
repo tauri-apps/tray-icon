@@ -178,7 +178,7 @@ impl Icon {
     /// Create an icon from an HICON
     #[cfg(windows)]
     pub fn from_handle(handle: isize) -> Self {
-        let win_icon = PlatformIcon::from_handle(handle);
+        let win_icon = PlatformIcon::from_handle(handle as _);
         Icon { inner: win_icon }
     }
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.15.1]
+
+- [`5a381ff`](https://www.github.com/tauri-apps/tray-icon/commit/5a381ffd3d0f8ab8b1a88a95e557c5837c17a1b7) Update `core-foundation` crate to `0.10` and `core-graphics` to `0.24`
+
 ## \[0.15.0]
 
 - [`d407869`](https://www.github.com/tauri-apps/tray-icon/commit/d4078696edba67b0ab42cef67e6a421a0332c96f) ([#172](https://www.github.com/tauri-apps/tray-icon/pull/172)) Added a new variant `NotMainThread` to the `Error` enum, which is emitted on macOS when trying to create tray icons from a thread that is not the main thread.

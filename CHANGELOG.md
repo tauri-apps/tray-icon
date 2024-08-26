@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.15.2]
+
+- [`a1303c3`](https://www.github.com/tauri-apps/tray-icon/commit/a1303c39020befc977d818d7cce1a039d416ccd2) ([#185](https://www.github.com/tauri-apps/tray-icon/pull/185) by [@amrbashir](https://www.github.com/tauri-apps/tray-icon/../../amrbashir)) On Windows, Add and emit `DoubleClick` variant for `TrayIconEvent`.
+
 ## \[0.15.1]
 
 - [`5a381ff`](https://www.github.com/tauri-apps/tray-icon/commit/5a381ffd3d0f8ab8b1a88a95e557c5837c17a1b7) Update `core-foundation` crate to `0.10` and `core-graphics` to `0.24`

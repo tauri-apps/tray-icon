@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.16.0]
+
+- [`20819e4`](https://www.github.com/tauri-apps/tray-icon/commit/20819e445e23f1d3749d03534eba9641404a8db6) ([#187](https://www.github.com/tauri-apps/tray-icon/pull/187) by [@amrbashir](https://www.github.com/tauri-apps/tray-icon/../../amrbashir)) Removed `button_state` field in `TrayIconEvent::DoubleClick` variant.
+
 ## \[0.15.2]
 
 - [`a1303c3`](https://www.github.com/tauri-apps/tray-icon/commit/a1303c39020befc977d818d7cce1a039d416ccd2) ([#185](https://www.github.com/tauri-apps/tray-icon/pull/185) by [@amrbashir](https://www.github.com/tauri-apps/tray-icon/../../amrbashir)) On Windows, Add and emit `DoubleClick` variant for `TrayIconEvent`.

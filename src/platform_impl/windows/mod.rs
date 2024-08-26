@@ -20,10 +20,11 @@ use windows_sys::{
                 CreateWindowExW, DefWindowProcW, DestroyWindow, GetCursorPos, KillTimer,
                 RegisterClassW, RegisterWindowMessageA, SendMessageW, SetForegroundWindow,
                 SetTimer, TrackPopupMenu, CREATESTRUCTW, CW_USEDEFAULT, GWL_USERDATA, HICON, HMENU,
-                TPM_BOTTOMALIGN, TPM_LEFTALIGN, WM_CREATE, WM_DESTROY, WM_LBUTTONDOWN,
-                WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE, WM_NCCREATE,
-                WM_RBUTTONDOWN, WM_RBUTTONUP, WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE,
-                WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_OVERLAPPED,
+                TPM_BOTTOMALIGN, TPM_LEFTALIGN, WM_CREATE, WM_DESTROY, WM_LBUTTONDBLCLK,
+                WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP,
+                WM_MOUSEMOVE, WM_NCCREATE, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP,
+                WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+                WS_EX_TRANSPARENT, WS_OVERLAPPED,
             },
         },
     },
@@ -332,6 +333,9 @@ unsafe extern "system" fn tray_proc(
                     | WM_LBUTTONUP
                     | WM_RBUTTONUP
                     | WM_MBUTTONUP
+                    | WM_LBUTTONDBLCLK
+                    | WM_RBUTTONDBLCLK
+                    | WM_MBUTTONDBLCLK
                     | WM_MOUSEMOVE
             ) =>
         {
@@ -391,7 +395,27 @@ unsafe extern "system" fn tray_proc(
                     button: MouseButton::Middle,
                     button_state: MouseButtonState::Up,
                 },
-
+                WM_LBUTTONDBLCLK => TrayIconEvent::DoubleClick {
+                    id,
+                    rect,
+                    position,
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                },
+                WM_RBUTTONDBLCLK => TrayIconEvent::DoubleClick {
+                    id,
+                    rect,
+                    position,
+                    button: MouseButton::Right,
+                    button_state: MouseButtonState::Up,
+                },
+                WM_MBUTTONDBLCLK => TrayIconEvent::DoubleClick {
+                    id,
+                    rect,
+                    position,
+                    button: MouseButton::Middle,
+                    button_state: MouseButtonState::Up,
+                },
                 WM_MOUSEMOVE if !userdata.entered => {
                     userdata.entered = true;
                     TrayIconEvent::Enter { id, rect, position }

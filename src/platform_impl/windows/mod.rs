@@ -400,21 +400,18 @@ unsafe extern "system" fn tray_proc(
                     rect,
                     position,
                     button: MouseButton::Left,
-                    button_state: MouseButtonState::Up,
                 },
                 WM_RBUTTONDBLCLK => TrayIconEvent::DoubleClick {
                     id,
                     rect,
                     position,
                     button: MouseButton::Right,
-                    button_state: MouseButtonState::Up,
                 },
                 WM_MBUTTONDBLCLK => TrayIconEvent::DoubleClick {
                     id,
                     rect,
                     position,
                     button: MouseButton::Middle,
-                    button_state: MouseButtonState::Up,
                 },
                 WM_MOUSEMOVE if !userdata.entered => {
                     userdata.entered = true;

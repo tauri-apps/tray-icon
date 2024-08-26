@@ -438,8 +438,6 @@ pub enum TrayIconEvent {
         rect: Rect,
         /// Mouse button that triggered this event.
         button: MouseButton,
-        /// Mouse button state when this event was triggered.
-        button_state: MouseButtonState,
     },
     /// The mouse entered the tray icon region.
     Enter {

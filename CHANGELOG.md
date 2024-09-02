@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.17.0]
+
+- [`e711c1f`](https://www.github.com/tauri-apps/tray-icon/commit/e711c1f5e6aef3052694ee8da33b2de624093ec8) ([#189](https://www.github.com/tauri-apps/tray-icon/pull/189) by [@htngr](https://www.github.com/tauri-apps/tray-icon/../../htngr)) Implemented `TrayIcon::with_menu_on_left_click` on windows
+
 ## \[0.16.0]
 
 - [`20819e4`](https://www.github.com/tauri-apps/tray-icon/commit/20819e445e23f1d3749d03534eba9641404a8db6) ([#187](https://www.github.com/tauri-apps/tray-icon/pull/187) by [@amrbashir](https://www.github.com/tauri-apps/tray-icon/../../amrbashir)) Removed `button_state` field in `TrayIconEvent::DoubleClick` variant.

@@ -147,7 +147,7 @@ pub struct TrayIconAttributes {
     /// Use the icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
     pub icon_is_template: bool,
 
-    /// Whether to show the tray menu on left click or not, default is `true`. **macOS only**.
+    /// Whether to show the tray menu on left click or not, default is `true`. **macOS & Windows only**.
     pub menu_on_left_click: bool,
 
     /// Tray icon title.

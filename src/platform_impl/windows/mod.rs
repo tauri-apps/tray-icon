@@ -59,6 +59,7 @@ struct TrayUserData {
     tooltip: Option<String>,
     entered: bool,
     last_position: Option<PhysicalPosition<f64>>,
+    menu_on_left_click: bool,
 }
 
 pub struct TrayIcon {
@@ -93,6 +94,7 @@ impl TrayIcon {
                 tooltip: attrs.tooltip.clone(),
                 entered: false,
                 last_position: None,
+                menu_on_left_click: attrs.menu_on_left_click,
             };
 
             let hwnd = CreateWindowExW(
@@ -436,7 +438,9 @@ unsafe extern "system" fn tray_proc(
 
             TrayIconEvent::send(event);
 
-            if lparam as u32 == WM_RBUTTONDOWN {
+            if lparam as u32 == WM_RBUTTONDOWN
+                || (userdata.menu_on_left_click && lparam as u32 == WM_LBUTTONDOWN)
+            {
                 if let Some(menu) = userdata.hpopupmenu {
                     show_tray_menu(hwnd, menu, cursor.x, cursor.y);
                 }

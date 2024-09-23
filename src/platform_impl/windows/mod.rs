@@ -171,12 +171,12 @@ impl TrayIcon {
     }
 
     pub fn set_menu(&mut self, menu: Option<Box<dyn menu::ContextMenu>>) {
+        // Safety: self.hwnd is valid as long as as the TrayIcon is
         if let Some(menu) = &self.menu {
-            menu.detach_menu_subclass_from_hwnd(self.hwnd as _);
+            unsafe { menu.detach_menu_subclass_from_hwnd(self.hwnd as _) };
         }
-
         if let Some(menu) = &menu {
-            menu.attach_menu_subclass_for_hwnd(self.hwnd as _);
+            unsafe { menu.attach_menu_subclass_for_hwnd(self.hwnd as _) };
         }
 
         unsafe {

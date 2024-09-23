@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.18.0]
+
+- [`c63733c`](https://www.github.com/tauri-apps/tray-icon/commit/c63733c45f5fd34bc16c9310cb4f1a063e5e21c7) ([#193](https://www.github.com/tauri-apps/tray-icon/pull/193) by [@amrbashir](https://www.github.com/tauri-apps/tray-icon/../../amrbashir)) Update `muda` crate to `0.15`
+
 ## \[0.17.0]
 
 - [`e711c1f`](https://www.github.com/tauri-apps/tray-icon/commit/e711c1f5e6aef3052694ee8da33b2de624093ec8) ([#189](https://www.github.com/tauri-apps/tray-icon/pull/189) by [@htngr](https://www.github.com/tauri-apps/tray-icon/../../htngr)) Implemented `TrayIcon::with_menu_on_left_click` on windows

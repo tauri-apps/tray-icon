@@ -413,9 +413,11 @@ impl TrayIcon {
 ///   and will still show a context menu on right click.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 #[non_exhaustive]
 pub enum TrayIconEvent {
     /// A click happened on the tray icon.
+    #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
     Click {
         /// Id of the tray icon which triggered this event.
         id: TrayIconId,
@@ -564,5 +566,47 @@ impl TrayIconEvent {
         } else {
             let _ = TRAY_CHANNEL.0.send(event);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn it_serializes() {
+        use super::*;
+        let event = TrayIconEvent::Click {
+            button: MouseButton::Left,
+            button_state: MouseButtonState::Down,
+            id: TrayIconId::new("id"),
+            position: dpi::PhysicalPosition::default(),
+            rect: Rect::default(),
+        };
+
+        let value = serde_json::to_value(&event).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "type": "Click",
+                "button": "Left",
+                "buttonState": "Down",
+                "id": "id",
+                "position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                },
+                "rect": {
+                    "size": {
+                        "width": 0,
+                        "height": 0,
+                    },
+                    "position": {
+                        "x": 0.0,
+                        "y": 0.0,
+                    },
+                }
+            })
+        )
     }
 }

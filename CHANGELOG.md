@@ -1,5 +1,32 @@
 # Changelog
 
+## \[0.19.0]
+
+- [`bf5cec4`](https://www.github.com/tauri-apps/tray-icon/commit/bf5cec4c3242534cb068978bb27e37551bcb63f9) ([#196](https://www.github.com/tauri-apps/tray-icon/pull/196) by [@amrbashir](https://www.github.com/tauri-apps/tray-icon/../../amrbashir)) **Breaking change** Changed `serde` derive implementation for `TrayIconEvent` to use `serde(tag = "type")` and `rename_all = "camelCase"` on variants so the expected JSON serialization would look like this
+
+  ```json
+  {
+    "type": "Click",
+    "button": "Left",
+    "buttonState": "Down",
+    "id": "some id",
+    "position": {
+      "x": 0,
+      "y": 0
+    },
+    "rect": {
+      "size": {
+        "width": 0,
+        "height": 0
+      },
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  }
+  ```
+
 ## \[0.18.0]
 
 - [`c63733c`](https://www.github.com/tauri-apps/tray-icon/commit/c63733c45f5fd34bc16c9310cb4f1a063e5e21c7) ([#193](https://www.github.com/tauri-apps/tray-icon/pull/193) by [@amrbashir](https://www.github.com/tauri-apps/tray-icon/../../amrbashir)) Update `muda` crate to `0.15`

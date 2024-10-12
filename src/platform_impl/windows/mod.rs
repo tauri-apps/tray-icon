@@ -230,8 +230,8 @@ impl TrayIcon {
                 self.hwnd,
                 WM_USER_SHOW_MENU_ON_LEFT_CLICK,
                 enable as usize,
-                0
-             );
+                0,
+            );
         }
     }
 
@@ -339,7 +339,6 @@ unsafe extern "system" fn tray_proc(
         WM_USER_SHOW_MENU_ON_LEFT_CLICK => {
             userdata.menu_on_left_click = wparam != 0;
         }
-        
 
         WM_USER_TRAYICON
             if matches!(

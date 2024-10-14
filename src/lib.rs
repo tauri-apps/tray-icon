@@ -387,7 +387,11 @@ impl TrayIcon {
         let _ = is_template;
     }
 
-    /// Disable or enable showing the tray menu on left click. **macOS and Windows only**.
+    /// Disable or enable showing the tray menu on left click.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
     pub fn set_show_menu_on_left_click(&self, enable: bool) {
         #[cfg(any(target_os = "macos", target_os = "windows"))]
         self.tray.borrow_mut().set_show_menu_on_left_click(enable);

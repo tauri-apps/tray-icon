@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.19.1]
+
+- [`19e67de`](https://www.github.com/tauri-apps/tray-icon/commit/19e67de6ff0b66241fddde507eb82e96781b6c36) ([#199](https://www.github.com/tauri-apps/tray-icon/pull/199) by [@Klemen2](https://www.github.com/tauri-apps/tray-icon/../../Klemen2)) Implemented `TrayIcon::set_show_menu_on_left_click` on windows
+
 ## \[0.19.0]
 
 - [`bf5cec4`](https://www.github.com/tauri-apps/tray-icon/commit/bf5cec4c3242534cb068978bb27e37551bcb63f9) ([#196](https://www.github.com/tauri-apps/tray-icon/pull/196) by [@amrbashir](https://www.github.com/tauri-apps/tray-icon/../../amrbashir)) **Breaking change** Changed `serde` derive implementation for `TrayIconEvent` to use `serde(tag = "type")` and `rename_all = "camelCase"` on variants so the expected JSON serialization would look like this

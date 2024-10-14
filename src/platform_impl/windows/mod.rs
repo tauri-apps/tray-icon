@@ -44,7 +44,7 @@ const WM_USER_SHOW_TRAYICON: u32 = 6005;
 const WM_USER_HIDE_TRAYICON: u32 = 6006;
 const WM_USER_UPDATE_TRAYTOOLTIP: u32 = 6007;
 const WM_USER_LEAVE_TIMER_ID: u32 = 6008;
-
+const WM_USER_SHOW_MENU_ON_LEFT_CLICK: u32 = 6009;
 /// When the taskbar is created, it registers a message with the "TaskbarCreated" string and then broadcasts this message to all top-level windows
 /// When the application receives this message, it should assume that any taskbar icons it added have been removed and add them again.
 static S_U_TASKBAR_RESTART: Lazy<u32> =
@@ -224,6 +224,17 @@ impl TrayIcon {
         Ok(())
     }
 
+    pub fn set_show_menu_on_left_click(&mut self, enable: bool) {
+        unsafe {
+            SendMessageW(
+                self.hwnd,
+                WM_USER_SHOW_MENU_ON_LEFT_CLICK,
+                enable as usize,
+                0,
+            );
+        }
+    }
+
     pub fn set_title<S: AsRef<str>>(&mut self, _title: Option<S>) {}
 
     pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {
@@ -324,6 +335,9 @@ unsafe extern "system" fn tray_proc(
                 &userdata.icon.as_ref().map(|i| i.inner.as_raw_handle()),
                 &userdata.tooltip,
             );
+        }
+        WM_USER_SHOW_MENU_ON_LEFT_CLICK => {
+            userdata.menu_on_left_click = wparam != 0;
         }
 
         WM_USER_TRAYICON

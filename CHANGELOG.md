@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.19.4]
+
+- [`e94976b`](https://www.github.com/tauri-apps/tray-icon/commit/e94976bb48bbe97ac5ab215c6da7c7ca746a5c8a) ([#237](https://www.github.com/tauri-apps/tray-icon/pull/237) by [@renovate](https://www.github.com/tauri-apps/tray-icon/../../renovate)) Updated `muda` to 0.16.0
+
 ## \[0.19.3]
 
 - [`d6fee6f`](https://www.github.com/tauri-apps/tray-icon/commit/d6fee6ff627e6ff08bf8bf9a2880197d0f07271e) ([#226](https://www.github.com/tauri-apps/tray-icon/pull/226) by [@madsmtm](https://www.github.com/tauri-apps/tray-icon/../../madsmtm)) Update `objc2` to v0.6.

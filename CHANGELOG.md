@@ -1,6 +1,6 @@
 # Changelog
 
-## \[0.19.4]
+## \[0.20.0]
 
 - [`e94976b`](https://www.github.com/tauri-apps/tray-icon/commit/e94976bb48bbe97ac5ab215c6da7c7ca746a5c8a) ([#237](https://www.github.com/tauri-apps/tray-icon/pull/237) by [@renovate](https://www.github.com/tauri-apps/tray-icon/../../renovate)) Updated `muda` to 0.16.0
 
@@ -205,7 +205,7 @@
 - [`dd63ef3`](https://www.github.com/tauri-apps/tray-icon/commit/dd63ef3b68c35fc8b8fbc1d59975d8826420ae51) Add `TrayIconEvent::id` method.
 - [`3901519`](https://www.github.com/tauri-apps/tray-icon/commit/3901519a48f76b57174b36ce36c7f803dbfb5536) Update to `muda@0.7`
 - [`13d448a`](https://www.github.com/tauri-apps/tray-icon/commit/13d448a9ee7c013f0cc13391ea498da93e806551)([#55](https://www.github.com/tauri-apps/tray-icon/pull/55)) Implement `Clone` for `TrayIcon`.
-- [`13d448a`](https://www.github.com/tauri-apps/tray-icon/commit/13d448a9ee7c013f0cc13391ea498da93e806551)([#55](https://www.github.com/tauri-apps/tray-icon/pull/55)) -   **Breaking change**: `TrayEvent` has been renamed to `TrayIconEvent` for consistency with other struct names.
+- [`13d448a`](https://www.github.com/tauri-apps/tray-icon/commit/13d448a9ee7c013f0cc13391ea498da93e806551)([#55](https://www.github.com/tauri-apps/tray-icon/pull/55)) - **Breaking change**: `TrayEvent` has been renamed to `TrayIconEvent` for consistency with other struct names.
   - **Breaking change**: `ClickEvent` enum has been renamed to `ClickType` and `TrayEvent`'s `event` field has been renamed to `click_type`
 - [`d8d6082`](https://www.github.com/tauri-apps/tray-icon/commit/d8d6082c73b1fa6047ead13d228cf7de1ad0d71c)([#57](https://www.github.com/tauri-apps/tray-icon/pull/57)) Add `TrayIcon::with_id` and `TrayIconBuilder::with_id` to create the tray icon with specified id.
 

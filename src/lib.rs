@@ -178,7 +178,11 @@ pub struct TrayIconAttributes {
     /// Use the icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
     pub icon_is_template: bool,
 
-    /// Whether to show the tray menu on left click or not, default is `true`. **macOS & Windows only**.
+    /// Whether to show the tray menu on left click or not, default is `true`.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
     pub menu_on_left_click: bool,
 
     /// Tray icon title.
@@ -293,7 +297,11 @@ impl TrayIconBuilder {
         self
     }
 
-    /// Whether to show the tray menu on left click or not, default is `true`. **macOS only**.
+    /// Whether to show the tray menu on left click or not, default is `true`.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
     pub fn with_menu_on_left_click(mut self, enable: bool) -> Self {
         self.attrs.menu_on_left_click = enable;
         self

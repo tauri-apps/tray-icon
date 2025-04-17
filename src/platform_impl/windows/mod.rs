@@ -257,6 +257,10 @@ impl TrayIcon {
     pub fn rect(&self) -> Option<Rect> {
         get_tray_rect(self.internal_id, self.hwnd).map(Into::into)
     }
+
+    pub fn hwnd(&self) -> HWND {
+        self.hwnd
+    }
 }
 
 impl Drop for TrayIcon {

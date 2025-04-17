@@ -1,5 +1,10 @@
 # Changelog
 
+## \[0.20.1]
+
+- [`47fc3f3`](https://www.github.com/tauri-apps/tray-icon/commit/47fc3f3ef8ad9a60476d6cf7b5eaa87c621c380a) ([#248](https://www.github.com/tauri-apps/tray-icon/pull/248) by [@aschey](https://www.github.com/tauri-apps/tray-icon/../../aschey)) Add `window_handle` method to retrieve the underlying `hwnd` on Windows
+- [`1f28d6f`](https://www.github.com/tauri-apps/tray-icon/commit/1f28d6fc6bc52dfcea0358bae17d9119ec99c4b6) ([#241](https://www.github.com/tauri-apps/tray-icon/pull/241) by [@Legend-Master](https://www.github.com/tauri-apps/tray-icon/../../Legend-Master)) Correct `with_menu_on_left_click`'s docs to include window support
+
 ## \[0.20.0]
 
 - [`e94976b`](https://www.github.com/tauri-apps/tray-icon/commit/e94976bb48bbe97ac5ab215c6da7c7ca746a5c8a) ([#237](https://www.github.com/tauri-apps/tray-icon/pull/237) by [@renovate](https://www.github.com/tauri-apps/tray-icon/../../renovate)) Updated `muda` to 0.16.0

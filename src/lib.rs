@@ -461,11 +461,9 @@ impl TrayIcon {
         self.tray.borrow().rect()
     }
 
-    /// Get the tray icon's underlying [window handle](windows_sys::Win32::Foundation::HWND).
+    /// Get the tray icon's underlying [window handle](windows_sys::Win32::Foundation::HWND) **Windows only**.
     ///
-    /// ## Platform-specific:
-    ///
-    /// **Windows only.**
+    /// This window handle is valid as long as the tray icon.
     #[cfg(windows)]
     pub fn window_handle(&self) -> windows_sys::Win32::Foundation::HWND {
         self.tray.borrow().hwnd()

@@ -169,7 +169,7 @@ pub struct TrayIconAttributes {
     /// ## Platform-specific:
     ///
     /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
-    ///     Setting an empty [`Menu`](crate::menu::Menu) is enough.
+    ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub icon: Option<Icon>,
 
     /// Tray icon temp dir path. **Linux only**.

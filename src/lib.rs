@@ -402,6 +402,10 @@ impl TrayIcon {
         self.tray.borrow_mut().set_title(title)
     }
 
+    pub fn set_monospaced_title<S: AsRef<str>>(&self, title: Option<S>) {
+        self.tray.borrow_mut().set_monospaced_title(title)
+    }
+
     /// Show or hide this tray icon
     pub fn set_visible(&self, visible: bool) -> Result<()> {
         self.tray.borrow_mut().set_visible(visible)

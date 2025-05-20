@@ -6,14 +6,17 @@ mod icon;
 use std::cell::{Cell, RefCell};
 
 use objc2::rc::Retained;
+use objc2::runtime::AnyObject;
 use objc2::{define_class, msg_send, AllocAnyThread, DeclaredClass, Message};
 use objc2_app_kit::{
-    NSCellImagePosition, NSEvent, NSImage, NSMenu, NSStatusBar, NSStatusItem, NSTrackingArea,
-    NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
+    NSCellImagePosition, NSEvent, NSFont, NSImage, NSMenu, NSStatusBar, NSStatusItem,
+    NSTrackingArea, NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
-use objc2_foundation::{MainThreadMarker, NSData, NSSize, NSString};
+use objc2_foundation::{
+    ns_string, MainThreadMarker, NSAttributedString, NSData, NSDictionary, NSSize, NSString,
+};
 
 pub(crate) use self::icon::PlatformIcon;
 use crate::Error;
@@ -184,6 +187,36 @@ impl TrayIcon {
             unsafe {
                 if let Some(button) = ns_status_item.button(mtm) {
                     button.setTitle(&NSString::from_str(title.as_ref()));
+                }
+            }
+        }
+    }
+
+    pub fn set_monospaced_title<S: AsRef<str>>(&mut self, title: Option<S>) {
+        let title = title.map(|s| s.as_ref().to_string());
+        if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
+        {
+            Self::set_monospaced_title_inner(ns_status_item, title.clone(), self.mtm);
+            tray_target.update_dimensions();
+        }
+        self.attrs.title = title;
+    }
+
+    fn set_monospaced_title_inner<S: AsRef<str>>(
+        ns_status_item: &NSStatusItem,
+        title: Option<S>,
+        mtm: MainThreadMarker,
+    ) {
+        if let Some(title) = title {
+            unsafe {
+                let ns_title = &NSString::from_str(title.as_ref());
+                let ns_font: Retained<AnyObject> =
+                    NSFont::monospacedSystemFontOfSize_weight(12.0, 400.0).into();
+                let dict = NSDictionary::from_retained_objects(&[ns_string!("font")], &[ns_font]);
+                if let Some(button) = ns_status_item.button(mtm) {
+                    button.setAttributedTitle(&NSAttributedString::new_with_attributes(
+                        ns_title, &*dict,
+                    ));
                 }
             }
         }

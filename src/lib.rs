@@ -388,7 +388,7 @@ impl TrayIcon {
         self.tray.borrow_mut().set_tooltip(tooltip)
     }
 
-    /// Sets the tooltip for this tray icon.
+    /// Sets the title for this tray icon.
     ///
     /// ## Platform-specific:
     ///
@@ -400,6 +400,11 @@ impl TrayIcon {
     /// - **Windows:** Unsupported
     pub fn set_title<S: AsRef<str>>(&self, title: Option<S>) {
         self.tray.borrow_mut().set_title(title)
+    }
+
+    /// Sets the title for this tray icon using the system monospaced font with digits. **macOS only**.
+    pub fn set_title_monospaced_digit<S: AsRef<str>>(&self, title: Option<S>) {
+        self.tray.borrow_mut().set_title_monospaced_digit(title)
     }
 
     /// Show or hide this tray icon

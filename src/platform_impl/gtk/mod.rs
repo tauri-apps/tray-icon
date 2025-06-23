@@ -23,7 +23,8 @@ pub struct TrayIcon {
 impl TrayIcon {
     pub fn new(_id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
         let id = COUNTER.next();
-        let mut indicator = AppIndicator::new("tray-icon tray app", "");
+        let title = format!("tray-icon tray app {}", _id.as_ref());
+        let mut indicator = AppIndicator::new(title.as_str(), "");
         indicator.set_status(AppIndicatorStatus::Active);
 
         let (parent_path, icon_path) = temp_icon_path(attrs.temp_dir_path.as_ref(), id, 0)?;

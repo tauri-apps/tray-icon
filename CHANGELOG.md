@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.21.0]
+
+- [`986007b`](https://www.github.com/tauri-apps/tray-icon/commit/986007b4113f3050d65b6fd1bb43d2bd4b97dcc1) ([#263](https://www.github.com/tauri-apps/tray-icon/pull/263) by [@renovate](https://www.github.com/tauri-apps/tray-icon/../../renovate)) Updated `muda` to `0.17`.
+
 ## \[0.20.1]
 
 - [`47fc3f3`](https://www.github.com/tauri-apps/tray-icon/commit/47fc3f3ef8ad9a60476d6cf7b5eaa87c621c380a) ([#248](https://www.github.com/tauri-apps/tray-icon/pull/248) by [@aschey](https://www.github.com/tauri-apps/tray-icon/../../aschey)) Add `window_handle` method to retrieve the underlying `hwnd` on Windows

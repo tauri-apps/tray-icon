@@ -2409,6 +2409,7 @@ checksum = "58b89bf91c19bf036347f1ab85a81c560f08c0667c8601bece664d860a600988"
 dependencies = [
  "crossbeam-channel",
  "dpi",
+ "gtk",
  "keyboard-types",
  "libxdo",
  "objc2 0.6.0",

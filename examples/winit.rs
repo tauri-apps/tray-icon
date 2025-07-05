@@ -124,7 +124,7 @@ fn main() {
     });
 
     if let Err(err) = event_loop.run_app(&mut app) {
-        println!("Error: {:?}", err);
+        println!("Error: {err:?}");
     }
 }
 

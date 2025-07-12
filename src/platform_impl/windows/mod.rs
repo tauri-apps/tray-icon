@@ -306,14 +306,14 @@ unsafe extern "system" fn tray_proc(
 
     match msg {
         WM_DEVICECHANGE => {
+            userdata.entered = false;
+            userdata.last_position = None;
+
             let mut msg = std::mem::zeroed();
             while PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_REMOVE) != 0 {
                 TranslateMessage(&msg);
                 DispatchMessageW(&msg);
             }
-
-            userdata.entered = false;
-            userdata.last_position = None;
 
             return 1;
         }

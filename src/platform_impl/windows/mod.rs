@@ -309,6 +309,8 @@ unsafe extern "system" fn tray_proc(
             userdata.entered = false;
             userdata.last_position = None;
 
+            KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
+
             let mut msg = std::mem::zeroed();
             while PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_REMOVE) != 0 {
                 TranslateMessage(&msg);

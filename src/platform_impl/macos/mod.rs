@@ -251,6 +251,10 @@ impl TrayIcon {
             window.map(|window| get_tray_rect(&window))
         }
     }
+
+    pub fn ns_status_item(&self) -> Option<&Retained<NSStatusItem>> {
+        self.ns_status_item.as_ref()
+    }
 }
 
 impl Drop for TrayIcon {

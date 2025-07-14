@@ -468,6 +468,11 @@ impl TrayIcon {
     pub fn window_handle(&self) -> windows_sys::Win32::Foundation::HWND {
         self.tray.borrow().hwnd()
     }
+
+    #[cfg(target_os = "macos")]
+    pub fn ns_status_item(&self) -> Option<objc2::rc::Retained<objc2_app_kit::NSStatusItem>> {
+        self.tray.borrow().ns_status_item().cloned()
+    }
 }
 
 /// Describes a tray icon event.

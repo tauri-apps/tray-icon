@@ -370,6 +370,10 @@ impl TrayIcon {
         self.tray.borrow_mut().set_icon(icon)
     }
 
+    pub fn set_themed_icon(&self, light_icon: Icon, dark_icon: Icon) -> Result<()> {
+        self.tray.borrow_mut().set_themed_icon(light_icon, dark_icon)
+    }
+
     /// Set new tray menu.
     ///
     /// ## Platform-specific:

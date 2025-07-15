@@ -5,15 +5,18 @@
 mod icon;
 use std::cell::{Cell, RefCell};
 
+use block2::{Block, RcBlock};
+use objc2::ffi::id;
 use objc2::rc::Retained;
-use objc2::{define_class, msg_send, AllocAnyThread, DeclaredClass, Message};
+use objc2::runtime::{self, AnyObject};
+use objc2::{class, define_class, msg_send, sel, AllocAnyThread, DeclaredClass, Message};
 use objc2_app_kit::{
     NSCellImagePosition, NSEvent, NSImage, NSMenu, NSStatusBar, NSStatusItem, NSTrackingArea,
     NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
-use objc2_foundation::{MainThreadMarker, NSData, NSSize, NSString};
+use objc2_foundation::{MainThreadMarker, NSData, NSRect, NSSize, NSString};
 
 pub(crate) use self::icon::PlatformIcon;
 use crate::Error;
@@ -118,6 +121,21 @@ impl TrayIcon {
             tray_target.update_dimensions();
         }
         self.attrs.icon = icon;
+        Ok(())
+    }
+
+    pub fn set_themed_icon(&mut self, light_icon: Icon, dark_icon: Icon) -> crate::Result<()> {
+        if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
+        {
+            set_themed_icon_for_ns_status_item_button(
+                ns_status_item,
+                light_icon.clone(),
+                dark_icon,
+                self.mtm,
+            )?;
+            tray_target.update_dimensions();
+        }
+        self.attrs.icon = Some(light_icon);
         Ok(())
     }
 
@@ -292,6 +310,46 @@ fn set_icon_for_ns_status_item_button(
         unsafe { button.setImage(None) };
     }
 
+    Ok(())
+}
+
+fn set_themed_icon_for_ns_status_item_button(
+    ns_status_item: &Retained<NSStatusItem>,
+    light_icon: Icon,
+    dark_icon: Icon,
+    mtm: MainThreadMarker,
+) -> crate::Result<()> {
+    const ICON_WIDTH: f64 = 18.0;
+    const ICON_HEIGHT: f64 = 18.0;
+    let light_png: Vec<u8> = light_icon.inner.to_png()?;
+    let dark_png: Vec<u8> = dark_icon.inner.to_png()?;
+    let ns_status_item = ns_status_item.clone();
+
+    let button = unsafe { ns_status_item.button(mtm).unwrap() };
+
+    unsafe {
+        let light_nsdata = NSData::from_vec(light_png);
+        let light_nsimage = NSImage::initWithData(NSImage::alloc(), &light_nsdata).unwrap();
+        let dark_nsdata = NSData::from_vec(dark_png);
+        let dark_nsimage = NSImage::initWithData(NSImage::alloc(), &dark_nsdata).unwrap();
+        let new_size = NSSize::new(ICON_WIDTH, ICON_HEIGHT);
+
+
+        let block = RcBlock::new(move |ns_rect: NSRect| {
+            if is_object_dark(&ns_status_item) {
+                dark_nsimage.drawInRect(ns_rect);
+            } else {
+                light_nsimage.drawInRect(ns_rect);
+            }
+            runtime::Bool::YES
+        });
+
+        let nsimage = NSImage::imageWithSize_flipped_drawingHandler(new_size, true, &block);
+
+        nsimage.setTemplate(false);
+
+        button.setImage(Some(&nsimage));
+    }
     Ok(())
 }
 
@@ -584,4 +642,44 @@ struct MouseClickEvent {
 /// to convert between the two coordinate systems.
 fn flip_window_screen_coordinates(y: f64) -> f64 {
     unsafe { CGDisplayPixelsHigh(CGMainDisplayID()) as f64 - y }
+}
+
+extern "C" {
+    static NSAppearanceNameAqua: *const AnyObject;
+    static NSAppearanceNameAccessibilityHighContrastAqua: *const AnyObject;
+    static NSAppearanceNameDarkAqua: *const AnyObject;
+    static NSAppearanceNameAccessibilityHighContrastDarkAqua: *const AnyObject;
+}
+
+unsafe fn is_object_dark(object: &NSStatusItem) -> bool {
+    let appearance: *const AnyObject = msg_send![object, effectiveAppearance];
+
+    let objects = [
+        NSAppearanceNameAqua,
+        NSAppearanceNameAccessibilityHighContrastAqua,
+        NSAppearanceNameDarkAqua,
+        NSAppearanceNameAccessibilityHighContrastDarkAqua,
+    ];
+    let names: *const AnyObject = msg_send![
+        class!(NSArray),
+        arrayWithObjects:objects.as_ptr(),
+        count:objects.len()
+    ];
+
+    // `bestMatchFromAppearancesWithNames` is only available in macOS 10.14+.
+    // Gracefully handle earlier versions.
+    let responds_to_selector: runtime::Bool = msg_send![
+        appearance,
+        respondsToSelector: sel!(bestMatchFromAppearancesWithNames:)
+    ];
+    if responds_to_selector == runtime::Bool::NO {
+        return false;
+    }
+
+    let style: *const AnyObject = msg_send![
+        appearance,
+        bestMatchFromAppearancesWithNames:&*names
+    ];
+
+    style == NSAppearanceNameDarkAqua || style == NSAppearanceNameAccessibilityHighContrastDarkAqua
 }

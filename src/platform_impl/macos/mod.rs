@@ -5,8 +5,7 @@
 mod icon;
 use std::cell::{Cell, RefCell};
 
-use block2::{Block, RcBlock};
-use objc2::ffi::id;
+use block2::RcBlock;
 use objc2::rc::Retained;
 use objc2::runtime::{self, AnyObject};
 use objc2::{class, define_class, msg_send, sel, AllocAnyThread, DeclaredClass, Message};
@@ -333,7 +332,6 @@ fn set_themed_icon_for_ns_status_item_button(
         let dark_nsdata = NSData::from_vec(dark_png);
         let dark_nsimage = NSImage::initWithData(NSImage::alloc(), &dark_nsdata).unwrap();
         let new_size = NSSize::new(ICON_WIDTH, ICON_HEIGHT);
-
 
         let block = RcBlock::new(move |ns_rect: NSRect| {
             if is_object_dark(&ns_status_item) {

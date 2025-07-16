@@ -374,7 +374,9 @@ impl TrayIcon {
     /// and the dark icon is used when the taskbar is light.
     #[cfg(target_os = "macos")]
     pub fn set_themed_icon(&self, light_icon: Icon, dark_icon: Icon) -> Result<()> {
-        self.tray.borrow_mut().set_themed_icon(light_icon, dark_icon)
+        self.tray
+            .borrow_mut()
+            .set_themed_icon(light_icon, dark_icon)
     }
 
     /// Set new tray menu.

@@ -2,4 +2,4 @@
 tray-icon: patch
 ---
 
-Fix Windows tray menu freeze on device change events
+On Windows, fix tray menu freeze on device change events

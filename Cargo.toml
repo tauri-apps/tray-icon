@@ -65,6 +65,7 @@ objc2-app-kit = { version = "0.3", default-features = false, features = [
   "block2",
   "std",
   "objc2-core-foundation",
+  "NSAppearance",
   "NSButton",
   "NSCell",
   "NSControl",

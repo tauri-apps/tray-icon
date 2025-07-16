@@ -7,15 +7,18 @@ use std::cell::{Cell, RefCell};
 
 use block2::RcBlock;
 use objc2::rc::Retained;
-use objc2::runtime::{self, AnyObject};
-use objc2::{class, define_class, msg_send, sel, AllocAnyThread, DeclaredClass, Message};
+use objc2::runtime::Bool;
+use objc2::{available, define_class, msg_send, AllocAnyThread, DeclaredClass, Message};
 use objc2_app_kit::{
-    NSCellImagePosition, NSEvent, NSImage, NSMenu, NSStatusBar, NSStatusItem, NSTrackingArea,
-    NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
+    NSAppearanceCustomization, NSAppearanceNameAccessibilityHighContrastAqua,
+    NSAppearanceNameAccessibilityHighContrastDarkAqua, NSAppearanceNameAqua,
+    NSAppearanceNameDarkAqua, NSCellImagePosition, NSEvent, NSImage, NSMenu, NSStatusBar,
+    NSStatusBarButton, NSStatusItem, NSTrackingArea, NSTrackingAreaOptions,
+    NSVariableStatusItemLength, NSView, NSWindow,
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
-use objc2_foundation::{MainThreadMarker, NSData, NSRect, NSSize, NSString};
+use objc2_foundation::{MainThreadMarker, NSArray, NSData, NSRect, NSSize, NSString};
 
 pub(crate) use self::icon::PlatformIcon;
 use crate::Error;
@@ -326,28 +329,30 @@ fn set_themed_icon_for_ns_status_item_button(
 
     let button = unsafe { ns_status_item.button(mtm).unwrap() };
 
+    let light_nsdata = NSData::from_vec(light_png);
+    let light_nsimage = NSImage::initWithData(NSImage::alloc(), &light_nsdata).unwrap();
+    let dark_nsdata = NSData::from_vec(dark_png);
+    let dark_nsimage = NSImage::initWithData(NSImage::alloc(), &dark_nsdata).unwrap();
+    let new_size = NSSize::new(ICON_WIDTH, ICON_HEIGHT);
+
+    let button_clone = button.clone();
+    let block = RcBlock::new(move |ns_rect: NSRect| unsafe {
+        if is_button_dark(&button_clone) {
+            dark_nsimage.drawInRect(ns_rect);
+        } else {
+            light_nsimage.drawInRect(ns_rect);
+        }
+        Bool::YES
+    });
+
     unsafe {
-        let light_nsdata = NSData::from_vec(light_png);
-        let light_nsimage = NSImage::initWithData(NSImage::alloc(), &light_nsdata).unwrap();
-        let dark_nsdata = NSData::from_vec(dark_png);
-        let dark_nsimage = NSImage::initWithData(NSImage::alloc(), &dark_nsdata).unwrap();
-        let new_size = NSSize::new(ICON_WIDTH, ICON_HEIGHT);
-
-        let block = RcBlock::new(move |ns_rect: NSRect| {
-            if is_object_dark(&ns_status_item) {
-                dark_nsimage.drawInRect(ns_rect);
-            } else {
-                light_nsimage.drawInRect(ns_rect);
-            }
-            runtime::Bool::YES
-        });
-
         let nsimage = NSImage::imageWithSize_flipped_drawingHandler(new_size, true, &block);
 
         nsimage.setTemplate(false);
 
         button.setImage(Some(&nsimage));
     }
+
     Ok(())
 }
 
@@ -642,42 +647,25 @@ fn flip_window_screen_coordinates(y: f64) -> f64 {
     unsafe { CGDisplayPixelsHigh(CGMainDisplayID()) as f64 - y }
 }
 
-extern "C" {
-    static NSAppearanceNameAqua: *const AnyObject;
-    static NSAppearanceNameAccessibilityHighContrastAqua: *const AnyObject;
-    static NSAppearanceNameDarkAqua: *const AnyObject;
-    static NSAppearanceNameAccessibilityHighContrastDarkAqua: *const AnyObject;
-}
-
-unsafe fn is_object_dark(object: &NSStatusItem) -> bool {
-    let appearance: *const AnyObject = msg_send![object, effectiveAppearance];
-
-    let objects = [
-        NSAppearanceNameAqua,
-        NSAppearanceNameAccessibilityHighContrastAqua,
-        NSAppearanceNameDarkAqua,
-        NSAppearanceNameAccessibilityHighContrastDarkAqua,
-    ];
-    let names: *const AnyObject = msg_send![
-        class!(NSArray),
-        arrayWithObjects:objects.as_ptr(),
-        count:objects.len()
-    ];
-
+fn is_button_dark(button: &NSStatusBarButton) -> bool {
     // `bestMatchFromAppearancesWithNames` is only available in macOS 10.14+.
-    // Gracefully handle earlier versions.
-    let responds_to_selector: runtime::Bool = msg_send![
-        appearance,
-        respondsToSelector: sel!(bestMatchFromAppearancesWithNames:)
-    ];
-    if responds_to_selector == runtime::Bool::NO {
+    if !available!(macos = 10.14) {
         return false;
     }
 
-    let style: *const AnyObject = msg_send![
-        appearance,
-        bestMatchFromAppearancesWithNames:&*names
-    ];
-
-    style == NSAppearanceNameDarkAqua || style == NSAppearanceNameAccessibilityHighContrastDarkAqua
+    let appearance = unsafe { button.effectiveAppearance() };
+    let style = appearance.bestMatchFromAppearancesWithNames(&NSArray::from_slice(unsafe {
+        &[
+            NSAppearanceNameAqua,
+            NSAppearanceNameAccessibilityHighContrastAqua,
+            NSAppearanceNameDarkAqua,
+            NSAppearanceNameAccessibilityHighContrastDarkAqua,
+        ]
+    }));
+    style
+        .map(|style| unsafe {
+            style.isEqualToString(NSAppearanceNameDarkAqua)
+                || style.isEqualToString(NSAppearanceNameAccessibilityHighContrastDarkAqua)
+        })
+        .unwrap_or(false)
 }

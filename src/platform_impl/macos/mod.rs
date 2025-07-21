@@ -4,6 +4,7 @@
 
 mod icon;
 use std::cell::{Cell, RefCell};
+use std::cmp::max;
 
 use block2::RcBlock;
 use objc2::rc::Retained;
@@ -60,12 +61,21 @@ impl TrayIcon {
             NSStatusBar::systemStatusBar().statusItemWithLength(NSVariableStatusItemLength)
         };
 
-        set_icon_for_ns_status_item_button(
-            &ns_status_item,
-            attrs.icon.clone(),
-            attrs.icon_is_template,
-            mtm,
-        )?;
+        if let (Some(dark), Some(light)) = (&attrs.dark_icon, &attrs.icon) {
+            set_themed_icon_for_ns_status_item_button(
+                &ns_status_item,
+                light.clone(),
+                dark.clone(),
+                mtm,
+            )?;
+        } else {
+            set_icon_for_ns_status_item_button(
+                &ns_status_item,
+                attrs.icon.clone(),
+                attrs.icon_is_template,
+                mtm,
+            )?;
+        }
 
         if let Some(menu) = &attrs.menu {
             unsafe {
@@ -123,6 +133,7 @@ impl TrayIcon {
             tray_target.update_dimensions();
         }
         self.attrs.icon = icon;
+        self.attrs.dark_icon = None;
         Ok(())
     }
 
@@ -132,12 +143,13 @@ impl TrayIcon {
             set_themed_icon_for_ns_status_item_button(
                 ns_status_item,
                 light_icon.clone(),
-                dark_icon,
+                dark_icon.clone(),
                 self.mtm,
             )?;
             tray_target.update_dimensions();
         }
         self.attrs.icon = Some(light_icon);
+        self.attrs.dark_icon = Some(dark_icon);
         Ok(())
     }
 
@@ -321,8 +333,13 @@ fn set_themed_icon_for_ns_status_item_button(
     dark_icon: Icon,
     mtm: MainThreadMarker,
 ) -> crate::Result<()> {
-    const ICON_WIDTH: f64 = 18.0;
     const ICON_HEIGHT: f64 = 18.0;
+
+    let (light_width, light_height) = light_icon.inner.get_size();
+    let (dark_width, dark_height) = dark_icon.inner.get_size();
+    let icon_width: f64 = (max(light_width, dark_width) as f64)
+        / (max(light_height, dark_height) as f64 / ICON_HEIGHT);
+
     let light_png: Vec<u8> = light_icon.inner.to_png()?;
     let dark_png: Vec<u8> = dark_icon.inner.to_png()?;
     let ns_status_item = ns_status_item.clone();
@@ -333,24 +350,24 @@ fn set_themed_icon_for_ns_status_item_button(
     let light_nsimage = NSImage::initWithData(NSImage::alloc(), &light_nsdata).unwrap();
     let dark_nsdata = NSData::from_vec(dark_png);
     let dark_nsimage = NSImage::initWithData(NSImage::alloc(), &dark_nsdata).unwrap();
-    let new_size = NSSize::new(ICON_WIDTH, ICON_HEIGHT);
+    let nssize = NSSize::new(icon_width, ICON_HEIGHT);
 
     let button_clone = button.clone();
     let block = RcBlock::new(move |ns_rect: NSRect| unsafe {
         if is_button_dark(&button_clone) {
-            dark_nsimage.drawInRect(ns_rect);
-        } else {
             light_nsimage.drawInRect(ns_rect);
+        } else {
+            dark_nsimage.drawInRect(ns_rect);
         }
         Bool::YES
     });
 
     unsafe {
-        let nsimage = NSImage::imageWithSize_flipped_drawingHandler(new_size, true, &block);
-
+        let nsimage = NSImage::imageWithSize_flipped_drawingHandler(nssize, true, &block);
         nsimage.setTemplate(false);
 
         button.setImage(Some(&nsimage));
+        button.setImagePosition(NSCellImagePosition::ImageLeft);
     }
 
     Ok(())

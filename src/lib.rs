@@ -469,9 +469,18 @@ impl TrayIcon {
         self.tray.borrow().hwnd()
     }
 
+    /// Get the tray icon's underlying [NSStatusItem](objc2_app_kit::NSStatusItem) **macOS only**.
+    ///
+    /// Returns `None` if the status item is not available.
     #[cfg(target_os = "macos")]
     pub fn ns_status_item(&self) -> Option<objc2::rc::Retained<objc2_app_kit::NSStatusItem>> {
         self.tray.borrow().ns_status_item().cloned()
+    }
+
+    /// Get the tray icon's underlying [AppIndicator](libappindicator::AppIndicator) **Linux only**.
+    #[cfg(all(unix, not(target_os = "macos")))]
+    pub fn app_indicator(&self) -> libappindicator::AppIndicator {
+        self.tray.borrow().app_indicator().clone()
     }
 }
 

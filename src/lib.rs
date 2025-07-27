@@ -479,8 +479,8 @@ impl TrayIcon {
 
     /// Get the tray icon's underlying [AppIndicator](libappindicator::AppIndicator) **Linux only**.
     #[cfg(all(unix, not(target_os = "macos")))]
-    pub fn app_indicator(&self) -> libappindicator::AppIndicator {
-        self.tray.borrow().app_indicator().clone()
+    pub fn app_indicator(&self) -> &libappindicator::AppIndicator {
+        unsafe { &*(self.tray.borrow().app_indicator() as *const _) }
     }
 }
 

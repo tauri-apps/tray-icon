@@ -478,9 +478,13 @@ impl TrayIcon {
     }
 
     /// Get the tray icon's underlying [AppIndicator](libappindicator::AppIndicator) **Linux only**.
+    ///
+    /// # Safety
+    ///
+    /// The returned pointer is valid as long as the `TrayIcon` is.
     #[cfg(all(unix, not(target_os = "macos")))]
-    pub fn app_indicator(&self) -> &libappindicator::AppIndicator {
-        unsafe { &*(self.tray.borrow().app_indicator() as *const _) }
+    unsafe pub fn app_indicator(&self) -> *const libappindicator::AppIndicator {
+        unsafe { self.tray.borrow().app_indicator() as *const _ }
     }
 }
 

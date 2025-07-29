@@ -483,7 +483,7 @@ impl TrayIcon {
     ///
     /// The returned pointer is valid as long as the `TrayIcon` is.
     #[cfg(all(unix, not(target_os = "macos")))]
-    unsafe pub fn app_indicator(&self) -> *const libappindicator::AppIndicator {
+    pub unsafe fn app_indicator(&self) -> *const libappindicator::AppIndicator {
         unsafe { self.tray.borrow().app_indicator() as *const _ }
     }
 }

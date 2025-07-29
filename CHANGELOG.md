@@ -1,5 +1,13 @@
 # Changelog
 
+## \[0.21.1]
+
+- [`1470763`](https://www.github.com/tauri-apps/tray-icon/commit/147076368596bac8626f51d70563ce3a1b048cfb) ([#272](https://www.github.com/tauri-apps/tray-icon/pull/272) by [@ahonn](https://www.github.com/tauri-apps/tray-icon/../../ahonn)) Add platform specific methods to access the underlying native handles of the tray (similar to `TrayIcon::window_handle`):
+
+  - `TrayIcon::ns_status_item` for macOS
+  - `TrayIcon::app_indicator` for Linux.
+- [`2a6a19b`](https://www.github.com/tauri-apps/tray-icon/commit/2a6a19bbac9848d3887b12599b2860ba6653c8f7) ([#268](https://www.github.com/tauri-apps/tray-icon/pull/268) by [@iKineticate](https://www.github.com/tauri-apps/tray-icon/../../iKineticate)) On Windows, fix tray menu freeze on device change events
+
 ## \[0.21.0]
 
 - [`986007b`](https://www.github.com/tauri-apps/tray-icon/commit/986007b4113f3050d65b6fd1bb43d2bd4b97dcc1) ([#263](https://www.github.com/tauri-apps/tray-icon/pull/263) by [@renovate](https://www.github.com/tauri-apps/tray-icon/../../renovate)) Updated `muda` to `0.17`.

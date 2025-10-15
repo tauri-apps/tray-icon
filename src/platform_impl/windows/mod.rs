@@ -17,11 +17,10 @@ use windows_sys::{
                 NIM_ADD, NIM_DELETE, NIM_MODIFY, NOTIFYICONDATAW, NOTIFYICONIDENTIFIER,
             },
             WindowsAndMessaging::{
-                CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetCursorPos,
-                KillTimer, PeekMessageW, RegisterClassW, RegisterWindowMessageA, SendMessageW,
-                SetForegroundWindow, SetTimer, TrackPopupMenu, TranslateMessage, CREATESTRUCTW,
-                CW_USEDEFAULT, GWL_USERDATA, HICON, HMENU, PM_REMOVE, TPM_BOTTOMALIGN,
-                TPM_LEFTALIGN, WM_CREATE, WM_DESTROY, WM_DEVICECHANGE, WM_LBUTTONDBLCLK,
+                CreateWindowExW, DefWindowProcW, DestroyWindow, GetCursorPos, KillTimer,
+                RegisterClassW, RegisterWindowMessageA, SendMessageW, SetForegroundWindow,
+                SetTimer, TrackPopupMenu, CREATESTRUCTW, CW_USEDEFAULT, GWL_USERDATA, HICON, HMENU,
+                TPM_BOTTOMALIGN, TPM_LEFTALIGN, WM_CREATE, WM_DESTROY, WM_LBUTTONDBLCLK,
                 WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP,
                 WM_MOUSEMOVE, WM_NCCREATE, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP,
                 WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
@@ -307,20 +306,6 @@ unsafe extern "system" fn tray_proc(
     let userdata = &mut *(userdata_ptr);
 
     match msg {
-        WM_DEVICECHANGE => {
-            userdata.entered = false;
-            userdata.last_position = None;
-
-            KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
-
-            let mut msg = std::mem::zeroed();
-            while PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_REMOVE) != 0 {
-                TranslateMessage(&msg);
-                DispatchMessageW(&msg);
-            }
-
-            return 1;
-        }
         WM_DESTROY => {
             drop(Box::from_raw(userdata_ptr));
             return 0;

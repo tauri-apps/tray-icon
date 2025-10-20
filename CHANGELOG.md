@@ -1,5 +1,11 @@
 # Changelog
 
+## \[0.21.2]
+
+- [`c9f0d21`](https://www.github.com/tauri-apps/tray-icon/commit/c9f0d2108202b3743efb7696a334759b403b9856) ([#278](https://www.github.com/tauri-apps/tray-icon/pull/278) by [@aarol](https://www.github.com/tauri-apps/tray-icon/../../aarol)) Fix infinite loops when printing the full error chain (for example "{err:?}" with anyhow) for `BadIcon`
+- [`4bbabba`](https://www.github.com/tauri-apps/tray-icon/commit/4bbabba49cd82e7eb8b5f58cfdfe2b00812517af) ([#277](https://www.github.com/tauri-apps/tray-icon/pull/277) by [@ancwrd1](https://www.github.com/tauri-apps/tray-icon/../../ancwrd1)) Fix a problem on Windows platform where the created window was not destroyed correctly in case the tray icon creation fails.
+- [`343599f`](https://www.github.com/tauri-apps/tray-icon/commit/343599f27fb59bf393793140a09511f1331aeda6) ([#284](https://www.github.com/tauri-apps/tray-icon/pull/284) by [@FabianLars](https://www.github.com/tauri-apps/tray-icon/../../FabianLars)) This hotfix reverts https://github.com/tauri-apps/tray-icon/pull/268 because it caused `assertion failed: flush_paint_messages` panics.
+
 ## \[0.21.1]
 
 - [`1470763`](https://www.github.com/tauri-apps/tray-icon/commit/147076368596bac8626f51d70563ce3a1b048cfb) ([#272](https://www.github.com/tauri-apps/tray-icon/pull/272) by [@ahonn](https://www.github.com/tauri-apps/tray-icon/../../ahonn)) Add platform specific methods to access the underlying native handles of the tray (similar to `TrayIcon::window_handle`):

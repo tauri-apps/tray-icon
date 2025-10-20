@@ -86,6 +86,6 @@ png = "0.17"
 [dev-dependencies]
 winit = "0.30"
 tao = "0.33"
-image = "0.25"
 eframe = "0.31"
+image = { version = "0.25", default-features = false, features = ["png"] }
 serde_json = "1"

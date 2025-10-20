@@ -24,7 +24,7 @@ thiserror = "2"
 serde = { version = "1", optional = true }
 
 [target."cfg(target_os = \"windows\")".dependencies.windows-sys]
-version = "0.59"
+version = "0.60"
 features = [
   "Win32_UI_WindowsAndMessaging",
   "Win32_Foundation",

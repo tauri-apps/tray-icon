@@ -126,11 +126,9 @@ use std::{
     rc::Rc,
 };
 
-use counter::Counter;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use once_cell::sync::{Lazy, OnceCell};
 
-mod counter;
 mod error;
 mod icon;
 mod platform_impl;
@@ -145,8 +143,6 @@ pub mod menu {
     pub use muda::*;
 }
 pub use muda::dpi;
-
-static COUNTER: Counter = Counter::new();
 
 /// Attributes to use when creating a tray icon.
 pub struct TrayIconAttributes {
@@ -225,7 +221,7 @@ impl TrayIconBuilder {
     /// See [`TrayIcon::new`] for more info.
     pub fn new() -> Self {
         Self {
-            id: TrayIconId(COUNTER.next().to_string()),
+            id: TrayIconId::random(),
             attrs: TrayIconAttributes::default(),
         }
     }
@@ -336,7 +332,7 @@ impl TrayIcon {
     /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
     ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub fn new(attrs: TrayIconAttributes) -> Result<Self> {
-        let id = TrayIconId(COUNTER.next().to_string());
+        let id = TrayIconId::random();
         Ok(Self {
             tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(
                 id.clone(),

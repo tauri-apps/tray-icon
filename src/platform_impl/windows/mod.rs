@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
+mod counter;
 mod icon;
 mod util;
 use std::ptr;
@@ -32,7 +33,7 @@ use windows_sys::{
 
 use crate::{
     dpi::PhysicalPosition, icon::Icon, menu, MouseButton, MouseButtonState, Rect,
-    TrayIconAttributes, TrayIconEvent, TrayIconId, COUNTER,
+    TrayIconAttributes, TrayIconEvent, TrayIconId,
 };
 
 pub(crate) use self::icon::WinIcon as PlatformIcon;
@@ -61,6 +62,8 @@ struct TrayUserData {
     last_position: Option<PhysicalPosition<f64>>,
     menu_on_left_click: bool,
 }
+
+static COUNTER: counter::Counter = counter::Counter::new();
 
 pub struct TrayIcon {
     hwnd: HWND,

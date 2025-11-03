@@ -10,6 +10,14 @@ impl TrayIconId {
     pub fn new<S: AsRef<str>>(id: S) -> Self {
         Self(id.as_ref().to_string())
     }
+
+    /// Generate random id for internal use
+    pub(crate) fn random() -> Self {
+        let id: String = std::iter::repeat_with(fastrand::alphanumeric)
+            .take(6)
+            .collect();
+        id.into()
+    }
 }
 
 impl AsRef<str> for TrayIconId {

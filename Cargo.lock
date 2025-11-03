@@ -3523,6 +3523,7 @@ dependencies = [
  "crossbeam-channel",
  "dirs",
  "eframe",
+ "fastrand",
  "gtk",
  "image",
  "libappindicator",

@@ -556,30 +556,22 @@ pub enum TrayIconEvent {
 /// Describes the mouse button state.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Default)]
 pub enum MouseButtonState {
+    #[default]
     Up,
     Down,
-}
-
-impl Default for MouseButtonState {
-    fn default() -> Self {
-        Self::Up
-    }
 }
 
 /// Describes which mouse button triggered the event..
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Default)]
 pub enum MouseButton {
+    #[default]
     Left,
     Right,
     Middle,
-}
-
-impl Default for MouseButton {
-    fn default() -> Self {
-        Self::Left
-    }
 }
 
 /// Describes a rectangle including position (x - y axis) and size.

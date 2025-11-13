@@ -225,7 +225,7 @@ impl TrayIconBuilder {
     /// See [`TrayIcon::new`] for more info.
     pub fn new() -> Self {
         Self {
-            id: TrayIconId(COUNTER.next().to_string()),
+            id: TrayIconId::new_unique(),
             attrs: TrayIconAttributes::default(),
         }
     }
@@ -336,7 +336,7 @@ impl TrayIcon {
     /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
     ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub fn new(attrs: TrayIconAttributes) -> Result<Self> {
-        let id = TrayIconId(COUNTER.next().to_string());
+        let id = TrayIconId::new_unique();
         Ok(Self {
             tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(
                 id.clone(),

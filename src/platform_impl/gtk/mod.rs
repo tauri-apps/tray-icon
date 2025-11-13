@@ -8,11 +8,11 @@ use std::path::{Path, PathBuf};
 use crate::icon::Icon;
 pub(crate) use icon::PlatformIcon;
 
-use crate::{TrayIconAttributes, TrayIconId, COUNTER};
+use crate::{TrayIconAttributes, TrayIconId};
 use libappindicator::{AppIndicator, AppIndicatorStatus};
 
 pub struct TrayIcon {
-    id: u32,
+    id: TrayIconId,
     indicator: AppIndicator,
     temp_dir_path: Option<PathBuf>,
     path: PathBuf,
@@ -21,12 +21,11 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
-    pub fn new(_id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
-        let id = COUNTER.next();
-        let mut indicator = AppIndicator::new("tray-icon tray app", "");
+    pub fn new(id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
+        let mut indicator = AppIndicator::new(&format!("tray-icon tray app {}", id.as_ref()), "");
         indicator.set_status(AppIndicatorStatus::Active);
 
-        let (parent_path, icon_path) = temp_icon_path(attrs.temp_dir_path.as_ref(), id, 0)?;
+        let (parent_path, icon_path) = temp_icon_path(attrs.temp_dir_path.as_ref(), &id, 0)?;
 
         if let Some(icon) = attrs.icon {
             icon.inner.write_to_png(&icon_path)?;
@@ -58,7 +57,7 @@ impl TrayIcon {
         self.counter += 1;
 
         let (parent_path, icon_path) =
-            temp_icon_path(self.temp_dir_path.as_ref(), self.id, self.counter)?;
+            temp_icon_path(self.temp_dir_path.as_ref(), &self.id, self.counter)?;
 
         if let Some(icon) = icon {
             icon.inner.write_to_png(&icon_path)?;
@@ -125,7 +124,7 @@ impl Drop for TrayIcon {
 /// 3. `/tmp/tray-icon`
 fn temp_icon_path(
     temp_icon_dir: Option<&PathBuf>,
-    id: u32,
+    id: &TrayIconId,
     counter: u32,
 ) -> std::io::Result<(PathBuf, PathBuf)> {
     let parent_path = match temp_icon_dir.as_ref() {
@@ -136,7 +135,7 @@ fn temp_icon_path(
     };
 
     std::fs::create_dir_all(&parent_path)?;
-    let icon_path = parent_path.join(format!("tray-icon-{}-{}.png", id, counter));
+    let icon_path = parent_path.join(format!("tray-icon-{}-{}.png", id.as_ref(), counter));
     Ok((parent_path, icon_path))
 }
 
@@ -145,10 +144,10 @@ fn temp_icon_path_preference_order() {
     let runtime_dir = option_env!("XDG_RUNTIME_DIR");
     let override_dir = PathBuf::from("/tmp/tao-tests");
 
-    let (dir1, _file1) = temp_icon_path(Some(&override_dir), 00, 00).unwrap();
-    let (dir2, _file1) = temp_icon_path(None, 00, 00).unwrap();
+    let (dir1, _file1) = temp_icon_path(Some(&override_dir), &"00".into(), 00).unwrap();
+    let (dir2, _file1) = temp_icon_path(None, &"00".into(), 00).unwrap();
     std::env::remove_var("XDG_RUNTIME_DIR");
-    let (dir3, _file2) = temp_icon_path(None, 00, 00).unwrap();
+    let (dir3, _file2) = temp_icon_path(None, &"00".into(), 00).unwrap();
 
     assert_eq!(dir1, override_dir);
     if let Some(runtime_dir) = runtime_dir {

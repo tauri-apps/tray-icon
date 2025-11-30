@@ -11,20 +11,21 @@ use windows_sys::{
     s,
     Win32::{
         Foundation::{FALSE, HWND, LPARAM, LRESULT, POINT, RECT, S_OK, TRUE, WPARAM},
+        System::Threading::{AttachThreadInput, GetCurrentThreadId},
         UI::{
             Shell::{
                 Shell_NotifyIconGetRect, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP,
                 NIM_ADD, NIM_DELETE, NIM_MODIFY, NOTIFYICONDATAW, NOTIFYICONIDENTIFIER,
             },
             WindowsAndMessaging::{
-                CreateWindowExW, DefWindowProcW, DestroyWindow, GetCursorPos, KillTimer,
-                RegisterClassW, RegisterWindowMessageA, SendMessageW, SetForegroundWindow,
-                SetTimer, TrackPopupMenu, CREATESTRUCTW, CW_USEDEFAULT, GWL_USERDATA, HICON, HMENU,
-                TPM_BOTTOMALIGN, TPM_LEFTALIGN, WM_CREATE, WM_DESTROY, WM_LBUTTONDBLCLK,
-                WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP,
-                WM_MOUSEMOVE, WM_NCCREATE, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP,
-                WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
-                WS_EX_TRANSPARENT, WS_OVERLAPPED,
+                CreateWindowExW, DefWindowProcW, DestroyWindow, GetCursorPos, GetForegroundWindow,
+                GetWindowThreadProcessId, KillTimer, RegisterClassW, RegisterWindowMessageA,
+                SendMessageW, SetTimer, TrackPopupMenu, CREATESTRUCTW, CW_USEDEFAULT, GWL_USERDATA,
+                HICON, HMENU, TPM_BOTTOMALIGN, TPM_LEFTALIGN, WM_CREATE, WM_DESTROY,
+                WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDBLCLK, WM_MBUTTONDOWN,
+                WM_MBUTTONUP, WM_MOUSEMOVE, WM_NCCREATE, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN,
+                WM_RBUTTONUP, WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE,
+                WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_OVERLAPPED,
             },
         },
     },
@@ -511,7 +512,15 @@ unsafe extern "system" fn tray_timer_proc(hwnd: HWND, msg: u32, wparam: WPARAM, 
 unsafe fn show_tray_menu(hwnd: HWND, menu: HMENU, x: i32, y: i32) {
     // bring the hidden window to the foreground so the pop up menu
     // would automatically hide on click outside
-    SetForegroundWindow(hwnd);
+    //
+    // `SetForegroundWindow(hwnd);` seems quite straightforward, but it **panics**
+    // in Windows 7.
+    AttachThreadInput(
+        GetWindowThreadProcessId(GetForegroundWindow(), std::ptr::null_mut()),
+        GetCurrentThreadId(),
+        TRUE,
+    );
+
     TrackPopupMenu(
         menu,
         // align bottom / right, maybe we could expose this later..

@@ -17,14 +17,14 @@ use windows_sys::{
                 NIM_ADD, NIM_DELETE, NIM_MODIFY, NOTIFYICONDATAW, NOTIFYICONIDENTIFIER,
             },
             WindowsAndMessaging::{
-                CreateWindowExW, DefWindowProcW, DestroyWindow, GetCursorPos, KillTimer,
-                RegisterClassW, RegisterWindowMessageA, SendMessageW, SetForegroundWindow,
-                SetTimer, TrackPopupMenu, CREATESTRUCTW, CW_USEDEFAULT, GWL_USERDATA, HICON, HMENU,
-                TPM_BOTTOMALIGN, TPM_LEFTALIGN, WM_CREATE, WM_DESTROY, WM_LBUTTONDBLCLK,
-                WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP,
-                WM_MOUSEMOVE, WM_NCCREATE, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP,
-                WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
-                WS_EX_TRANSPARENT, WS_OVERLAPPED,
+                ChangeWindowMessageFilterEx, CreateWindowExW, DefWindowProcW, DestroyWindow,
+                GetCursorPos, KillTimer, RegisterClassW, RegisterWindowMessageA, SendMessageW,
+                SetForegroundWindow, SetTimer, TrackPopupMenu, CREATESTRUCTW, CW_USEDEFAULT,
+                GWL_USERDATA, HICON, HMENU, MSGFLT_ALLOW, TPM_BOTTOMALIGN, TPM_LEFTALIGN,
+                WM_CREATE, WM_DESTROY, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP,
+                WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE, WM_NCCREATE,
+                WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_TIMER, WNDCLASSW, WS_EX_LAYERED,
+                WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_OVERLAPPED,
             },
         },
     },
@@ -123,12 +123,14 @@ impl TrayIcon {
                 return Err(crate::Error::OsError(std::io::Error::last_os_error()));
             }
 
+            // Allow "TaskbarCreated" through UIPI so elevated apps can re-register on explorer restart.
+            ChangeWindowMessageFilterEx(hwnd, *S_U_TASKBAR_RESTART, MSGFLT_ALLOW, ptr::null_mut());
+
             let hicon = attrs.icon.as_ref().map(|i| i.inner.as_raw_handle());
 
             if !register_tray_icon(hwnd, internal_id, &hicon, &attrs.tooltip) {
-                let result = Err(crate::Error::OsError(std::io::Error::last_os_error()));
-                DestroyWindow(hwnd);
-                return result;
+                // Explorer/taskbar may not be ready yet (e.g., app starts before explorer.exe).
+                // Keep the window alive and wait for TaskbarCreated to re-register.
             }
 
             if let Some(menu) = &attrs.menu {
@@ -334,7 +336,6 @@ unsafe extern "system" fn tray_proc(
             userdata.tooltip = *tooltip;
         }
         _ if msg == *S_U_TASKBAR_RESTART => {
-            remove_tray_icon(userdata.hwnd, userdata.internal_id);
             register_tray_icon(
                 userdata.hwnd,
                 userdata.internal_id,

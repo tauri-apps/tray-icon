@@ -1,5 +1,10 @@
 # Changelog
 
+## \[0.21.3]
+
+- [`d3c2468`](https://www.github.com/tauri-apps/tray-icon/commit/d3c24683fd63d197fa064bfbf205ad2fb464e338) ([#293](https://www.github.com/tauri-apps/tray-icon/pull/293) by [@Slinetrac](https://www.github.com/tauri-apps/tray-icon/../../Slinetrac)) Handle Windows tray icon creation when the taskbar is not ready by keeping the message window alive and re-registering on TaskbarCreated.
+- [`cb22cd5`](https://www.github.com/tauri-apps/tray-icon/commit/cb22cd5df6b0938aaeebd6c302ec50bc696d8b1a) ([#290](https://www.github.com/tauri-apps/tray-icon/pull/290) by [@FabianLars](https://www.github.com/tauri-apps/tray-icon/../../FabianLars)) The default `id` is now derived from the process id to prevent issues when multiple open apps use the `tray-icon` crate on Linux.
+
 ## \[0.21.2]
 
 - [`c9f0d21`](https://www.github.com/tauri-apps/tray-icon/commit/c9f0d2108202b3743efb7696a334759b403b9856) ([#278](https://www.github.com/tauri-apps/tray-icon/pull/278) by [@aarol](https://www.github.com/tauri-apps/tray-icon/../../aarol)) Fix infinite loops when printing the full error chain (for example "{err:?}" with anyhow) for `BadIcon`

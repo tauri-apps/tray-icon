@@ -45,6 +45,7 @@ const WM_USER_HIDE_TRAYICON: u32 = 6006;
 const WM_USER_UPDATE_TRAYTOOLTIP: u32 = 6007;
 const WM_USER_LEAVE_TIMER_ID: u32 = 6008;
 const WM_USER_SHOW_MENU_ON_LEFT_CLICK: u32 = 6009;
+const WM_USER_SHOW_MENU_ON_RIGHT_CLICK: u32 = 6010;
 /// When the taskbar is created, it registers a message with the "TaskbarCreated" string and then broadcasts this message to all top-level windows
 /// When the application receives this message, it should assume that any taskbar icons it added have been removed and add them again.
 static S_U_TASKBAR_RESTART: Lazy<u32> =
@@ -60,6 +61,7 @@ struct TrayUserData {
     entered: bool,
     last_position: Option<PhysicalPosition<f64>>,
     menu_on_left_click: bool,
+    menu_on_right_click: bool,
 }
 
 pub struct TrayIcon {
@@ -95,6 +97,7 @@ impl TrayIcon {
                 entered: false,
                 last_position: None,
                 menu_on_left_click: attrs.menu_on_left_click,
+                menu_on_right_click: attrs.menu_on_right_click,
             };
 
             let hwnd = CreateWindowExW(
@@ -239,6 +242,17 @@ impl TrayIcon {
         }
     }
 
+    pub fn set_show_menu_on_right_click(&mut self, enable: bool) {
+        unsafe {
+            SendMessageW(
+                self.hwnd,
+                WM_USER_SHOW_MENU_ON_RIGHT_CLICK,
+                enable as usize,
+                0,
+            );
+        }
+    }
+
     pub fn set_title<S: AsRef<str>>(&mut self, _title: Option<S>) {}
 
     pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {
@@ -345,6 +359,9 @@ unsafe extern "system" fn tray_proc(
         }
         WM_USER_SHOW_MENU_ON_LEFT_CLICK => {
             userdata.menu_on_left_click = wparam != 0;
+        }
+        WM_USER_SHOW_MENU_ON_RIGHT_CLICK => {
+            userdata.menu_on_right_click = wparam != 0;
         }
 
         WM_USER_TRAYICON
@@ -459,7 +476,7 @@ unsafe extern "system" fn tray_proc(
 
             TrayIconEvent::send(event);
 
-            if lparam as u32 == WM_RBUTTONDOWN
+            if (userdata.menu_on_right_click && lparam as u32 == WM_RBUTTONDOWN)
                 || (userdata.menu_on_left_click && lparam as u32 == WM_LBUTTONDOWN)
             {
                 if let Some(menu) = userdata.hpopupmenu {

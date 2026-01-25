@@ -185,6 +185,13 @@ pub struct TrayIconAttributes {
     /// - **Linux:** Unsupported.
     pub menu_on_left_click: bool,
 
+    /// Whether to show the tray menu on right click or not, default is `true`.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
+    pub menu_on_right_click: bool,
+
     /// Tray icon title.
     ///
     /// ## Platform-specific
@@ -207,6 +214,7 @@ impl Default for TrayIconAttributes {
             temp_dir_path: None,
             icon_is_template: false,
             menu_on_left_click: true,
+            menu_on_right_click: true,
             title: None,
         }
     }
@@ -304,6 +312,16 @@ impl TrayIconBuilder {
     /// - **Linux:** Unsupported.
     pub fn with_menu_on_left_click(mut self, enable: bool) -> Self {
         self.attrs.menu_on_left_click = enable;
+        self
+    }
+
+    /// Whether to show the tray menu on right click or not, default is `true`.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
+    pub fn with_menu_on_right_click(mut self, enable: bool) -> Self {
+        self.attrs.menu_on_right_click = enable;
         self
     }
 
@@ -460,6 +478,18 @@ impl TrayIcon {
     pub fn set_show_menu_on_left_click(&self, enable: bool) {
         #[cfg(any(target_os = "macos", target_os = "windows"))]
         self.tray.borrow_mut().set_show_menu_on_left_click(enable);
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        let _ = enable;
+    }
+
+    /// Disable or enable showing the tray menu on right click.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
+    pub fn set_show_menu_on_right_click(&self, enable: bool) {
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        self.tray.borrow_mut().set_show_menu_on_right_click(enable);
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         let _ = enable;
     }

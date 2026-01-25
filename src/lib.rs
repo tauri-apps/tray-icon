@@ -494,6 +494,19 @@ impl TrayIcon {
         let _ = enable;
     }
 
+    /// Manually show the tray menu at the current cursor position.
+    ///
+    /// This is useful when you want to control when the menu is displayed,
+    /// for example after updating menu items dynamically.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
+    pub fn show_menu(&self) {
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        self.tray.borrow().show_menu();
+    }
+
     /// Get tray icon rect.
     ///
     /// ## Platform-specific:

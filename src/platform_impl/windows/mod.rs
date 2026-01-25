@@ -253,6 +253,16 @@ impl TrayIcon {
         }
     }
 
+    pub fn show_menu(&self) {
+        if let Some(menu) = &self.menu {
+            unsafe {
+                if let Some(rect) = get_tray_rect(self.internal_id, self.hwnd) {
+                    show_tray_menu(self.hwnd, menu.hpopupmenu() as _, rect.left, rect.top);
+                }
+            }
+        }
+    }
+
     pub fn set_title<S: AsRef<str>>(&mut self, _title: Option<S>) {}
 
     pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {

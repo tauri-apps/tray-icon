@@ -251,6 +251,15 @@ impl TrayIcon {
         self.attrs.menu_on_right_click = enable;
     }
 
+    pub fn show_menu(&self) {
+        if let Some(ns_status_item) = &self.ns_status_item {
+            unsafe {
+                let button = ns_status_item.button(self.mtm).unwrap();
+                button.performClick(None);
+            }
+        }
+    }
+
     pub fn rect(&self) -> Option<Rect> {
         let ns_status_item = self.ns_status_item.as_deref()?;
         unsafe {

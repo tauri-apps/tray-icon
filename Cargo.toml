@@ -33,11 +33,11 @@ features = [
   "Win32_UI_Shell",
 ]
 
-[target."cfg(target_os = \"linux\")".dependencies]
+[target."cfg(any(target_os = \"linux\", target_os = \"freebsd\"))".dependencies]
 libappindicator = "0.9"
 dirs = "6"
 
-[target."cfg(target_os = \"linux\")".dev-dependencies]
+[target."cfg(any(target_os = \"linux\", target_os = \"freebsd\"))".dev-dependencies]
 gtk = "0.18"
 
 [target."cfg(target_os = \"macos\")".dependencies]
@@ -80,7 +80,7 @@ objc2-app-kit = { version = "0.3", default-features = false, features = [
   "NSWindow",
 ] }
 
-[target."cfg(any(target_os = \"linux\", target_os = \"macos\"))".dependencies]
+[target."cfg(any(target_os = \"linux\", target_os = \"macos\", target_os = \"freebsd\"))".dependencies]
 png = "0.18"
 
 [dev-dependencies]

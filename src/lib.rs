@@ -412,9 +412,9 @@ impl TrayIcon {
     /// On Linux, we need to write the icon to the disk and usually it will
     /// be `$XDG_RUNTIME_DIR/tray-icon` or `$TEMP/tray-icon`.
     pub fn set_temp_dir_path<P: AsRef<Path>>(&self, path: Option<P>) {
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", target_os = "freebsd"))]
         self.tray.borrow_mut().set_temp_dir_path(path);
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
         let _ = path;
     }
 

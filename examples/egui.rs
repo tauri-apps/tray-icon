@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
 use std::{cell::RefCell, rc::Rc};
 
 use eframe::egui;
@@ -13,7 +13,7 @@ fn main() -> Result<(), eframe::Error> {
     // Since egui uses winit under the hood and doesn't use gtk on Linux, and we need gtk for
     // the tray icon to show up, we need to spawn a thread
     // where we initialize gtk and create the tray_icon
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "freebsd"))]
     std::thread::spawn(|| {
         use tray_icon::menu::Menu;
 
@@ -27,16 +27,16 @@ fn main() -> Result<(), eframe::Error> {
         gtk::main();
     });
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
     let mut _tray_icon = Rc::new(RefCell::new(None));
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
     let tray_c = _tray_icon.clone();
 
     eframe::run_native(
         "My egui App",
         eframe::NativeOptions::default(),
         Box::new(move |_cc| {
-            #[cfg(not(target_os = "linux"))]
+            #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
             {
                 tray_c
                     .borrow_mut()

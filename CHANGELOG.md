@@ -1,5 +1,15 @@
 # Changelog
 
+## \[0.22.0]
+
+- [`f912921`](https://www.github.com/tauri-apps/tray-icon/commit/f912921a56584251dc0b5670b5281cbf7e4106b0) ([#294](https://www.github.com/tauri-apps/tray-icon/pull/294) by [@felipecrs](https://www.github.com/tauri-apps/tray-icon/../../felipecrs)) Added `with_menu_on_right_click` builder method, `set_show_menu_on_right_click` to control whether the context menu is shown on right click (analogous to the existing left click option), and `show_menu()` to programmatically display the tray menu.
+
+  Together these enable dynamic menu workflows where the menu content is updated before being shown, for example by disabling automatic right-click menu, listening for the click event, updating items, and then calling `show_menu()`.
+- [`0a5835b`](https://www.github.com/tauri-apps/tray-icon/commit/0a5835b0e6828e37a1f781de9c2d671ae7a939e6) ([#295](https://www.github.com/tauri-apps/tray-icon/pull/295) by [@thief-sty](https://www.github.com/tauri-apps/tray-icon/../../thief-sty)) Update png dependency version to 0.18.
+
+  This avoids duplicated dependencies in downstream crates.
+- [`0a5835b`](https://www.github.com/tauri-apps/tray-icon/commit/0a5835b0e6828e37a1f781de9c2d671ae7a939e6) ([#295](https://www.github.com/tauri-apps/tray-icon/pull/295) by [@thief-sty](https://www.github.com/tauri-apps/tray-icon/../../thief-sty)) Update rust version to 1.73.
+
 ## \[0.21.3]
 
 - [`d3c2468`](https://www.github.com/tauri-apps/tray-icon/commit/d3c24683fd63d197fa064bfbf205ad2fb464e338) ([#293](https://www.github.com/tauri-apps/tray-icon/pull/293) by [@Slinetrac](https://www.github.com/tauri-apps/tray-icon/../../Slinetrac)) Handle Windows tray icon creation when the taskbar is not ready by keeping the message window alive and re-registering on TaskbarCreated.

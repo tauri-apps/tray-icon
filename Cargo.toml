@@ -15,9 +15,10 @@ default = ["libxdo"]
 libxdo = ["muda/libxdo"]
 serde = ["muda/serde", "dep:serde"]
 common-controls-v6 = ["muda/common-controls-v6"]
+gtk = ["muda/gtk", "dep:libappindicator"]
 
 [dependencies]
-muda = { version = "0.17", default-features = false, features = ["gtk"] }
+muda = { version = "0.17", default-features = false }
 crossbeam-channel = "0.5"
 once_cell = "1"
 thiserror = "2"
@@ -34,7 +35,7 @@ features = [
 ]
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"netbsd\", target_os = \"openbsd\"))".dependencies]
-libappindicator = "0.9"
+libappindicator = { version = "0.9", optional = true }
 dirs = "6"
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"netbsd\", target_os = \"openbsd\"))".dev-dependencies]

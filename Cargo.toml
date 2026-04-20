@@ -11,7 +11,7 @@ rust-version = "1.73"
 include = ["README.md", "src/**/*.rs", "Cargo.toml", "LICENSE-APACHE", "LICENSE-MIT", "LICENSE.spdx"]
 
 [features]
-default = ["libxdo"]
+default = ["libxdo", "gtk"]
 libxdo = ["muda/libxdo"]
 serde = ["muda/serde", "dep:serde"]
 common-controls-v6 = ["muda/common-controls-v6"]

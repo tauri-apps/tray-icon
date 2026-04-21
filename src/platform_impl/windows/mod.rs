@@ -360,6 +360,7 @@ unsafe extern "system" fn tray_proc(
             userdata.tooltip = *tooltip;
         }
         _ if msg == *S_U_TASKBAR_RESTART => {
+            remove_tray_icon(userdata.hwnd, userdata.internal_id);
             register_tray_icon(
                 userdata.hwnd,
                 userdata.internal_id,

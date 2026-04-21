@@ -1,5 +1,5 @@
 ---
-"tray_icon": minor
+"tray-icon": minor
 ---
 
 Make gtk an optional feature (enabled by default)

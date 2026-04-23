@@ -70,6 +70,22 @@ let tray_icon = TrayIconBuilder::new()
     .unwrap();
 ```
 
+#### Create a tray icon that reacts to the menu bar theme **macOS only**
+
+```rs
+use tray_icon::TrayIconBuilder;
+
+let tray_icon = TrayIconBuilder::new()
+    .with_tooltip("themed tray icon!")
+    // if your icon is grayscale, enable template mode
+    //.with_icon(icon).with_template(true)
+
+    // ...otherwise set a different icon for light and dark themes
+    .with_themed_icon(light_icon, dark_icon)
+    .build()
+    .unwrap();
+```
+
 ## Processing tray events
 
 You can use `TrayIconEvent::receiver` to get a reference to the `TrayIconEventReceiver`

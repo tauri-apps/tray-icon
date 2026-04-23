@@ -4,16 +4,22 @@
 
 mod icon;
 use std::cell::{Cell, RefCell};
+use std::cmp::max;
 
+use block2::RcBlock;
 use objc2::rc::Retained;
-use objc2::{define_class, msg_send, AllocAnyThread, DeclaredClass, Message};
+use objc2::runtime::Bool;
+use objc2::{available, define_class, msg_send, AllocAnyThread, DeclaredClass, Message};
 use objc2_app_kit::{
-    NSCellImagePosition, NSEvent, NSImage, NSMenu, NSStatusBar, NSStatusItem, NSTrackingArea,
-    NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
+    NSAppearanceCustomization, NSAppearanceNameAccessibilityHighContrastAqua,
+    NSAppearanceNameAccessibilityHighContrastDarkAqua, NSAppearanceNameAqua,
+    NSAppearanceNameDarkAqua, NSCellImagePosition, NSEvent, NSImage, NSMenu, NSStatusBar,
+    NSStatusBarButton, NSStatusItem, NSTrackingArea, NSTrackingAreaOptions,
+    NSVariableStatusItemLength, NSView, NSWindow,
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
-use objc2_foundation::{MainThreadMarker, NSData, NSSize, NSString};
+use objc2_foundation::{MainThreadMarker, NSArray, NSData, NSRect, NSSize, NSString};
 
 pub(crate) use self::icon::PlatformIcon;
 use crate::Error;
@@ -55,12 +61,21 @@ impl TrayIcon {
             NSStatusBar::systemStatusBar().statusItemWithLength(NSVariableStatusItemLength)
         };
 
-        set_icon_for_ns_status_item_button(
-            &ns_status_item,
-            attrs.icon.clone(),
-            attrs.icon_is_template,
-            mtm,
-        )?;
+        if let (Some(dark), Some(light)) = (&attrs.dark_icon, &attrs.icon) {
+            set_themed_icon_for_ns_status_item_button(
+                &ns_status_item,
+                light.clone(),
+                dark.clone(),
+                mtm,
+            )?;
+        } else {
+            set_icon_for_ns_status_item_button(
+                &ns_status_item,
+                attrs.icon.clone(),
+                attrs.icon_is_template,
+                mtm,
+            )?;
+        }
 
         if let Some(menu) = &attrs.menu {
             unsafe {
@@ -119,6 +134,23 @@ impl TrayIcon {
             tray_target.update_dimensions();
         }
         self.attrs.icon = icon;
+        self.attrs.dark_icon = None;
+        Ok(())
+    }
+
+    pub fn set_themed_icon(&mut self, light_icon: Icon, dark_icon: Icon) -> crate::Result<()> {
+        if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
+        {
+            set_themed_icon_for_ns_status_item_button(
+                ns_status_item,
+                light_icon.clone(),
+                dark_icon.clone(),
+                self.mtm,
+            )?;
+            tray_target.update_dimensions();
+        }
+        self.attrs.icon = Some(light_icon);
+        self.attrs.dark_icon = Some(dark_icon);
         Ok(())
     }
 
@@ -311,6 +343,52 @@ fn set_icon_for_ns_status_item_button(
         }
     } else {
         unsafe { button.setImage(None) };
+    }
+
+    Ok(())
+}
+
+fn set_themed_icon_for_ns_status_item_button(
+    ns_status_item: &Retained<NSStatusItem>,
+    light_icon: Icon,
+    dark_icon: Icon,
+    mtm: MainThreadMarker,
+) -> crate::Result<()> {
+    const ICON_HEIGHT: f64 = 18.0;
+
+    let (light_width, light_height) = light_icon.inner.get_size();
+    let (dark_width, dark_height) = dark_icon.inner.get_size();
+    let icon_width: f64 = (max(light_width, dark_width) as f64)
+        / (max(light_height, dark_height) as f64 / ICON_HEIGHT);
+
+    let light_png: Vec<u8> = light_icon.inner.to_png()?;
+    let dark_png: Vec<u8> = dark_icon.inner.to_png()?;
+    let ns_status_item = ns_status_item.clone();
+
+    let button = unsafe { ns_status_item.button(mtm).unwrap() };
+
+    let light_nsdata = NSData::from_vec(light_png);
+    let light_nsimage = NSImage::initWithData(NSImage::alloc(), &light_nsdata).unwrap();
+    let dark_nsdata = NSData::from_vec(dark_png);
+    let dark_nsimage = NSImage::initWithData(NSImage::alloc(), &dark_nsdata).unwrap();
+    let nssize = NSSize::new(icon_width, ICON_HEIGHT);
+
+    let button_clone = button.clone();
+    let block = RcBlock::new(move |ns_rect: NSRect| unsafe {
+        if is_button_dark(&button_clone) {
+            light_nsimage.drawInRect(ns_rect);
+        } else {
+            dark_nsimage.drawInRect(ns_rect);
+        }
+        Bool::YES
+    });
+
+    unsafe {
+        let nsimage = NSImage::imageWithSize_flipped_drawingHandler(nssize, true, &block);
+        nsimage.setTemplate(false);
+
+        button.setImage(Some(&nsimage));
+        button.setImagePosition(NSCellImagePosition::ImageLeft);
     }
 
     Ok(())
@@ -609,4 +687,27 @@ struct MouseClickEvent {
 /// to convert between the two coordinate systems.
 fn flip_window_screen_coordinates(y: f64) -> f64 {
     unsafe { CGDisplayPixelsHigh(CGMainDisplayID()) as f64 - y }
+}
+
+fn is_button_dark(button: &NSStatusBarButton) -> bool {
+    // `bestMatchFromAppearancesWithNames` is only available in macOS 10.14+.
+    if !available!(macos = 10.14) {
+        return false;
+    }
+
+    let appearance = unsafe { button.effectiveAppearance() };
+    let style = appearance.bestMatchFromAppearancesWithNames(&NSArray::from_slice(unsafe {
+        &[
+            NSAppearanceNameAqua,
+            NSAppearanceNameAccessibilityHighContrastAqua,
+            NSAppearanceNameDarkAqua,
+            NSAppearanceNameAccessibilityHighContrastDarkAqua,
+        ]
+    }));
+    style
+        .map(|style| unsafe {
+            style.isEqualToString(NSAppearanceNameDarkAqua)
+                || style.isEqualToString(NSAppearanceNameAccessibilityHighContrastDarkAqua)
+        })
+        .unwrap_or(false)
 }

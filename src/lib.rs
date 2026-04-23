@@ -172,6 +172,9 @@ pub struct TrayIconAttributes {
     ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub icon: Option<Icon>,
 
+    /// Dark theme tray icon. **macOS only**.
+    pub dark_icon: Option<Icon>,
+
     /// Tray icon temp dir path. **Linux only**.
     pub temp_dir_path: Option<PathBuf>,
 
@@ -211,6 +214,7 @@ impl Default for TrayIconAttributes {
             tooltip: None,
             menu: None,
             icon: None,
+            dark_icon: None,
             temp_dir_path: None,
             icon_is_template: false,
             menu_on_left_click: true,
@@ -262,6 +266,16 @@ impl TrayIconBuilder {
     ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub fn with_icon(mut self, icon: Icon) -> Self {
         self.attrs.icon = Some(icon);
+        self
+    }
+
+    /// Automatically set appropriate icon based on the menu bar theme. **macOS only**
+    ///
+    /// The light icon will be used when the menu bar is dark and vice versa.
+    /// If the icon doesn't have color, see [`with_icon_as_template`](Self::with_icon_as_template).
+    pub fn with_themed_icon(mut self, light_icon: Icon, dark_icon: Icon) -> Self {
+        self.attrs.icon = Some(light_icon);
+        self.attrs.dark_icon = Some(dark_icon);
         self
     }
 
@@ -386,6 +400,25 @@ impl TrayIcon {
     /// Set new tray icon. If `None` is provided, it will remove the icon.
     pub fn set_icon(&self, icon: Option<Icon>) -> Result<()> {
         self.tray.borrow_mut().set_icon(icon)
+    }
+
+    /// Automatically set appropriate icon based on the menu bar theme. **macOS only**
+    ///
+    /// The light icon will be used when the menu bar is dark and vice versa.
+    /// If the icon doesn't have color, see [`set_icon_as_template`](Self::set_icon_as_template).
+    pub fn set_themed_icon(&self, light_icon: Icon, dark_icon: Icon) -> Result<()> {
+        #[cfg(target_os = "macos")]
+        return self
+            .tray
+            .borrow_mut()
+            .set_themed_icon(light_icon, dark_icon);
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            let _ = light_icon;
+            let _ = dark_icon;
+            Ok(())
+        }
     }
 
     /// Set new tray menu.

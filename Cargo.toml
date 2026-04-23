@@ -63,8 +63,10 @@ objc2-foundation = { version = "0.3", default-features = false, features = [
   "NSThread",
 ] }
 objc2-app-kit = { version = "0.3", default-features = false, features = [
+  "block2",
   "std",
   "objc2-core-foundation",
+  "NSAppearance",
   "NSButton",
   "NSCell",
   "NSControl",
@@ -79,6 +81,7 @@ objc2-app-kit = { version = "0.3", default-features = false, features = [
   "NSView",
   "NSWindow",
 ] }
+block2 = "0.6"
 
 [target."cfg(any(target_os = \"linux\", target_os = \"macos\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"netbsd\", target_os = \"openbsd\"))".dependencies]
 png = "0.18"

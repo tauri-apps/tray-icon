@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.22.1]
+
+- [`eabe0f4`](https://www.github.com/tauri-apps/tray-icon/commit/eabe0f48f89c3df1cde48e8111d46bd9fec1ca30) ([#306](https://www.github.com/tauri-apps/tray-icon/pull/306) by [@Legend-Master](https://www.github.com/tauri-apps/tray-icon/../../Legend-Master)) Fix tray icon gets blurry after changing dpi on Windows
+
 ## \[0.22.0]
 
 - [`f912921`](https://www.github.com/tauri-apps/tray-icon/commit/f912921a56584251dc0b5670b5281cbf7e4106b0) ([#294](https://www.github.com/tauri-apps/tray-icon/pull/294) by [@felipecrs](https://www.github.com/tauri-apps/tray-icon/../../felipecrs)) Added `with_menu_on_right_click` builder method, `set_show_menu_on_right_click` to control whether the context menu is shown on right click (analogous to the existing left click option), and `show_menu()` to programmatically display the tray menu.

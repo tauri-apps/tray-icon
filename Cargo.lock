@@ -3551,7 +3551,7 @@ dependencies = [
  "serde_json",
  "tao",
  "thiserror 2.0.11",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
  "winit",
 ]
 
@@ -4234,15 +4234,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2f500e4d28234f72040990ec9d39e3a6b950f9f22d3dba18416c35882612bcb"
 dependencies = [
  "windows-targets 0.53.5",
-]
-
-[[package]]
-name = "windows-sys"
-version = "0.61.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
-dependencies = [
- "windows-link 0.2.1",
 ]
 
 [[package]]

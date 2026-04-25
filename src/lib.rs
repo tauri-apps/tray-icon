@@ -185,6 +185,13 @@ pub struct TrayIconAttributes {
     /// - **Linux:** Unsupported.
     pub menu_on_left_click: bool,
 
+    /// Whether to show the tray menu on right click or not, default is `true`.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
+    pub menu_on_right_click: bool,
+
     /// Tray icon title.
     ///
     /// ## Platform-specific
@@ -207,6 +214,7 @@ impl Default for TrayIconAttributes {
             temp_dir_path: None,
             icon_is_template: false,
             menu_on_left_click: true,
+            menu_on_right_click: true,
             title: None,
         }
     }
@@ -304,6 +312,16 @@ impl TrayIconBuilder {
     /// - **Linux:** Unsupported.
     pub fn with_menu_on_left_click(mut self, enable: bool) -> Self {
         self.attrs.menu_on_left_click = enable;
+        self
+    }
+
+    /// Whether to show the tray menu on right click or not, default is `true`.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
+    pub fn with_menu_on_right_click(mut self, enable: bool) -> Self {
+        self.attrs.menu_on_right_click = enable;
         self
     }
 
@@ -412,9 +430,21 @@ impl TrayIcon {
     /// On Linux, we need to write the icon to the disk and usually it will
     /// be `$XDG_RUNTIME_DIR/tray-icon` or `$TEMP/tray-icon`.
     pub fn set_temp_dir_path<P: AsRef<Path>>(&self, path: Option<P>) {
-        #[cfg(target_os = "linux")]
+        #[cfg(any(
+            target_os = "linux",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        ))]
         self.tray.borrow_mut().set_temp_dir_path(path);
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(not(any(
+            target_os = "linux",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        )))]
         let _ = path;
     }
 
@@ -450,6 +480,31 @@ impl TrayIcon {
         self.tray.borrow_mut().set_show_menu_on_left_click(enable);
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         let _ = enable;
+    }
+
+    /// Disable or enable showing the tray menu on right click.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
+    pub fn set_show_menu_on_right_click(&self, enable: bool) {
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        self.tray.borrow_mut().set_show_menu_on_right_click(enable);
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        let _ = enable;
+    }
+
+    /// Manually show the tray menu at the current cursor position.
+    ///
+    /// This is useful when you want to control when the menu is displayed,
+    /// for example after updating menu items dynamically.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
+    pub fn show_menu(&self) {
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        self.tray.borrow().show_menu();
     }
 
     /// Get tray icon rect.

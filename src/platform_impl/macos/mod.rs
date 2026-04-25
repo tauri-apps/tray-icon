@@ -86,6 +86,7 @@ impl TrayIcon {
                 ),
                 status_item: ns_status_item.retain(),
                 menu_on_left_click: Cell::new(attrs.menu_on_left_click),
+                menu_on_right_click: Cell::new(attrs.menu_on_right_click),
             });
             let tray_target: Retained<TrayTarget> = msg_send![super(target), initWithFrame: frame];
             tray_target.setWantsLayer(true);
@@ -243,6 +244,22 @@ impl TrayIcon {
         self.attrs.menu_on_left_click = enable;
     }
 
+    pub fn set_show_menu_on_right_click(&mut self, enable: bool) {
+        if let Some(tray_target) = &self.tray_target {
+            tray_target.ivars().menu_on_right_click.set(enable);
+        }
+        self.attrs.menu_on_right_click = enable;
+    }
+
+    pub fn show_menu(&self) {
+        if let Some(ns_status_item) = &self.ns_status_item {
+            unsafe {
+                let button = ns_status_item.button(self.mtm).unwrap();
+                button.performClick(None);
+            }
+        }
+    }
+
     pub fn rect(&self) -> Option<Rect> {
         let ns_status_item = self.ns_status_item.as_deref()?;
         unsafe {
@@ -305,6 +322,7 @@ struct TrayTargetIvars {
     menu: RefCell<Option<Retained<NSMenu>>>,
     status_item: Retained<NSStatusItem>,
     menu_on_left_click: Cell<bool>,
+    menu_on_right_click: Cell<bool>,
 }
 
 define_class!(
@@ -474,7 +492,10 @@ fn on_tray_click(this: &TrayTarget, button: MouseButton) {
         let ns_button = this.ivars().status_item.button(mtm).unwrap();
 
         let menu_on_left_click = this.ivars().menu_on_left_click.get();
-        if button == MouseButton::Right || (menu_on_left_click && button == MouseButton::Left) {
+        let menu_on_right_click = this.ivars().menu_on_right_click.get();
+        if (menu_on_right_click && button == MouseButton::Right)
+            || (menu_on_left_click && button == MouseButton::Left)
+        {
             let has_items = if let Some(menu) = &*this.ivars().menu.borrow() {
                 menu.numberOfItems() > 0
             } else {

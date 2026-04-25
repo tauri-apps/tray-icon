@@ -507,6 +507,12 @@ impl TrayIcon {
         self.tray.borrow().show_menu();
     }
 
+    /// Returns whether the tray menu is currently showing. **Windows only**.
+    #[cfg(windows)]
+    pub fn is_menu_showing(&self) -> Option<bool> {
+        self.tray.borrow().is_menu_showing()
+    }
+
     /// Get tray icon rect.
     ///
     /// ## Platform-specific:

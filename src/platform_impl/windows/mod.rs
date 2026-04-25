@@ -4,7 +4,9 @@
 
 mod icon;
 mod util;
+use std::collections::HashMap;
 use std::ptr;
+use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
 use windows_sys::{
@@ -21,10 +23,11 @@ use windows_sys::{
                 GetCursorPos, KillTimer, RegisterClassW, RegisterWindowMessageA, SendMessageW,
                 SetForegroundWindow, SetTimer, TrackPopupMenu, CREATESTRUCTW, CW_USEDEFAULT,
                 GWL_USERDATA, HICON, HMENU, MSGFLT_ALLOW, TPM_BOTTOMALIGN, TPM_LEFTALIGN,
-                WM_CREATE, WM_DESTROY, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP,
-                WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE, WM_NCCREATE,
-                WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_TIMER, WNDCLASSW, WS_EX_LAYERED,
-                WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_OVERLAPPED,
+                WM_CREATE, WM_DESTROY, WM_ENTERMENULOOP, WM_EXITMENULOOP, WM_LBUTTONDBLCLK,
+                WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP,
+                WM_MOUSEMOVE, WM_NCCREATE, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP,
+                WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+                WS_EX_TRANSPARENT, WS_OVERLAPPED,
             },
         },
     },
@@ -46,6 +49,9 @@ const WM_USER_UPDATE_TRAYTOOLTIP: u32 = 6007;
 const WM_USER_LEAVE_TIMER_ID: u32 = 6008;
 const WM_USER_SHOW_MENU_ON_LEFT_CLICK: u32 = 6009;
 const WM_USER_SHOW_MENU_ON_RIGHT_CLICK: u32 = 6010;
+/// Whether the tray menu is currently showing
+static IS_MENU_SHOWING: Lazy<Mutex<HashMap</* HWND as usize */ usize, bool>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
 /// When the taskbar is created, it registers a message with the "TaskbarCreated" string and then broadcasts this message to all top-level windows
 /// When the application receives this message, it should assume that any taskbar icons it added have been removed and add them again.
 static S_U_TASKBAR_RESTART: Lazy<u32> =
@@ -125,6 +131,8 @@ impl TrayIcon {
             if hwnd.is_null() {
                 return Err(crate::Error::OsError(std::io::Error::last_os_error()));
             }
+
+            IS_MENU_SHOWING.lock().unwrap().insert(hwnd as usize, false);
 
             // Allow "TaskbarCreated" through UIPI so elevated apps can re-register on explorer restart.
             ChangeWindowMessageFilterEx(hwnd, *S_U_TASKBAR_RESTART, MSGFLT_ALLOW, ptr::null_mut());
@@ -282,6 +290,14 @@ impl TrayIcon {
         Ok(())
     }
 
+    pub fn is_menu_showing(&self) -> Option<bool> {
+        IS_MENU_SHOWING
+            .lock()
+            .unwrap()
+            .get(&(self.hwnd as usize))
+            .copied()
+    }
+
     pub fn rect(&self) -> Option<Rect> {
         get_tray_rect(self.internal_id, self.hwnd).map(Into::into)
     }
@@ -293,6 +309,11 @@ impl TrayIcon {
 
 impl Drop for TrayIcon {
     fn drop(&mut self) {
+        IS_MENU_SHOWING
+            .lock()
+            .unwrap()
+            .remove(&(self.hwnd as usize));
+
         unsafe {
             remove_tray_icon(self.hwnd, self.internal_id);
 
@@ -332,6 +353,12 @@ unsafe extern "system" fn tray_proc(
     let userdata = &mut *(userdata_ptr);
 
     match msg {
+        WM_ENTERMENULOOP => {
+            IS_MENU_SHOWING.lock().unwrap().insert(hwnd as usize, true);
+        }
+        WM_EXITMENULOOP => {
+            IS_MENU_SHOWING.lock().unwrap().insert(hwnd as usize, false);
+        }
         WM_DESTROY => {
             drop(Box::from_raw(userdata_ptr));
             return 0;

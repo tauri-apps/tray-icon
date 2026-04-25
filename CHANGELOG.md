@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.22.2]
+
+- [`215e972`](https://www.github.com/tauri-apps/tray-icon/commit/215e97221e3a9e9cbc71b29c10bcfb234e1cc022) ([#262](https://www.github.com/tauri-apps/tray-icon/pull/262) by [@renovate](https://www.github.com/tauri-apps/tray-icon/../../renovate)) Relaxed `windows-sys` dependency to `>=0.60, <=0.61` instead of `0.60`
+
 ## \[0.22.1]
 
 - [`eabe0f4`](https://www.github.com/tauri-apps/tray-icon/commit/eabe0f48f89c3df1cde48e8111d46bd9fec1ca30) ([#306](https://www.github.com/tauri-apps/tray-icon/pull/306) by [@Legend-Master](https://www.github.com/tauri-apps/tray-icon/../../Legend-Master)) Fix tray icon gets blurry after changing dpi on Windows

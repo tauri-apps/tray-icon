@@ -18,13 +18,14 @@ use windows_sys::{
             },
             WindowsAndMessaging::{
                 ChangeWindowMessageFilterEx, CreateWindowExW, DefWindowProcW, DestroyWindow,
-                GetCursorPos, KillTimer, RegisterClassW, RegisterWindowMessageA, SendMessageW,
-                SetForegroundWindow, SetTimer, TrackPopupMenu, CREATESTRUCTW, CW_USEDEFAULT,
-                GWL_USERDATA, HICON, HMENU, MSGFLT_ALLOW, TPM_BOTTOMALIGN, TPM_LEFTALIGN,
-                WM_CREATE, WM_DESTROY, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP,
-                WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE, WM_NCCREATE,
-                WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_TIMER, WNDCLASSW, WS_EX_LAYERED,
-                WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_OVERLAPPED,
+                GetCursorPos, KillTimer, PostMessageW, RegisterClassW, RegisterWindowMessageA,
+                SendMessageW, SetForegroundWindow, SetTimer, TrackPopupMenu, CREATESTRUCTW,
+                CW_USEDEFAULT, GWL_USERDATA, HICON, HMENU, MSGFLT_ALLOW, TPM_BOTTOMALIGN,
+                TPM_LEFTALIGN, WM_CREATE, WM_DESTROY, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
+                WM_LBUTTONUP, WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE,
+                WM_NCCREATE, WM_NULL, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_TIMER,
+                WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
+                WS_OVERLAPPED,
             },
         },
     },
@@ -487,8 +488,8 @@ unsafe extern "system" fn tray_proc(
 
             TrayIconEvent::send(event);
 
-            if (userdata.menu_on_right_click && lparam as u32 == WM_RBUTTONDOWN)
-                || (userdata.menu_on_left_click && lparam as u32 == WM_LBUTTONDOWN)
+            if (userdata.menu_on_right_click && lparam as u32 == WM_RBUTTONUP)
+                || (userdata.menu_on_left_click && lparam as u32 == WM_LBUTTONUP)
             {
                 if let Some(menu) = userdata.hpopupmenu {
                     show_tray_menu(hwnd, menu, cursor.x, cursor.y);
@@ -551,6 +552,9 @@ unsafe fn show_tray_menu(hwnd: HWND, menu: HMENU, x: i32, y: i32) {
         hwnd,
         std::ptr::null_mut(),
     );
+    // The shell docs recommend posting a benign message after TrackPopupMenu
+    // for notification area menus so the task switch is finalized correctly.
+    PostMessageW(hwnd, WM_NULL, 0, 0);
 }
 
 #[inline]

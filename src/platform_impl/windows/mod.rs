@@ -70,6 +70,9 @@ pub struct TrayIcon {
     internal_id: u32,
 }
 
+unsafe impl Send for TrayIcon {}
+unsafe impl Sync for TrayIcon {}
+
 impl TrayIcon {
     pub fn new(id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
         let internal_id = COUNTER.next();

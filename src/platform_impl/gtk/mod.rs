@@ -20,6 +20,9 @@ pub struct TrayIcon {
     menu: Option<Box<dyn muda::ContextMenu>>,
 }
 
+unsafe impl Send for TrayIcon {}
+unsafe impl Sync for TrayIcon {}
+
 impl TrayIcon {
     pub fn new(id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
         let mut indicator = AppIndicator::new(&format!("tray-icon tray app {}", id.as_ref()), "");

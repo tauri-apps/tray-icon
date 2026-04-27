@@ -30,6 +30,9 @@ pub struct TrayIcon {
     mtm: MainThreadMarker,
 }
 
+unsafe impl Send for TrayIcon {}
+unsafe impl Sync for TrayIcon {}
+
 impl TrayIcon {
     pub fn new(id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
         let mtm = MainThreadMarker::new().ok_or(Error::NotMainThread)?;

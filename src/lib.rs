@@ -121,9 +121,8 @@
 //! [tao]: https://docs.rs/tao
 
 use std::{
-    cell::RefCell,
     path::{Path, PathBuf},
-    rc::Rc,
+    sync::{Arc, Mutex},
 };
 
 use counter::Counter;
@@ -343,8 +342,11 @@ impl TrayIconBuilder {
 #[derive(Clone)]
 pub struct TrayIcon {
     id: TrayIconId,
-    tray: Rc<RefCell<platform_impl::TrayIcon>>,
+    tray: Arc<Mutex<platform_impl::TrayIcon>>,
 }
+
+unsafe impl Send for TrayIcon {}
+unsafe impl Sync for TrayIcon {}
 
 impl TrayIcon {
     /// Builds and adds a new tray icon to the system tray.
@@ -356,10 +358,7 @@ impl TrayIcon {
     pub fn new(attrs: TrayIconAttributes) -> Result<Self> {
         let id = TrayIconId::new_unique();
         Ok(Self {
-            tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(
-                id.clone(),
-                attrs,
-            )?)),
+            tray: Arc::new(Mutex::new(platform_impl::TrayIcon::new(id.clone(), attrs)?)),
             id,
         })
     }
@@ -370,10 +369,7 @@ impl TrayIcon {
     pub fn with_id<I: Into<TrayIconId>>(id: I, attrs: TrayIconAttributes) -> Result<Self> {
         let id = id.into();
         Ok(Self {
-            tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(
-                id.clone(),
-                attrs,
-            )?)),
+            tray: Arc::new(Mutex::new(platform_impl::TrayIcon::new(id.clone(), attrs)?)),
             id,
         })
     }
@@ -385,7 +381,7 @@ impl TrayIcon {
 
     /// Set new tray icon. If `None` is provided, it will remove the icon.
     pub fn set_icon(&self, icon: Option<Icon>) -> Result<()> {
-        self.tray.borrow_mut().set_icon(icon)
+        self.tray.lock().unwrap().set_icon(icon)
     }
 
     /// Set new tray menu.
@@ -394,7 +390,7 @@ impl TrayIcon {
     ///
     /// - **Linux**: once a menu is set it cannot be removed so `None` has no effect
     pub fn set_menu(&self, menu: Option<Box<dyn menu::ContextMenu>>) {
-        self.tray.borrow_mut().set_menu(menu)
+        self.tray.lock().unwrap().set_menu(menu);
     }
 
     /// Sets the tooltip for this tray icon.
@@ -403,7 +399,7 @@ impl TrayIcon {
     ///
     /// - **Linux:** Unsupported
     pub fn set_tooltip<S: AsRef<str>>(&self, tooltip: Option<S>) -> Result<()> {
-        self.tray.borrow_mut().set_tooltip(tooltip)
+        self.tray.lock().unwrap().set_tooltip(tooltip)
     }
 
     /// Sets the tooltip for this tray icon.
@@ -417,12 +413,12 @@ impl TrayIcon {
     ///   on the user's panel.  This may not be shown in all visualizations.
     /// - **Windows:** Unsupported
     pub fn set_title<S: AsRef<str>>(&self, title: Option<S>) {
-        self.tray.borrow_mut().set_title(title)
+        self.tray.lock().unwrap().set_title(title)
     }
 
     /// Show or hide this tray icon
     pub fn set_visible(&self, visible: bool) -> Result<()> {
-        self.tray.borrow_mut().set_visible(visible)
+        self.tray.lock().unwrap().set_visible(visible)
     }
 
     /// Sets the tray icon temp dir path. **Linux only**.
@@ -437,7 +433,7 @@ impl TrayIcon {
             target_os = "netbsd",
             target_os = "openbsd"
         ))]
-        self.tray.borrow_mut().set_temp_dir_path(path);
+        self.tray.lock().unwrap().set_temp_dir_path(path);
         #[cfg(not(any(
             target_os = "linux",
             target_os = "dragonfly",
@@ -451,7 +447,7 @@ impl TrayIcon {
     /// Set the current icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
     pub fn set_icon_as_template(&self, is_template: bool) {
         #[cfg(target_os = "macos")]
-        self.tray.borrow_mut().set_icon_as_template(is_template);
+        self.tray.lock().unwrap().set_icon_as_template(is_template);
         #[cfg(not(target_os = "macos"))]
         let _ = is_template;
     }
@@ -460,7 +456,8 @@ impl TrayIcon {
         #[cfg(target_os = "macos")]
         return self
             .tray
-            .borrow_mut()
+            .lock()
+            .unwrap()
             .set_icon_with_as_template(icon, is_template);
         #[cfg(not(target_os = "macos"))]
         {
@@ -477,7 +474,10 @@ impl TrayIcon {
     /// - **Linux:** Unsupported.
     pub fn set_show_menu_on_left_click(&self, enable: bool) {
         #[cfg(any(target_os = "macos", target_os = "windows"))]
-        self.tray.borrow_mut().set_show_menu_on_left_click(enable);
+        self.tray
+            .lock()
+            .unwrap()
+            .set_show_menu_on_left_click(enable);
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         let _ = enable;
     }
@@ -489,7 +489,10 @@ impl TrayIcon {
     /// - **Linux:** Unsupported.
     pub fn set_show_menu_on_right_click(&self, enable: bool) {
         #[cfg(any(target_os = "macos", target_os = "windows"))]
-        self.tray.borrow_mut().set_show_menu_on_right_click(enable);
+        self.tray
+            .lock()
+            .unwrap()
+            .set_show_menu_on_right_click(enable);
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         let _ = enable;
     }
@@ -504,7 +507,7 @@ impl TrayIcon {
     /// - **Linux:** Unsupported.
     pub fn show_menu(&self) {
         #[cfg(any(target_os = "macos", target_os = "windows"))]
-        self.tray.borrow().show_menu();
+        self.tray.lock().unwrap().show_menu();
     }
 
     /// Get tray icon rect.
@@ -513,7 +516,7 @@ impl TrayIcon {
     ///
     /// - **Linux**: Unsupported.
     pub fn rect(&self) -> Option<Rect> {
-        self.tray.borrow().rect()
+        self.tray.lock().unwrap().rect()
     }
 
     /// Get the tray icon's underlying [window handle](windows_sys::Win32::Foundation::HWND) **Windows only**.
@@ -521,7 +524,7 @@ impl TrayIcon {
     /// This window handle is valid as long as the tray icon.
     #[cfg(windows)]
     pub fn window_handle(&self) -> windows_sys::Win32::Foundation::HWND {
-        self.tray.borrow().hwnd()
+        self.tray.lock().unwrap().hwnd()
     }
 
     /// Get the tray icon's underlying [NSStatusItem](objc2_app_kit::NSStatusItem) **macOS only**.
@@ -529,7 +532,7 @@ impl TrayIcon {
     /// Returns `None` if the status item is not available.
     #[cfg(target_os = "macos")]
     pub fn ns_status_item(&self) -> Option<objc2::rc::Retained<objc2_app_kit::NSStatusItem>> {
-        self.tray.borrow().ns_status_item().cloned()
+        self.tray.lock().unwrap().ns_status_item().cloned()
     }
 
     /// Get the tray icon's underlying [AppIndicator](libappindicator::AppIndicator) **Linux only**.
@@ -539,7 +542,7 @@ impl TrayIcon {
     /// The returned pointer is valid as long as the `TrayIcon` is.
     #[cfg(all(unix, not(target_os = "macos")))]
     pub unsafe fn app_indicator(&self) -> *const libappindicator::AppIndicator {
-        self.tray.borrow().app_indicator() as *const _
+        self.tray.lock().unwrap().app_indicator() as *const _
     }
 }
 

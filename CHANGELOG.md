@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.23.0]
+
+- [`b74676a`](https://www.github.com/tauri-apps/tray-icon/commit/b74676a487cd74d1cf12b2d355a91473ac476369) ([#312](https://www.github.com/tauri-apps/tray-icon/pull/312) by [@lucasfernog](https://www.github.com/tauri-apps/tray-icon/../../lucasfernog)) Updated `muda` to 0.19.
+
 ## \[0.22.2]
 
 - [`215e972`](https://www.github.com/tauri-apps/tray-icon/commit/215e97221e3a9e9cbc71b29c10bcfb234e1cc022) ([#262](https://www.github.com/tauri-apps/tray-icon/pull/262) by [@renovate](https://www.github.com/tauri-apps/tray-icon/../../renovate)) Relaxed `windows-sys` dependency to `>=0.60, <=0.61` instead of `0.60`

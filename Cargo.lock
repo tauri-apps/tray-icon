@@ -2174,9 +2174,9 @@ dependencies = [
 
 [[package]]
 name = "muda"
-version = "0.17.1"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01c1738382f66ed56b3b9c8119e794a2e23148ac8ea214eda86622d4cb9d415a"
+checksum = "23c443734cd93d52511c967b796f4a788e74899e0a0d232e8e12974bd52b3f1e"
 dependencies = [
  "crossbeam-channel",
  "dpi",
@@ -2188,7 +2188,7 @@ dependencies = [
  "objc2-core-foundation",
  "objc2-foundation 0.3.0",
  "once_cell",
- "png 0.17.16",
+ "png 0.18.0",
  "serde",
  "thiserror 2.0.11",
  "windows-sys 0.60.2",

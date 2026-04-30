@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.23.1]
+
+- [`7e5953c`](https://www.github.com/tauri-apps/tray-icon/commit/7e5953c227065f92dc3113268c86d6d0f05739a4) ([#311](https://www.github.com/tauri-apps/tray-icon/pull/311) by [@Fullzoon](https://www.github.com/tauri-apps/tray-icon/../../Fullzoon)) Fixed a Windows tray menu issue reported in #303 where the context menu could appear behind the taskbar after launching from the Start Menu by aligning the tray menu handling with the expected shell behavior, including showing the right-click menu on button release and posting `WM_NULL` after `TrackPopupMenu`.
+
 ## \[0.23.0]
 
 - [`b74676a`](https://www.github.com/tauri-apps/tray-icon/commit/b74676a487cd74d1cf12b2d355a91473ac476369) ([#312](https://www.github.com/tauri-apps/tray-icon/pull/312) by [@lucasfernog](https://www.github.com/tauri-apps/tray-icon/../../lucasfernog)) Updated `muda` to 0.19.

@@ -1,5 +1,21 @@
 # Changelog
 
+## \[0.23.1]
+
+- [`7e5953c`](https://www.github.com/tauri-apps/tray-icon/commit/7e5953c227065f92dc3113268c86d6d0f05739a4) ([#311](https://www.github.com/tauri-apps/tray-icon/pull/311) by [@Fullzoon](https://www.github.com/tauri-apps/tray-icon/../../Fullzoon)) Fixed a Windows tray menu issue reported in #303 where the context menu could appear behind the taskbar after launching from the Start Menu by aligning the tray menu handling with the expected shell behavior, including showing the right-click menu on button release and posting `WM_NULL` after `TrackPopupMenu`.
+
+## \[0.23.0]
+
+- [`b74676a`](https://www.github.com/tauri-apps/tray-icon/commit/b74676a487cd74d1cf12b2d355a91473ac476369) ([#312](https://www.github.com/tauri-apps/tray-icon/pull/312) by [@lucasfernog](https://www.github.com/tauri-apps/tray-icon/../../lucasfernog)) Updated `muda` to 0.19.
+
+## \[0.22.2]
+
+- [`215e972`](https://www.github.com/tauri-apps/tray-icon/commit/215e97221e3a9e9cbc71b29c10bcfb234e1cc022) ([#262](https://www.github.com/tauri-apps/tray-icon/pull/262) by [@renovate](https://www.github.com/tauri-apps/tray-icon/../../renovate)) Relaxed `windows-sys` dependency to `>=0.60, <=0.61` instead of `0.60`
+
+## \[0.22.1]
+
+- [`eabe0f4`](https://www.github.com/tauri-apps/tray-icon/commit/eabe0f48f89c3df1cde48e8111d46bd9fec1ca30) ([#306](https://www.github.com/tauri-apps/tray-icon/pull/306) by [@Legend-Master](https://www.github.com/tauri-apps/tray-icon/../../Legend-Master)) Fix tray icon gets blurry after changing dpi on Windows
+
 ## \[0.22.0]
 
 - [`f912921`](https://www.github.com/tauri-apps/tray-icon/commit/f912921a56584251dc0b5670b5281cbf7e4106b0) ([#294](https://www.github.com/tauri-apps/tray-icon/pull/294) by [@felipecrs](https://www.github.com/tauri-apps/tray-icon/../../felipecrs)) Added `with_menu_on_right_click` builder method, `set_show_menu_on_right_click` to control whether the context menu is shown on right click (analogous to the existing left click option), and `show_menu()` to programmatically display the tray menu.

@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.24.0]
+
+- [`19bcab3`](https://www.github.com/tauri-apps/tray-icon/commit/19bcab382753cbbb883b7d6ae96d07111fc73e67) ([#305](https://www.github.com/tauri-apps/tray-icon/pull/305) by [@expenses](https://www.github.com/tauri-apps/tray-icon/../../expenses)) Make gtk an optional feature (enabled by default)
+
 ## \[0.23.1]
 
 - [`7e5953c`](https://www.github.com/tauri-apps/tray-icon/commit/7e5953c227065f92dc3113268c86d6d0f05739a4) ([#311](https://www.github.com/tauri-apps/tray-icon/pull/311) by [@Fullzoon](https://www.github.com/tauri-apps/tray-icon/../../Fullzoon)) Fixed a Windows tray menu issue reported in #303 where the context menu could appear behind the taskbar after launching from the Start Menu by aligning the tray menu handling with the expected shell behavior, including showing the right-click menu on button release and posting `WM_NULL` after `TrackPopupMenu`.

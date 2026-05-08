@@ -203,6 +203,22 @@ pub struct TrayIconAttributes {
     ///   on the user's panel.  This may not be shown in all visualizations.
     /// - **Windows:** Unsupported.
     pub title: Option<String>,
+
+    /// Autosave name passed to `NSStatusItem.setAutosaveName`. AppKit
+    /// uses this key to persist the user's ⌘+drag position across
+    /// app launches via NSUserDefaults. Without it, the status item
+    /// snaps back to the default leftmost slot every launch — which
+    /// on notched MacBooks (M1+ Pro/Max/14"/16") collides with the
+    /// camera cutout.
+    ///
+    /// Pick a stable, app-unique string (typically a reverse-DNS
+    /// identifier like `"com.example.app.tray"`); changing it
+    /// invalidates the saved position.
+    ///
+    /// ## Platform-specific
+    ///
+    /// - **macOS only.** No-op on Linux / Windows.
+    pub autosave_name: Option<String>,
 }
 
 impl Default for TrayIconAttributes {
@@ -216,6 +232,7 @@ impl Default for TrayIconAttributes {
             menu_on_left_click: true,
             menu_on_right_click: true,
             title: None,
+            autosave_name: None,
         }
     }
 }
@@ -302,6 +319,24 @@ impl TrayIconBuilder {
     /// Use the icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
     pub fn with_icon_as_template(mut self, is_template: bool) -> Self {
         self.attrs.icon_is_template = is_template;
+        self
+    }
+
+    /// Set the autosave name handed to `NSStatusItem.setAutosaveName`.
+    /// AppKit uses this key to persist the user's ⌘+drag position
+    /// across launches via NSUserDefaults. Without it, the status
+    /// item snaps back to the default leftmost slot every launch —
+    /// which on notched MacBooks collides with the camera cutout.
+    ///
+    /// Pick a stable, app-unique string (typically a reverse-DNS
+    /// identifier like `"com.example.app.tray"`); changing it
+    /// invalidates the saved position.
+    ///
+    /// ## Platform-specific
+    ///
+    /// - **macOS only.** No-op on Linux / Windows.
+    pub fn with_autosave_name<S: AsRef<str>>(mut self, name: S) -> Self {
+        self.attrs.autosave_name = Some(name.as_ref().to_string());
         self
     }
 

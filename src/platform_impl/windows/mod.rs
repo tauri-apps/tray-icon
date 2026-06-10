@@ -63,6 +63,7 @@ struct TrayUserData {
     last_position: Option<PhysicalPosition<f64>>,
     menu_on_left_click: bool,
     menu_on_right_click: bool,
+    visible: bool,
 }
 
 pub struct TrayIcon {
@@ -99,6 +100,7 @@ impl TrayIcon {
                 last_position: None,
                 menu_on_left_click: attrs.menu_on_left_click,
                 menu_on_right_click: attrs.menu_on_right_click,
+                visible: true,
             };
 
             let hwnd = CreateWindowExW(
@@ -346,6 +348,7 @@ unsafe extern "system" fn tray_proc(
             userdata.icon = *icon;
         }
         WM_USER_SHOW_TRAYICON => {
+            userdata.visible = true;
             register_tray_icon(
                 userdata.hwnd,
                 userdata.internal_id,
@@ -354,6 +357,7 @@ unsafe extern "system" fn tray_proc(
             );
         }
         WM_USER_HIDE_TRAYICON => {
+            userdata.visible = false;
             remove_tray_icon(userdata.hwnd, userdata.internal_id);
         }
         WM_USER_UPDATE_TRAYTOOLTIP => {
@@ -362,12 +366,14 @@ unsafe extern "system" fn tray_proc(
         }
         _ if msg == *S_U_TASKBAR_RESTART => {
             remove_tray_icon(userdata.hwnd, userdata.internal_id);
-            register_tray_icon(
-                userdata.hwnd,
-                userdata.internal_id,
-                &userdata.icon.as_ref().map(|i| i.inner.as_raw_handle()),
-                &userdata.tooltip,
-            );
+            if userdata.visible {
+                register_tray_icon(
+                    userdata.hwnd,
+                    userdata.internal_id,
+                    &userdata.icon.as_ref().map(|i| i.inner.as_raw_handle()),
+                    &userdata.tooltip,
+                );
+            }
         }
         WM_USER_SHOW_MENU_ON_LEFT_CLICK => {
             userdata.menu_on_left_click = wparam != 0;

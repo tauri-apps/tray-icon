@@ -4,7 +4,7 @@
 
 mod icon;
 mod util;
-use std::ptr;
+use std::{mem::size_of, ptr};
 
 use once_cell::sync::Lazy;
 use windows_sys::{

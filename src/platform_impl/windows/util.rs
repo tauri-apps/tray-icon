@@ -53,3 +53,31 @@ pub unsafe fn set_window_long(
             as isize
     };
 }
+
+/// Implementation of the `LOWORD` macro.
+#[allow(non_snake_case)]
+#[inline]
+pub fn LOWORD(dword: u32) -> u16 {
+    (dword & 0xFFFF) as u16
+}
+
+// /// Implementation of the `HIWORD` macro.
+// #[allow(non_snake_case)]
+// #[inline]
+// pub fn HIWORD(dword: u32) -> u16 {
+//     ((dword & 0xFFFF_0000) >> 16) as u16
+// }
+
+// /// Implementation of the `GET_X_LPARAM` macro.
+// #[allow(non_snake_case)]
+// #[inline]
+// pub fn GET_X_LPARAM(lparam: LPARAM) -> i16 {
+//     (lparam & 0xFFFF) as u16 as i16
+// }
+
+// /// Implementation of the `GET_Y_LPARAM` macro.
+// #[allow(non_snake_case)]
+// #[inline]
+// pub fn GET_Y_LPARAM(lparam: LPARAM) -> i16 {
+//     ((lparam & 0xFFFF_0000) >> 16) as u16 as i16
+// }

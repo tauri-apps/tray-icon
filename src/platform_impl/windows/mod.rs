@@ -13,8 +13,9 @@ use windows_sys::{
         Foundation::{FALSE, HWND, LPARAM, LRESULT, POINT, RECT, S_OK, TRUE, WPARAM},
         UI::{
             Shell::{
-                Shell_NotifyIconGetRect, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP,
-                NIM_ADD, NIM_DELETE, NIM_MODIFY, NOTIFYICONDATAW, NOTIFYICONIDENTIFIER,
+                Shell_NotifyIconGetRect, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_SHOWTIP,
+                NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW,
+                NOTIFYICONDATAW_0, NOTIFYICONIDENTIFIER, NOTIFYICON_VERSION_4,
             },
             WindowsAndMessaging::{
                 ChangeWindowMessageFilterEx, CreateWindowExW, DefWindowProcW, DestroyWindow,
@@ -382,123 +383,115 @@ unsafe extern "system" fn tray_proc(
             userdata.menu_on_right_click = wparam != 0;
         }
 
-        WM_USER_TRAYICON
-            if matches!(
-                lparam as u32,
-                WM_LBUTTONDOWN
-                    | WM_RBUTTONDOWN
-                    | WM_MBUTTONDOWN
-                    | WM_LBUTTONUP
-                    | WM_RBUTTONUP
-                    | WM_MBUTTONUP
-                    | WM_LBUTTONDBLCLK
-                    | WM_RBUTTONDBLCLK
-                    | WM_MBUTTONDBLCLK
-                    | WM_MOUSEMOVE
-            ) =>
-        {
-            let mut cursor = POINT { x: 0, y: 0 };
-            if GetCursorPos(&mut cursor as _) == 0 {
-                return 0;
-            }
-
-            let id = userdata.id.clone();
-            let position = PhysicalPosition::new(cursor.x as f64, cursor.y as f64);
-
-            let rect = match get_tray_rect(userdata.internal_id, hwnd) {
-                Some(rect) => Rect::from(rect),
-                None => return 0,
-            };
-
-            let event = match lparam as u32 {
-                WM_LBUTTONDOWN => TrayIconEvent::Click {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Left,
-                    button_state: MouseButtonState::Down,
-                },
-                WM_RBUTTONDOWN => TrayIconEvent::Click {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Right,
-                    button_state: MouseButtonState::Down,
-                },
-                WM_MBUTTONDOWN => TrayIconEvent::Click {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Middle,
-                    button_state: MouseButtonState::Down,
-                },
-                WM_LBUTTONUP => TrayIconEvent::Click {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Left,
-                    button_state: MouseButtonState::Up,
-                },
-                WM_RBUTTONUP => TrayIconEvent::Click {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Right,
-                    button_state: MouseButtonState::Up,
-                },
-                WM_MBUTTONUP => TrayIconEvent::Click {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Middle,
-                    button_state: MouseButtonState::Up,
-                },
-                WM_LBUTTONDBLCLK => TrayIconEvent::DoubleClick {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Left,
-                },
-                WM_RBUTTONDBLCLK => TrayIconEvent::DoubleClick {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Right,
-                },
-                WM_MBUTTONDBLCLK => TrayIconEvent::DoubleClick {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Middle,
-                },
-                WM_MOUSEMOVE if !userdata.entered => {
-                    userdata.entered = true;
-                    TrayIconEvent::Enter { id, rect, position }
-                }
-                WM_MOUSEMOVE if userdata.entered => {
-                    // handle extra WM_MOUSEMOVE events, ignore if position hasn't changed
-                    let cursor_moved = userdata.last_position != Some(position);
-                    userdata.last_position = Some(position);
-                    if cursor_moved {
-                        // Set or update existing timer, where we check if cursor left
-                        SetTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _, 15, Some(tray_timer_proc));
-
-                        TrayIconEvent::Move { id, rect, position }
-                    } else {
-                        return 0;
-                    }
-                }
-
-                _ => unreachable!(),
-            };
-
-            TrayIconEvent::send(event);
-
-            if (userdata.menu_on_right_click && lparam as u32 == WM_RBUTTONUP)
-                || (userdata.menu_on_left_click && lparam as u32 == WM_LBUTTONUP)
+        WM_USER_TRAYICON => {
+            if let win_event @ (WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN | WM_LBUTTONUP
+            | WM_RBUTTONUP | WM_MBUTTONUP | WM_LBUTTONDBLCLK
+            | WM_RBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_MOUSEMOVE) =
+                util::LOWORD(lparam as u32) as u32
             {
-                if let Some(menu) = userdata.hpopupmenu {
-                    show_tray_menu(hwnd, menu, cursor.x, cursor.y);
+                let mut cursor = POINT { x: 0, y: 0 };
+                if GetCursorPos(&mut cursor as _) == 0 {
+                    return 0;
+                }
+
+                let id = userdata.id.clone();
+                let position = PhysicalPosition::new(cursor.x as f64, cursor.y as f64);
+
+                let rect = match get_tray_rect(userdata.internal_id, hwnd) {
+                    Some(rect) => Rect::from(rect),
+                    None => return 0,
+                };
+
+                let event = match win_event {
+                    WM_LBUTTONDOWN => TrayIconEvent::Click {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Down,
+                    },
+                    WM_RBUTTONDOWN => TrayIconEvent::Click {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Right,
+                        button_state: MouseButtonState::Down,
+                    },
+                    WM_MBUTTONDOWN => TrayIconEvent::Click {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Middle,
+                        button_state: MouseButtonState::Down,
+                    },
+                    WM_LBUTTONUP => TrayIconEvent::Click {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                    },
+                    WM_RBUTTONUP => TrayIconEvent::Click {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Right,
+                        button_state: MouseButtonState::Up,
+                    },
+                    WM_MBUTTONUP => TrayIconEvent::Click {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Middle,
+                        button_state: MouseButtonState::Up,
+                    },
+                    WM_LBUTTONDBLCLK => TrayIconEvent::DoubleClick {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Left,
+                    },
+                    WM_RBUTTONDBLCLK => TrayIconEvent::DoubleClick {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Right,
+                    },
+                    WM_MBUTTONDBLCLK => TrayIconEvent::DoubleClick {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Middle,
+                    },
+                    WM_MOUSEMOVE if !userdata.entered => {
+                        userdata.entered = true;
+                        TrayIconEvent::Enter { id, rect, position }
+                    }
+                    WM_MOUSEMOVE if userdata.entered => {
+                        // handle extra WM_MOUSEMOVE events, ignore if position hasn't changed
+                        let cursor_moved = userdata.last_position != Some(position);
+                        userdata.last_position = Some(position);
+                        if cursor_moved {
+                            // Set or update existing timer, where we check if cursor left
+                            SetTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _, 15, Some(tray_timer_proc));
+
+                            TrayIconEvent::Move { id, rect, position }
+                        } else {
+                            return 0;
+                        }
+                    }
+
+                    _ => unreachable!(),
+                };
+
+                TrayIconEvent::send(event);
+
+                if (userdata.menu_on_right_click && win_event == WM_RBUTTONUP)
+                    || (userdata.menu_on_left_click && win_event == WM_LBUTTONUP)
+                {
+                    if let Some(menu) = userdata.hpopupmenu {
+                        show_tray_menu(hwnd, menu, cursor.x, cursor.y);
+                    }
                 }
             }
         }
@@ -580,7 +573,7 @@ unsafe fn register_tray_icon(
     }
 
     if let Some(tooltip) = tooltip {
-        flags |= NIF_TIP;
+        flags |= NIF_TIP | NIF_SHOWTIP;
         let tip = util::encode_wide(tooltip);
         #[allow(clippy::manual_memcpy)]
         for i in 0..tip.len().min(128) {
@@ -588,17 +581,21 @@ unsafe fn register_tray_icon(
         }
     }
 
-    let mut nid = NOTIFYICONDATAW {
+    let nid = NOTIFYICONDATAW {
         uFlags: flags,
         hWnd: hwnd,
         uID: tray_id,
         uCallbackMessage: WM_USER_TRAYICON,
         hIcon: h_icon,
         szTip: sz_tip,
+        Anonymous: NOTIFYICONDATAW_0 {
+            uVersion: NOTIFYICON_VERSION_4,
+        },
+        cbSize: size_of::<NOTIFYICONDATAW>() as u32,
         ..std::mem::zeroed()
     };
 
-    Shell_NotifyIconW(NIM_ADD, &mut nid as _) == TRUE
+    Shell_NotifyIconW(NIM_ADD, &nid) == TRUE && Shell_NotifyIconW(NIM_SETVERSION, &nid) == TRUE
 }
 
 #[inline]

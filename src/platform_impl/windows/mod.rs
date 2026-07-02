@@ -14,27 +14,30 @@ use windows_sys::{
         UI::{
             Shell::{
                 Shell_NotifyIconGetRect, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_SHOWTIP,
-                NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW,
-                NOTIFYICONDATAW_0, NOTIFYICONIDENTIFIER, NOTIFYICON_VERSION_4,
+                NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NIN_SELECT,
+                NOTIFYICONDATAW, NOTIFYICONDATAW_0, NOTIFYICONIDENTIFIER, NOTIFYICON_VERSION_4,
             },
             WindowsAndMessaging::{
                 ChangeWindowMessageFilterEx, CreateWindowExW, DefWindowProcW, DestroyWindow,
                 GetCursorPos, KillTimer, PostMessageW, RegisterClassW, RegisterWindowMessageA,
                 SendMessageW, SetForegroundWindow, SetTimer, TrackPopupMenu, CREATESTRUCTW,
                 CW_USEDEFAULT, GWL_USERDATA, HICON, HMENU, MSGFLT_ALLOW, TPM_BOTTOMALIGN,
-                TPM_LEFTALIGN, WM_CREATE, WM_DESTROY, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
-                WM_LBUTTONUP, WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE,
-                WM_NCCREATE, WM_NULL, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_TIMER,
-                WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
-                WS_OVERLAPPED,
+                TPM_LEFTALIGN, WM_CONTEXTMENU, WM_CREATE, WM_DESTROY, WM_LBUTTONDBLCLK,
+                WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP,
+                WM_MOUSEMOVE, WM_NCCREATE, WM_NULL, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP,
+                WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+                WS_EX_TRANSPARENT, WS_OVERLAPPED,
             },
         },
     },
 };
 
 use crate::{
-    dpi::PhysicalPosition, icon::Icon, menu, MouseButton, MouseButtonState, Rect,
-    TrayIconAttributes, TrayIconEvent, TrayIconId, COUNTER,
+    dpi::PhysicalPosition,
+    icon::Icon,
+    menu,
+    platform_impl::platform::util::{GET_X_LPARAM, GET_Y_LPARAM, NIN_KEYSELECT},
+    MouseButton, MouseButtonState, Rect, TrayIconAttributes, TrayIconEvent, TrayIconId, COUNTER,
 };
 
 pub(crate) use self::icon::WinIcon as PlatformIcon;
@@ -386,16 +389,16 @@ unsafe extern "system" fn tray_proc(
         WM_USER_TRAYICON => {
             if let win_event @ (WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN | WM_LBUTTONUP
             | WM_RBUTTONUP | WM_MBUTTONUP | WM_LBUTTONDBLCLK
-            | WM_RBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_MOUSEMOVE) =
-                util::LOWORD(lparam as u32) as u32
+            | WM_RBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_MOUSEMOVE
+            | WM_CONTEXTMENU | NIN_KEYSELECT | NIN_SELECT) = util::LOWORD(lparam as u32) as u32
             {
-                let mut cursor = POINT { x: 0, y: 0 };
-                if GetCursorPos(&mut cursor as _) == 0 {
-                    return 0;
-                }
-
                 let id = userdata.id.clone();
-                let position = PhysicalPosition::new(cursor.x as f64, cursor.y as f64);
+                let position = PhysicalPosition {
+                    // Yes, `GET_X_LPARAM` from `WPARAM` not `LPARAM`, when we set `NOTIFYICON_VERSION_4`,
+                    // See https://stackoverflow.com/a/41649787/16993372
+                    x: GET_X_LPARAM(wparam as _) as f64,
+                    y: GET_Y_LPARAM(wparam as _) as f64,
+                };
 
                 let rect = match get_tray_rect(userdata.internal_id, hwnd) {
                     Some(rect) => Rect::from(rect),
@@ -473,24 +476,52 @@ unsafe extern "system" fn tray_proc(
                         userdata.last_position = Some(position);
                         if cursor_moved {
                             // Set or update existing timer, where we check if cursor left
-                            SetTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _, 15, Some(tray_timer_proc));
+                            SetTimer(
+                                hwnd,
+                                WM_USER_LEAVE_TIMER_ID as _,
+                                15,
+                                Some(tray_timer_proc),
+                            );
 
                             TrayIconEvent::Move { id, rect, position }
                         } else {
                             return 0;
                         }
                     }
+                    // Menu key
+                    WM_CONTEXTMENU
+                    // Keyboard select and then SPACEBAR or ENTER key
+                    | NIN_KEYSELECT
+                    // Mouse select and then ENTER key
+                    | NIN_SELECT => {
+                        // Mimic the events without `NOTIFYICON_VERSION_4`
+                        TrayIconEvent::send(TrayIconEvent::Click {
+                            id: id.clone(),
+                            rect,
+                            position,
+                            button: MouseButton::Right,
+                            button_state: MouseButtonState::Down,
+                        });
 
+                        TrayIconEvent::Click {
+                            id,
+                            rect,
+                            position,
+                            button: MouseButton::Right,
+                            button_state: MouseButtonState::Up,
+                        }
+                    },
                     _ => unreachable!(),
                 };
 
                 TrayIconEvent::send(event);
 
-                if (userdata.menu_on_right_click && win_event == WM_RBUTTONUP)
+                if matches!(win_event, WM_CONTEXTMENU | NIN_KEYSELECT | NIN_SELECT)
+                    || (userdata.menu_on_right_click && win_event == WM_RBUTTONUP)
                     || (userdata.menu_on_left_click && win_event == WM_LBUTTONUP)
                 {
                     if let Some(menu) = userdata.hpopupmenu {
-                        show_tray_menu(hwnd, menu, cursor.x, cursor.y);
+                        show_tray_menu(hwnd, menu, position.x as i32, position.y as i32);
                     }
                 }
             }

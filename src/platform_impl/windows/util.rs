@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-use windows_sys::Win32::{Foundation::HWND, UI::WindowsAndMessaging::WINDOW_LONG_PTR_INDEX};
+use windows_sys::Win32::{
+    Foundation::{HWND, LPARAM},
+    UI::WindowsAndMessaging::{WINDOW_LONG_PTR_INDEX, WM_USER},
+};
 
 pub fn encode_wide<S: AsRef<std::ffi::OsStr>>(string: S) -> Vec<u16> {
     std::os::windows::prelude::OsStrExt::encode_wide(string.as_ref())
@@ -68,16 +71,21 @@ pub fn LOWORD(dword: u32) -> u16 {
 //     ((dword & 0xFFFF_0000) >> 16) as u16
 // }
 
-// /// Implementation of the `GET_X_LPARAM` macro.
-// #[allow(non_snake_case)]
-// #[inline]
-// pub fn GET_X_LPARAM(lparam: LPARAM) -> i16 {
-//     (lparam & 0xFFFF) as u16 as i16
-// }
+/// Implementation of the `GET_X_LPARAM` macro.
+#[allow(non_snake_case)]
+#[inline]
+pub fn GET_X_LPARAM(lparam: LPARAM) -> i16 {
+    (lparam & 0xFFFF) as u16 as i16
+}
 
-// /// Implementation of the `GET_Y_LPARAM` macro.
-// #[allow(non_snake_case)]
-// #[inline]
-// pub fn GET_Y_LPARAM(lparam: LPARAM) -> i16 {
-//     ((lparam & 0xFFFF_0000) >> 16) as u16 as i16
-// }
+/// Implementation of the `GET_Y_LPARAM` macro.
+#[allow(non_snake_case)]
+#[inline]
+pub fn GET_Y_LPARAM(lparam: LPARAM) -> i16 {
+    ((lparam & 0xFFFF_0000) >> 16) as u16 as i16
+}
+
+// Missing types, see https://github.com/microsoft/win32metadata/pull/1769
+pub(crate) const NIN_SELECT: u32 = WM_USER;
+const NINF_KEY: u32 = 1;
+pub(crate) const NIN_KEYSELECT: u32 = NIN_SELECT | NINF_KEY;

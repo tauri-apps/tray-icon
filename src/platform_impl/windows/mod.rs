@@ -169,7 +169,7 @@ impl TrayIcon {
                 nid.hIcon = hicon;
             }
 
-            if Shell_NotifyIconW(NIM_MODIFY, &mut nid as _) == 0 {
+            if Shell_NotifyIconW(NIM_MODIFY, &nid) == 0 {
                 return Err(crate::Error::OsError(std::io::Error::last_os_error()));
             }
 
@@ -224,7 +224,7 @@ impl TrayIcon {
                 }
             }
 
-            if Shell_NotifyIconW(NIM_MODIFY, &mut nid as _) == 0 {
+            if Shell_NotifyIconW(NIM_MODIFY, &nid) == 0 {
                 return Err(crate::Error::OsError(std::io::Error::last_os_error()));
             }
 
@@ -633,7 +633,7 @@ unsafe fn register_tray_icon(
 
 #[inline]
 unsafe fn remove_tray_icon(hwnd: HWND, id: u32) {
-    let mut nid = NOTIFYICONDATAW {
+    let nid = NOTIFYICONDATAW {
         uFlags: NIF_ICON,
         hWnd: hwnd,
         uID: id,
@@ -641,7 +641,7 @@ unsafe fn remove_tray_icon(hwnd: HWND, id: u32) {
         ..std::mem::zeroed()
     };
 
-    if Shell_NotifyIconW(NIM_DELETE, &mut nid as _) == FALSE {
+    if Shell_NotifyIconW(NIM_DELETE, &nid) == FALSE {
         eprintln!("Error removing system tray icon");
     }
 }

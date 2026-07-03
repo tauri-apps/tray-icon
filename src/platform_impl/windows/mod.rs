@@ -161,6 +161,7 @@ impl TrayIcon {
                 uFlags: NIF_ICON,
                 hWnd: self.hwnd,
                 uID: self.internal_id,
+                cbSize: size_of::<NOTIFYICONDATAW>() as u32,
                 ..std::mem::zeroed()
             };
 
@@ -212,6 +213,7 @@ impl TrayIcon {
                 uFlags: NIF_TIP,
                 hWnd: self.hwnd,
                 uID: self.internal_id,
+                cbSize: size_of::<NOTIFYICONDATAW>() as u32,
                 ..std::mem::zeroed()
             };
             if let Some(tooltip) = &tooltip {
@@ -635,6 +637,7 @@ unsafe fn remove_tray_icon(hwnd: HWND, id: u32) {
         uFlags: NIF_ICON,
         hWnd: hwnd,
         uID: id,
+        cbSize: size_of::<NOTIFYICONDATAW>() as u32,
         ..std::mem::zeroed()
     };
 

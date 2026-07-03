@@ -158,7 +158,7 @@ impl TrayIcon {
     pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
         unsafe {
             let mut nid = NOTIFYICONDATAW {
-                uFlags: NIF_ICON,
+                uFlags: NIF_ICON | NIF_SHOWTIP,
                 hWnd: self.hwnd,
                 uID: self.internal_id,
                 cbSize: size_of::<NOTIFYICONDATAW>() as u32,
@@ -210,7 +210,7 @@ impl TrayIcon {
     pub fn set_tooltip<S: AsRef<str>>(&mut self, tooltip: Option<S>) -> crate::Result<()> {
         unsafe {
             let mut nid = NOTIFYICONDATAW {
-                uFlags: NIF_TIP,
+                uFlags: NIF_TIP | NIF_SHOWTIP,
                 hWnd: self.hwnd,
                 uID: self.internal_id,
                 cbSize: size_of::<NOTIFYICONDATAW>() as u32,

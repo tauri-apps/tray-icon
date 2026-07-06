@@ -4,7 +4,7 @@
 
 mod icon;
 mod util;
-use std::ptr;
+use std::{mem::size_of, ptr};
 
 use once_cell::sync::Lazy;
 use windows_sys::{
@@ -75,7 +75,7 @@ impl TrayUserData {
             uID: self.internal_id,
             dwState: if visible { 0 } else { NIS_HIDDEN },
             dwStateMask: NIS_HIDDEN,
-            cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as u32,
+            cbSize: size_of::<NOTIFYICONDATAW>() as u32,
             ..Default::default()
         };
         unsafe { Shell_NotifyIconW(NIM_MODIFY, &nid) };
@@ -601,7 +601,7 @@ unsafe fn register_tray_icon(
         szTip: sz_tip,
         dwState,
         dwStateMask: dwState,
-        cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as u32,
+        cbSize: size_of::<NOTIFYICONDATAW>() as u32,
         ..std::mem::zeroed()
     };
 
@@ -627,7 +627,7 @@ unsafe fn remove_tray_icon(hwnd: HWND, id: u32) {
 fn get_tray_rect(id: u32, hwnd: HWND) -> Option<RECT> {
     let nid = NOTIFYICONIDENTIFIER {
         hWnd: hwnd,
-        cbSize: std::mem::size_of::<NOTIFYICONIDENTIFIER>() as _,
+        cbSize: size_of::<NOTIFYICONIDENTIFIER>() as _,
         uID: id,
         ..unsafe { std::mem::zeroed() }
     };

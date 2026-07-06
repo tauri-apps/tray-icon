@@ -407,70 +407,74 @@ unsafe extern "system" fn tray_proc(
                     None => return 0,
                 };
 
-                let event = match win_event {
-                    WM_LBUTTONDOWN => TrayIconEvent::Click {
-                        id,
-                        rect,
-                        position,
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Down,
-                    },
-                    WM_RBUTTONDOWN => TrayIconEvent::Click {
+                match win_event {
+                    // This will be triggered in `NIN_SELECT`
+                    // (it's only triggered on left mouse button up before `WM_LBUTTONUP`)
+                    // WM_LBUTTONDOWN => TrayIconEvent::send(TrayIconEvent::Click {
+                    //     id,
+                    //     rect,
+                    //     position,
+                    //     button: MouseButton::Left,
+                    //     button_state: MouseButtonState::Down,
+                    // }),
+                    WM_RBUTTONDOWN => TrayIconEvent::send(TrayIconEvent::Click {
                         id,
                         rect,
                         position,
                         button: MouseButton::Right,
                         button_state: MouseButtonState::Down,
-                    },
-                    WM_MBUTTONDOWN => TrayIconEvent::Click {
+                    }),
+                    WM_MBUTTONDOWN => TrayIconEvent::send(TrayIconEvent::Click {
                         id,
                         rect,
                         position,
                         button: MouseButton::Middle,
                         button_state: MouseButtonState::Down,
-                    },
-                    WM_LBUTTONUP => TrayIconEvent::Click {
-                        id,
-                        rect,
-                        position,
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                    },
-                    WM_RBUTTONUP => TrayIconEvent::Click {
-                        id,
-                        rect,
-                        position,
-                        button: MouseButton::Right,
-                        button_state: MouseButtonState::Up,
-                    },
-                    WM_MBUTTONUP => TrayIconEvent::Click {
-                        id,
-                        rect,
-                        position,
-                        button: MouseButton::Middle,
-                        button_state: MouseButtonState::Up,
-                    },
-                    WM_LBUTTONDBLCLK => TrayIconEvent::DoubleClick {
-                        id,
-                        rect,
-                        position,
-                        button: MouseButton::Left,
-                    },
-                    WM_RBUTTONDBLCLK => TrayIconEvent::DoubleClick {
-                        id,
-                        rect,
-                        position,
-                        button: MouseButton::Right,
-                    },
-                    WM_MBUTTONDBLCLK => TrayIconEvent::DoubleClick {
+                    }),
+                    // This will be triggered in `NIN_SELECT`
+                    // WM_LBUTTONUP => TrayIconEvent::send(TrayIconEvent::Click {
+                    //     id,
+                    //     rect,
+                    //     position,
+                    //     button: MouseButton::Left,
+                    //     button_state: MouseButtonState::Up,
+                    // }),
+                    // This will be triggered in `WM_CONTEXTMENU`
+                    // WM_RBUTTONUP => TrayIconEvent::send(TrayIconEvent::Click {
+                    //     id,
+                    //     rect,
+                    //     position,
+                    //     button: MouseButton::Right,
+                    //     button_state: MouseButtonState::Up,
+                    // }),
+                    WM_MBUTTONUP => TrayIconEvent::send(TrayIconEvent::Click {
                         id,
                         rect,
                         position,
                         button: MouseButton::Middle,
-                    },
+                        button_state: MouseButtonState::Up,
+                    }),
+                    WM_LBUTTONDBLCLK => TrayIconEvent::send(TrayIconEvent::DoubleClick {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Left,
+                    }),
+                    WM_RBUTTONDBLCLK => TrayIconEvent::send(TrayIconEvent::DoubleClick {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Right,
+                    }),
+                    WM_MBUTTONDBLCLK => TrayIconEvent::send(TrayIconEvent::DoubleClick {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Middle,
+                    }),
                     WM_MOUSEMOVE if !userdata.entered => {
                         userdata.entered = true;
-                        TrayIconEvent::Enter { id, rect, position }
+                        TrayIconEvent::send(TrayIconEvent::Enter { id, rect, position })
                     }
                     WM_MOUSEMOVE if userdata.entered => {
                         // handle extra WM_MOUSEMOVE events, ignore if position hasn't changed
@@ -485,7 +489,7 @@ unsafe extern "system" fn tray_proc(
                                 Some(tray_timer_proc),
                             );
 
-                            TrayIconEvent::Move { id, rect, position }
+                            TrayIconEvent::send(TrayIconEvent::Move { id, rect, position })
                         } else {
                             return 0;
                         }
@@ -502,16 +506,15 @@ unsafe extern "system" fn tray_proc(
                             button: MouseButton::Right,
                             button_state: MouseButtonState::Down,
                         });
-
-                        TrayIconEvent::Click {
+                        TrayIconEvent::send(TrayIconEvent::Click {
                             id,
                             rect,
                             position,
                             button: MouseButton::Right,
                             button_state: MouseButtonState::Up,
-                        }
+                        });
                     },
-                    // Mouse select and then ENTER key
+                    // Mouse select and then ENTER key (in reality this just fires on left clicks)
                     NIN_SELECT => {
                         // Mimic the events without `NOTIFYICON_VERSION_4`
                         TrayIconEvent::send(TrayIconEvent::Click {
@@ -521,19 +524,16 @@ unsafe extern "system" fn tray_proc(
                             button: MouseButton::Left,
                             button_state: MouseButtonState::Down,
                         });
-
-                        TrayIconEvent::Click {
+                        TrayIconEvent::send(TrayIconEvent::Click {
                             id,
                             rect,
                             position,
                             button: MouseButton::Left,
                             button_state: MouseButtonState::Up,
-                        }
+                        });
                     }
-                    _ => unreachable!(),
+                    _ => {},
                 };
-
-                TrayIconEvent::send(event);
 
                 if (userdata.menu_on_right_click
                     && matches!(win_event, WM_RBUTTONUP | WM_CONTEXTMENU | NIN_KEYSELECT))

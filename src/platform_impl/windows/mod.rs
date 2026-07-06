@@ -397,7 +397,7 @@ unsafe extern "system" fn tray_proc(
                 let id = userdata.id.clone();
                 let position = PhysicalPosition {
                     // Yes, `GET_X_LPARAM` from `WPARAM` not `LPARAM`, when we set `NOTIFYICON_VERSION_4`,
-                    // See https://stackoverflow.com/a/41649787/16993372
+                    // See https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-notifyicondataa
                     x: GET_X_LPARAM(wparam as _) as f64,
                     y: GET_Y_LPARAM(wparam as _) as f64,
                 };

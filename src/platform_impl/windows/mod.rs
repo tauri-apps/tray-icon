@@ -493,9 +493,7 @@ unsafe extern "system" fn tray_proc(
                     // Menu key
                     WM_CONTEXTMENU
                     // Keyboard select and then SPACEBAR or ENTER key
-                    | NIN_KEYSELECT
-                    // Mouse select and then ENTER key
-                    | NIN_SELECT => {
+                    | NIN_KEYSELECT => {
                         // Mimic the events without `NOTIFYICON_VERSION_4`
                         TrayIconEvent::send(TrayIconEvent::Click {
                             id: id.clone(),
@@ -513,6 +511,25 @@ unsafe extern "system" fn tray_proc(
                             button_state: MouseButtonState::Up,
                         }
                     },
+                    // Mouse select and then ENTER key
+                    NIN_SELECT => {
+                        // Mimic the events without `NOTIFYICON_VERSION_4`
+                        TrayIconEvent::send(TrayIconEvent::Click {
+                            id: id.clone(),
+                            rect,
+                            position,
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Down,
+                        });
+
+                        TrayIconEvent::Click {
+                            id,
+                            rect,
+                            position,
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                        }
+                    }
                     _ => unreachable!(),
                 };
 

@@ -518,9 +518,10 @@ unsafe extern "system" fn tray_proc(
 
                 TrayIconEvent::send(event);
 
-                if matches!(win_event, WM_CONTEXTMENU | NIN_KEYSELECT | NIN_SELECT)
-                    || (userdata.menu_on_right_click && win_event == WM_RBUTTONUP)
-                    || (userdata.menu_on_left_click && win_event == WM_LBUTTONUP)
+                if (userdata.menu_on_right_click
+                    && matches!(win_event, WM_RBUTTONUP | WM_CONTEXTMENU | NIN_KEYSELECT))
+                    || (userdata.menu_on_left_click
+                        && matches!(win_event, WM_LBUTTONUP | NIN_SELECT))
                 {
                     if let Some(menu) = userdata.hpopupmenu {
                         show_tray_menu(hwnd, menu, position.x as i32, position.y as i32);

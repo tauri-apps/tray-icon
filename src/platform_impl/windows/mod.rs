@@ -14,8 +14,9 @@ use windows_sys::{
         UI::{
             Shell::{
                 Shell_NotifyIconGetRect, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_SHOWTIP,
-                NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NIN_SELECT,
-                NOTIFYICONDATAW, NOTIFYICONDATAW_0, NOTIFYICONIDENTIFIER, NOTIFYICON_VERSION_4,
+                NIF_STATE, NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NIN_SELECT,
+                NIS_HIDDEN, NOTIFYICONDATAW, NOTIFYICONDATAW_0, NOTIFYICONIDENTIFIER,
+                NOTIFYICON_VERSION_4,
             },
             WindowsAndMessaging::{
                 ChangeWindowMessageFilterEx, CreateWindowExW, DefWindowProcW, DestroyWindow,
@@ -46,11 +47,10 @@ const WM_USER_TRAYICON: u32 = 6002;
 const WM_USER_UPDATE_TRAYMENU: u32 = 6003;
 const WM_USER_UPDATE_TRAYICON: u32 = 6004;
 const WM_USER_SHOW_TRAYICON: u32 = 6005;
-const WM_USER_HIDE_TRAYICON: u32 = 6006;
-const WM_USER_UPDATE_TRAYTOOLTIP: u32 = 6007;
-const WM_USER_LEAVE_TIMER_ID: u32 = 6008;
-const WM_USER_SHOW_MENU_ON_LEFT_CLICK: u32 = 6009;
-const WM_USER_SHOW_MENU_ON_RIGHT_CLICK: u32 = 6010;
+const WM_USER_UPDATE_TRAYTOOLTIP: u32 = 6006;
+const WM_USER_LEAVE_TIMER_ID: u32 = 6007;
+const WM_USER_SHOW_MENU_ON_LEFT_CLICK: u32 = 6008;
+const WM_USER_SHOW_MENU_ON_RIGHT_CLICK: u32 = 6009;
 /// When the taskbar is created, it registers a message with the "TaskbarCreated" string and then broadcasts this message to all top-level windows
 /// When the application receives this message, it should assume that any taskbar icons it added have been removed and add them again.
 static S_U_TASKBAR_RESTART: Lazy<u32> =
@@ -68,6 +68,22 @@ struct TrayUserData {
     menu_on_left_click: bool,
     menu_on_right_click: bool,
     visible: bool,
+}
+
+impl TrayUserData {
+    fn set_tray_visible(&mut self, visible: bool) {
+        self.visible = visible;
+        let nid = NOTIFYICONDATAW {
+            uFlags: NIF_STATE,
+            hWnd: self.hwnd,
+            uID: self.internal_id,
+            dwState: if visible { 0 } else { NIS_HIDDEN },
+            dwStateMask: NIS_HIDDEN,
+            cbSize: size_of::<NOTIFYICONDATAW>() as u32,
+            ..Default::default()
+        };
+        unsafe { Shell_NotifyIconW(NIM_MODIFY, &nid) };
+    }
 }
 
 pub struct TrayIcon {
@@ -138,7 +154,7 @@ impl TrayIcon {
 
             let hicon = attrs.icon.as_ref().map(|i| i.inner.as_raw_handle());
 
-            if !register_tray_icon(hwnd, internal_id, &hicon, &attrs.tooltip) {
+            if !register_tray_icon(hwnd, internal_id, &hicon, &attrs.tooltip, true) {
                 // Explorer/taskbar may not be ready yet (e.g., app starts before explorer.exe).
                 // Keep the window alive and wait for TaskbarCreated to re-register.
             }
@@ -276,18 +292,8 @@ impl TrayIcon {
 
     pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {
         unsafe {
-            SendMessageW(
-                self.hwnd,
-                if visible {
-                    WM_USER_SHOW_TRAYICON
-                } else {
-                    WM_USER_HIDE_TRAYICON
-                },
-                0,
-                0,
-            );
+            SendMessageW(self.hwnd, WM_USER_SHOW_TRAYICON, visible as usize, 0);
         }
-
         Ok(())
     }
 
@@ -353,33 +359,20 @@ unsafe extern "system" fn tray_proc(
             let icon = Box::from_raw(wparam as *mut Option<Icon>);
             userdata.icon = *icon;
         }
-        WM_USER_SHOW_TRAYICON => {
-            userdata.visible = true;
-            register_tray_icon(
-                userdata.hwnd,
-                userdata.internal_id,
-                &userdata.icon.as_ref().map(|i| i.inner.as_raw_handle()),
-                &userdata.tooltip,
-            );
-        }
-        WM_USER_HIDE_TRAYICON => {
-            userdata.visible = false;
-            remove_tray_icon(userdata.hwnd, userdata.internal_id);
-        }
+        WM_USER_SHOW_TRAYICON => userdata.set_tray_visible(wparam as i32 == TRUE),
         WM_USER_UPDATE_TRAYTOOLTIP => {
             let tooltip = Box::from_raw(wparam as *mut Option<String>);
             userdata.tooltip = *tooltip;
         }
         _ if msg == *S_U_TASKBAR_RESTART => {
             remove_tray_icon(userdata.hwnd, userdata.internal_id);
-            if userdata.visible {
-                register_tray_icon(
-                    userdata.hwnd,
-                    userdata.internal_id,
-                    &userdata.icon.as_ref().map(|i| i.inner.as_raw_handle()),
-                    &userdata.tooltip,
-                );
-            }
+            register_tray_icon(
+                userdata.hwnd,
+                userdata.internal_id,
+                &userdata.icon.as_ref().map(|i| i.inner.as_raw_handle()),
+                &userdata.tooltip,
+                userdata.visible,
+            );
         }
         WM_USER_SHOW_MENU_ON_LEFT_CLICK => {
             userdata.menu_on_left_click = wparam != 0;
@@ -613,6 +606,7 @@ unsafe fn register_tray_icon(
     tray_id: u32,
     hicon: &Option<HICON>,
     tooltip: &Option<String>,
+    visible: bool,
 ) -> bool {
     let mut h_icon = std::ptr::null_mut();
     let mut flags = NIF_MESSAGE;
@@ -632,6 +626,14 @@ unsafe fn register_tray_icon(
         }
     }
 
+    #[allow(non_snake_case)]
+    let dwState = if !visible {
+        flags |= NIF_STATE;
+        NIS_HIDDEN
+    } else {
+        0
+    };
+
     let nid = NOTIFYICONDATAW {
         uFlags: flags,
         hWnd: hwnd,
@@ -639,6 +641,8 @@ unsafe fn register_tray_icon(
         uCallbackMessage: WM_USER_TRAYICON,
         hIcon: h_icon,
         szTip: sz_tip,
+        dwState,
+        dwStateMask: dwState,
         Anonymous: NOTIFYICONDATAW_0 {
             uVersion: NOTIFYICON_VERSION_4,
         },
@@ -668,7 +672,7 @@ unsafe fn remove_tray_icon(hwnd: HWND, id: u32) {
 fn get_tray_rect(id: u32, hwnd: HWND) -> Option<RECT> {
     let nid = NOTIFYICONIDENTIFIER {
         hWnd: hwnd,
-        cbSize: std::mem::size_of::<NOTIFYICONIDENTIFIER>() as _,
+        cbSize: size_of::<NOTIFYICONIDENTIFIER>() as _,
         uID: id,
         ..unsafe { std::mem::zeroed() }
     };

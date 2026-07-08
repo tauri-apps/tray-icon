@@ -2280,7 +2280,7 @@ dependencies = [
 [[package]]
 name = "muda"
 version = "0.19.3"
-source = "git+https://github.com/OlympusLedgerOrg/muda?branch=codex/linux-ksni-api#76e8f3f3638439ec2b223cbd7c11771332571b0a"
+source = "git+https://github.com/OlympusLedgerOrg/muda?branch=codex/linux-ksni-api#2e8d21d83bf19df078240ad3747f514f357b8491"
 dependencies = [
  "arc-swap",
  "crossbeam-channel",

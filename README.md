@@ -4,7 +4,7 @@ tray-icon lets you create tray icons for desktop applications.
 
 - Windows
 - macOS
-- Linux (gtk Only)
+- Linux (gtk or KSNI)
 - FreeBSD (gtk Only)
 
 ## Platform-specific notes:
@@ -17,10 +17,11 @@ tray-icon lets you create tray icons for desktop applications.
 - `common-controls-v6`: Use `TaskDialogIndirect` API from `ComCtl32.dll` v6 on Windows for showing the predefined `About` menu item dialog.
 - `libxdo`: Enables linking to `libxdo` which is used for the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu item, see https://github.com/tauri-apps/muda#cargo-features
 - `serde`: Enables de/serializing derives.
+- `linux-ksni`: Uses the KDE/freedesktop StatusNotifierItem backend on Linux instead of the default GTK/libappindicator backend.
 
 ## Dependencies (Linux Only)
 
-On Linux, `gtk`, `libxdo` is used to make the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu items work and `libappindicator` or `libayatnat-appindicator` are used to create the tray icon, so make sure to install them on your system.
+With the default Linux backend, `gtk`, `libxdo` is used to make the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu items work and `libappindicator` or `libayatnat-appindicator` are used to create the tray icon, so make sure to install them on your system. The `linux-ksni` feature uses StatusNotifierItem instead of libappindicator.
 
 #### Arch Linux / Manjaro:
 

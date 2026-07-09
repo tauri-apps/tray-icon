@@ -9,23 +9,11 @@
 )))]
 
 use std::{cell::RefCell, rc::Rc};
-use winit::event_loop::EventLoop;
 use eframe::egui;
 use tray_icon::{
     menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
     TrayIconBuilder, TrayIconEvent,
 };
-
-enum UserTrayIconEvent {
-    TrayIconEvent(tray_icon::TrayIconEvent),
-    MenuEvent(tray_icon::menu::MenuEvent),
-}
-
-
-
-panic!("How to handle winit events inside or outside egui to have the tray events in parallel with the egui ui?");
-
-
 
 
 fn main() -> Result<(), eframe::Error> {
@@ -48,23 +36,6 @@ fn main() -> Result<(), eframe::Error> {
         &quit_i,
     ]).expect("Error creating the tray icon menu.");
 
-    // Create a winit event loop to handle the tray and tray menu events in
-    // parallel of any egui window (created or not)
-    let tray_event_loop = EventLoop::<UserTrayIconEvent>::with_user_event()
-    .build()
-    .expect("Error creating the winit event loop.");
-
-    // Those proxies send all those events generated in the tray to the previously
-    // made event loop
-    let proxy = tray_event_loop.create_proxy();
-    MenuEvent::set_event_handler(Some(move |event| {
-        proxy.send_event(UserTrayIconEvent::MenuEvent(event));
-    }));
-
-    let proxy = tray_event_loop.create_proxy();
-    TrayIconEvent::set_event_handler(Some(move |event| {
-        proxy.send_event(UserTrayIconEvent::TrayIconEvent(event));
-    }));
 
     // Since egui uses winit under the hood and doesn't use gtk on Linux, and we need gtk for
     // the tray icon to show up, we need to spawn a thread

@@ -7,14 +7,64 @@
     target_os = "netbsd",
     target_os = "openbsd"
 )))]
-use std::{cell::RefCell, rc::Rc};
 
+use std::{cell::RefCell, rc::Rc};
+use winit::event_loop::EventLoop;
 use eframe::egui;
-use tray_icon::TrayIconBuilder;
+use tray_icon::{
+    menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
+    TrayIconBuilder, TrayIconEvent,
+};
+
+enum UserTrayIconEvent {
+    TrayIconEvent(tray_icon::TrayIconEvent),
+    MenuEvent(tray_icon::menu::MenuEvent),
+}
+
+
+
+panic!("How to handle winit events inside or outside egui to have the tray events in parallel with the egui ui?");
+
+
+
 
 fn main() -> Result<(), eframe::Error> {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/icon.png");
     let icon = load_icon(std::path::Path::new(path));
+
+    // Create the tray menu and add the desired items
+    let tray_menu = Menu::new();
+    let quit_i = MenuItem::new("Quit", true, None);
+    tray_menu.append_items(&[
+        &PredefinedMenuItem::about(
+            None,
+            Some(AboutMetadata {
+                name: Some("egui example".to_string()),
+                copyright: Some("Copyright egui example".to_string()),
+                ..Default::default()
+            }),
+        ),
+        &PredefinedMenuItem::separator(),
+        &quit_i,
+    ]).expect("Error creating the tray icon menu.");
+
+    // Create a winit event loop to handle the tray and tray menu events in
+    // parallel of any egui window (created or not)
+    let tray_event_loop = EventLoop::<UserTrayIconEvent>::with_user_event()
+    .build()
+    .expect("Error creating the winit event loop.");
+
+    // Those proxies send all those events generated in the tray to the previously
+    // made event loop
+    let proxy = tray_event_loop.create_proxy();
+    MenuEvent::set_event_handler(Some(move |event| {
+        proxy.send_event(UserTrayIconEvent::MenuEvent(event));
+    }));
+
+    let proxy = tray_event_loop.create_proxy();
+    TrayIconEvent::set_event_handler(Some(move |event| {
+        proxy.send_event(UserTrayIconEvent::TrayIconEvent(event));
+    }));
 
     // Since egui uses winit under the hood and doesn't use gtk on Linux, and we need gtk for
     // the tray icon to show up, we need to spawn a thread
@@ -27,11 +77,10 @@ fn main() -> Result<(), eframe::Error> {
         target_os = "openbsd"
     ))]
     std::thread::spawn(|| {
-        use tray_icon::menu::Menu;
-
         gtk::init().unwrap();
         let _tray_icon = TrayIconBuilder::new()
-            .with_menu(Box::new(Menu::new()))
+            .with_menu(Box::new(tray_menu))
+            .with_tooltip("Some tray example text :-)")
             .with_icon(icon)
             .build()
             .unwrap();
@@ -70,7 +119,12 @@ fn main() -> Result<(), eframe::Error> {
             {
                 tray_c
                     .borrow_mut()
-                    .replace(TrayIconBuilder::new().with_icon(icon).build().unwrap());
+                    .replace(TrayIconBuilder::new()
+                        .with_menu(Box::new(tray_menu))
+                        .with_tooltip("Some tray example text :-)")
+                        .with_icon(icon)
+                        .build()
+                        .unwrap() );
             }
             Ok(Box::<MyApp>::default())
         }),
@@ -93,12 +147,17 @@ impl Default for MyApp {
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        use tray_icon::TrayIconEvent;
-
+        // Those printing function of the tray event won't work when the window
+        // isn't both openend and focused, as the egui event loop won't be running.
         if let Ok(event) = TrayIconEvent::receiver().try_recv() {
             println!("tray event: {event:?}");
         }
 
+        if let Ok(event) = MenuEvent::receiver().try_recv() {
+            println!("menu event: {event:?}");
+        }
+
+        // Design of the egui window
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("My egui Application");
             ui.horizontal(|ui| {

@@ -36,7 +36,7 @@ fn main() -> Result<(), eframe::Error> {
             .build()
             .unwrap();
 
-        gtk::main();
+        gtk::glib::MainLoop::new(None, false).run();
     });
 
     #[cfg(not(any(

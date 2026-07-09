@@ -15,23 +15,23 @@ tray-icon lets you create tray icons for desktop applications.
 ### Cargo Features
 
 - `common-controls-v6`: Use `TaskDialogIndirect` API from `ComCtl32.dll` v6 on Windows for showing the predefined `About` menu item dialog.
-- `libxdo`: Enables linking to `libxdo` which is used for the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu item, see https://github.com/tauri-apps/muda#cargo-features
+- `libxdo`: Compatibility feature forwarded to `muda` for predefined `Copy`, `Cut`, `Paste` and `SelectAll` menu items.
 - `serde`: Enables de/serializing derives.
 
 ## Dependencies (Linux Only)
 
-On Linux, `gtk`, `libxdo` is used to make the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu items work and `libappindicator` or `libayatnat-appindicator` are used to create the tray icon, so make sure to install them on your system.
+On Linux, GTK4 is used for menus. The AppIndicator backend also requires GTK3 AppIndicator headers, while the KSNI backend does not require AppIndicator. Make sure to install them on your system.
 
 #### Arch Linux / Manjaro:
 
 ```sh
-pacman -S gtk3 xdotool libappindicator-gtk3 #or libayatana-appindicator
+pacman -S gtk4 libayatana-appindicator
 ```
 
 #### Debian / Ubuntu:
 
 ```sh
-sudo apt install libgtk-3-dev libxdo-dev libappindicator3-dev #or libayatana-appindicator3-dev
+sudo apt install libgtk-3-dev libgtk-4-dev libayatana-appindicator3-dev
 ```
 
 ## Dependencies in FreeBSD
@@ -39,7 +39,7 @@ sudo apt install libgtk-3-dev libxdo-dev libappindicator3-dev #or libayatana-app
 Install this dependencies in order to compile `tray-icon`. Instructions using `pkg`:
 
 ```sh
-pkg install -y rust glib pkgconf gtk3
+pkg install -y rust glib pkgconf gtk4
 ```
 
 ## Examples

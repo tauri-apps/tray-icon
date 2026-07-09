@@ -7,7 +7,7 @@ homepage = "https://github.com/tauri-apps/tray-icon"
 repository = "https://github.com/tauri-apps/tray-icon"
 license = "MIT OR Apache-2.0"
 categories = ["gui"]
-rust-version = "1.73"
+rust-version = "1.92"
 include = [
   "README.md",
   "src/**/*.rs",
@@ -26,7 +26,7 @@ gtk = ["muda/gtk", "dep:libappindicator"]
 linux-ksni = ["dep:arc-swap", "dep:ksni", "muda/linux-ksni"]
 
 [dependencies]
-muda = { path = "../muda", default-features = false }
+muda = { git = "https://github.com/OlympusLedgerOrg/muda", branch = "port-gtk4", default-features = false }
 crossbeam-channel = "0.5"
 once_cell = "1"
 thiserror = "2"
@@ -96,7 +96,7 @@ png = "0.18"
 
 [dev-dependencies]
 winit = "0.30"
-tao = { path = "../tao" }
+tao = { git = "https://github.com/OlympusLedgerOrg/tao", branch = "port-gtk4" }
 eframe = "0.31"
 image = { version = "0.25", default-features = false, features = ["png"] }
 serde_json = "1"

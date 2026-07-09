@@ -132,7 +132,7 @@ fn main() {
 
         let _tray_icon = Application::new_tray_icon();
 
-        gtk::main();
+        gtk::glib::MainLoop::new(None, false).run();
     });
 
     if let Err(err) = event_loop.run_app(&mut app) {

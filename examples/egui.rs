@@ -128,32 +128,6 @@ impl Default for MyApp {
     }
 }
 
-// impl MyApp {
-//     fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-//         let app_struc = Self::default();
-
-//         //let quit_i = MenuItem::new("Quit", true, None);
-//         tray_menu.append_items(&[
-//             &PredefinedMenuItem::about(
-//                 None,
-//                 Some(AboutMetadata {
-//                     name: Some("egui example".to_string()),
-//                     copyright: Some("Copyright egui example".to_string()),
-//                     ..Default::default()
-//                 }),
-//             ),
-//             &PredefinedMenuItem::separator(),
-//             //&quit_i,
-//         ]).expect("Error creating the tray icon menu.");
-
-//         for elem in &app_struc.tray_icon_items {
-//             tray_menu.append(elem);
-//         }
-
-//         return app_struc;
-//     }
-// }
-
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Those printing function of the tray event won't work when the window

@@ -1,5 +1,9 @@
 # Changelog
 
+## \[0.24.1]
+
+- [`7adc007`](https://www.github.com/tauri-apps/tray-icon/commit/7adc007bb54a91e7e6de4baac87ae534e1aa0550) ([#325](https://www.github.com/tauri-apps/tray-icon/pull/325) by [@Y-ASLant](https://www.github.com/tauri-apps/tray-icon/../../Y-ASLant)) On Windows, preserve tray icon visibility on Explorer restart so a hidden tray icon won't become visible.
+
 ## \[0.24.0]
 
 - [`19bcab3`](https://www.github.com/tauri-apps/tray-icon/commit/19bcab382753cbbb883b7d6ae96d07111fc73e67) ([#305](https://www.github.com/tauri-apps/tray-icon/pull/305) by [@expenses](https://www.github.com/tauri-apps/tray-icon/../../expenses)) Make gtk an optional feature (enabled by default)

@@ -7,18 +7,19 @@
     target_os = "netbsd",
     target_os = "openbsd"
 )))]
-
 use std::{cell::RefCell, rc::Rc};
+
 use eframe::egui;
 use tray_icon::{
-    menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
-    TrayIconBuilder
+    TrayIcon, TrayIconBuilder, TrayIconEvent,
+    menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem}
 };
 
 
 fn main() -> Result<(), eframe::Error> {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/icon.png");
     let icon = load_icon(std::path::Path::new(path));
+    let menu_items = vec![MenuItem::new("Exit", true, None)];
 
     // Since egui uses winit under the hood and doesn't use gtk on Linux, and we need gtk for
     // the tray icon to show up, we need to spawn a thread
@@ -32,12 +33,7 @@ fn main() -> Result<(), eframe::Error> {
     ))]
     std::thread::spawn(|| {
         gtk::init().unwrap();
-        let _tray_icon = TrayIconBuilder::new()
-            .with_menu(Box::new(tray_menu))
-            .with_tooltip("Some tray example text :-)")
-            .with_icon(icon)
-            .build()
-            .unwrap();
+        let _tray_icon = create_tray_icon(icon, &menu_items);
 
         gtk::main();
     });
@@ -63,30 +59,7 @@ fn main() -> Result<(), eframe::Error> {
         "My egui App",
         eframe::NativeOptions::default(),
         Box::new(move |_cc| {
-            let app_struc = Box::<MyApp>::default();
-
-            // Create the tray menu and add the desired items
-            let tray_menu = Menu::new();
-
-            // Append those items that doesn't need to interact with the rest of
-            // the UI code
-            tray_menu.append_items(&[
-                &PredefinedMenuItem::about(
-                    None,
-                    Some(AboutMetadata {
-                        name: Some("egui example".to_string()),
-                        copyright: Some("Copyright egui example".to_string()),
-                        ..Default::default()
-                    }),
-                ),
-                &PredefinedMenuItem::separator(),
-            ]).expect("Error creating the tray icon menu.");
-
-            // Append those items that which events will be used in the egui
-            // event loop.
-            for elem in &app_struc.tray_icon_items {
-                tray_menu.append(elem).expect("Error creating the tray button");
-            }
+            let mut app_struc = Box::<MyApp>::default();
 
             #[cfg(not(any(
                 target_os = "linux",
@@ -98,12 +71,14 @@ fn main() -> Result<(), eframe::Error> {
             {
                 tray_c
                     .borrow_mut()
-                    .replace(TrayIconBuilder::new()
-                        .with_menu(Box::new(tray_menu))
-                        .with_tooltip("Some tray example text :-)")
-                        .with_icon(icon)
-                        .build()
-                        .unwrap() );
+                    .replace(create_tray_icon(icon, &menu_items));
+            }
+
+            // Add the ID list to the eframe data to being able to filter event
+            // sources
+            for item in &menu_items {
+                let id = item.id().clone();
+                app_struc.tray_icon_ids.push(id);
             }
 
             Ok(app_struc)
@@ -111,11 +86,45 @@ fn main() -> Result<(), eframe::Error> {
     )
 }
 
+// Create a tray icon with some custom settings, a menu, and some menu items
+fn create_tray_icon(icon: tray_icon::Icon, menu_items: &Vec<MenuItem>) -> TrayIcon {
+    // Create the tray menu
+    let tray_menu = Menu::new();
+
+    // Append those items that doesn't need to interact with the rest of
+    // the UI code
+    tray_menu.append_items(&[
+        &PredefinedMenuItem::about(
+            None,
+            Some(AboutMetadata {
+                name: Some("egui example".to_string()),
+                copyright: Some("Copyright egui example".to_string()),
+                ..Default::default()
+            }),
+        ),
+        &PredefinedMenuItem::separator(),
+    ]).expect("Error creating the tray icon menu.");
+
+    for item in menu_items {
+        tray_menu.append(item).unwrap();
+    }
+
+    // Create the tray icon and add the menu
+    let tray_icon = TrayIconBuilder::new()
+        .with_menu(Box::new(tray_menu))
+        .with_tooltip("Some tray example text :-)")
+        .with_icon(icon)
+        .build()
+        .unwrap();
+
+    return tray_icon;
+}
+
+
 struct MyApp {
     name: String,
     age: u32,
-    tray_icon_items: [tray_icon::menu::MenuItem; 1]
-    // Is better using a map to find a menuItem with its id
+    tray_icon_ids: Vec<tray_icon::menu::MenuId>
 }
 
 impl Default for MyApp {
@@ -123,7 +132,7 @@ impl Default for MyApp {
         Self {
             name: "Arthur".to_owned(),
             age: 42,
-            tray_icon_items: [MenuItem::new("Quit", true, None)]
+            tray_icon_ids: Vec::new()
         }
     }
 }
@@ -133,13 +142,13 @@ impl eframe::App for MyApp {
         // Those printing function of the tray event won't work when the window
         // isn't both openend and focused, as the egui event loop won't be running.
 
-        // if let Ok(event) = TrayIconEvent::receiver().try_recv() {
-        //     println!("tray event: {event:?}");
-        // }
+        if let Ok(event) = TrayIconEvent::receiver().try_recv() {
+            println!("tray event: {event:?}");
+        }
 
         if let Ok(event) = MenuEvent::receiver().try_recv() {
             println!("menu event: {event:?}");
-            if event.id == self.tray_icon_items[0].id() {
+            if event.id == self.tray_icon_ids[0] {
                 println!("Wanna close this?");
             }
         }

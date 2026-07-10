@@ -54,6 +54,9 @@ fn main() -> Result<(), eframe::Error> {
 
     // Thread that will process all the menu item events made by the user. This
     // thread will be destroyed when the main thread ends by design.
+    //
+    // The function 'recv()' is a locking one, and that means the loop will get
+    // stuck until some event is generated, then it will continue running.
     std::thread::spawn(move || {
         let ids = menu_items_id;
         loop {
@@ -84,7 +87,7 @@ fn create_tray_icon(icon: tray_icon::Icon, menu_items: Vec<MenuItem>) -> TrayIco
     // Create the tray menu
     let tray_menu = Menu::new();
 
-    // Append those items that doesn't need to interact with the rest of
+    // Append those static items that doesn't need to interact with the rest of
     // the UI code
     tray_menu.append_items(&[
         &PredefinedMenuItem::about(
@@ -98,6 +101,7 @@ fn create_tray_icon(icon: tray_icon::Icon, menu_items: Vec<MenuItem>) -> TrayIco
         &PredefinedMenuItem::separator(),
     ]).expect("Error creating the tray icon menu.");
 
+    // Append items that will be interacting with egui in some way or another.
     for item in menu_items {
         tray_menu.append(&item).unwrap();
     }
@@ -133,10 +137,16 @@ impl eframe::App for MyApp {
         // Those printing function of the tray event won't work when the window
         // isn't both openend and focused, as the egui event loop won't be running.
 
+        // Print tray icon events.
         if let Ok(event) = TrayIconEvent::receiver().try_recv() {
             println!("tray event: {event:?}");
         }
 
+        // Print tray icon menu events.
+        // Those events already received by the parrallel thread won't be here,
+        // and knowing this frame generating thread is locked to 60 FPS (or the
+        // screen frequency), this is a lot slower, and rarely will get any of
+        // those events.
         if let Ok(event) = MenuEvent::receiver().try_recv() {
             println!("menu event: {event:?}");
         }

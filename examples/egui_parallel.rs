@@ -1,9 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use std::process::exit;
+use std::sync::{Arc, Mutex};
 use eframe::egui;
 use tray_icon::{
-    menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
+    menu::{AboutMetadata, Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem},
     TrayIconEvent, TrayIconBuilder, TrayIcon
 };
 
@@ -12,19 +13,19 @@ fn main() -> Result<(), eframe::Error> {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/icon.png");
     let icon = load_icon(std::path::Path::new(path));
 
-    let menu_items = vec![MenuItem::new("Quit", true, None)];
+    macro_rules! generate_menu_items {
+        () => (vec![MenuItem::new("Quit", true, None)])
+    }
 
     // This is to provide the items ids to the event processing thread.
-    let mut menu_items_id = Vec::new();
-    for item in &menu_items {
-        menu_items_id.push(item.id().clone());
-    }
+    let menu_items_id = Arc::new(Mutex::new(Vec::<MenuId>::new()));
 
     // In the case of having more than one item to process, this could be a
     // simple way to having a distinguish between items.
     enum MenuItemsCmd {
         Exit = 0,
     }
+
 
     // Since egui uses winit under the hood and doesn't use gtk on Linux, and we
     // need gtk for the tray icon to show up, we need to spawn a thread where we
@@ -35,13 +36,25 @@ fn main() -> Result<(), eframe::Error> {
         target_os = "freebsd",
         target_os = "netbsd",
         target_os = "openbsd"
-    ))]
-    std::thread::spawn(|| {
-        gtk::init().unwrap();
-        let _tray_icon = create_tray_icon(icon, menu_items);
+    ))]{
+        let ids_gtk_thread = Arc::clone(&menu_items_id);
 
-        gtk::main();
-    });
+        std::thread::spawn(move || {
+            gtk::init().unwrap();
+
+            let menu_items = generate_menu_items!();
+            let _tray_icon = create_tray_icon(icon, &menu_items);
+
+            {
+                let mut ids = ids_gtk_thread.lock().unwrap();
+                for item in &menu_items {
+                    ids.push(item.id().clone());
+                }
+            }
+
+            gtk::main();
+        });
+    }
 
     #[cfg(not(any(
         target_os = "linux",
@@ -57,10 +70,16 @@ fn main() -> Result<(), eframe::Error> {
     //
     // The function 'recv()' is a locking one, and that means the loop will get
     // stuck until some event is generated, then it will continue running.
+    let ids_loop_thread = Arc::clone(&menu_items_id);
     std::thread::spawn(move || {
-        let ids = menu_items_id;
         loop {
             if let Ok(event) = MenuEvent::receiver().recv() {
+                let ids = ids_loop_thread.lock().unwrap();
+                
+                if ids.len() < 1 {
+                    break
+                };
+                
                 if event.id == ids[MenuItemsCmd::Exit as usize] {
                     println!("Exit pressed!");
                     exit(0);
@@ -83,7 +102,7 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 
-fn create_tray_icon(icon: tray_icon::Icon, menu_items: Vec<MenuItem>) -> TrayIcon {
+fn create_tray_icon(icon: tray_icon::Icon, menu_items: &Vec<MenuItem>) -> TrayIcon {
     // Create the tray menu
     let tray_menu = Menu::new();
 
@@ -103,7 +122,7 @@ fn create_tray_icon(icon: tray_icon::Icon, menu_items: Vec<MenuItem>) -> TrayIco
 
     // Append items that will be interacting with egui in some way or another.
     for item in menu_items {
-        tray_menu.append(&item).unwrap();
+        tray_menu.append(item).unwrap();
     }
 
     // Create the tray icon and add the menu

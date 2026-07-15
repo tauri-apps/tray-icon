@@ -1,5 +1,14 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
+#[cfg(not(any(
+        target_os = "linux",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd"
+)))]
+use std::{cell::RefCell, rc::Rc};
+
 use std::process::exit;
 use std::sync::{Arc, Mutex};
 use eframe::egui;
@@ -56,6 +65,7 @@ fn main() -> Result<(), eframe::Error> {
         });
     }
 
+
     #[cfg(not(any(
         target_os = "linux",
         target_os = "dragonfly",
@@ -63,7 +73,44 @@ fn main() -> Result<(), eframe::Error> {
         target_os = "netbsd",
         target_os = "openbsd"
     )))]
-    let _tray_icon = create_tray_icon(icon, menu_items);
+    let mut _tray_icon = Rc::new(RefCell::new(None));
+
+    #[cfg(not(any(
+        target_os = "linux",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    )))]
+    let tray_c = _tray_icon.clone();
+
+    #[cfg(not(any(
+        target_os = "linux",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    )))]
+    let menu_items;
+
+    #[cfg(not(any(
+        target_os = "linux",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    )))] {
+        menu_items = generate_menu_items!();
+
+        let ids_win_thread = Arc::clone(&menu_items_id);
+
+        {
+            let mut ids = ids_win_thread.lock().unwrap();
+            for item in &menu_items {
+                ids.push(item.id().clone());
+            }
+        }
+    }
 
     // Thread that will process all the menu item events made by the user. This
     // thread will be destroyed when the main thread ends by design.
@@ -75,11 +122,9 @@ fn main() -> Result<(), eframe::Error> {
         loop {
             if let Ok(event) = MenuEvent::receiver().recv() {
                 let ids = ids_loop_thread.lock().unwrap();
-                
-                if ids.len() < 1 {
-                    break
-                };
-                
+
+                assert!((ids.len() > 0), "No IDs found to process in parrallel!");
+
                 if event.id == ids[MenuItemsCmd::Exit as usize] {
                     println!("Exit pressed!");
                     exit(0);
@@ -93,6 +138,19 @@ fn main() -> Result<(), eframe::Error> {
         eframe::NativeOptions::default(),
         Box::new(move |_cc| {
             let app_struc = Box::<MyApp>::default();
+
+            #[cfg(not(any(
+                target_os = "linux",
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "netbsd",
+                target_os = "openbsd"
+            )))]
+            {
+                tray_c
+                    .borrow_mut()
+                    .replace(create_tray_icon(icon, &menu_items));
+            }
 
             Ok(app_struc)
         }),

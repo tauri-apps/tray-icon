@@ -1,11 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-#[cfg(not(any(
-        target_os = "linux",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "netbsd",
-        target_os = "openbsd"
+ #[cfg(not(any(
+    target_os = "linux",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd"
 )))]
 use std::{cell::RefCell, rc::Rc};
 
@@ -22,11 +22,16 @@ fn main() -> Result<(), eframe::Error> {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/icon.png");
     let icon = load_icon(std::path::Path::new(path));
 
+    // This might not be the most elegant way to avoid repeating the same code
+    // in the Linux/Unix part and the Windows one, but I don't know a better way
+    // to do it in Rust.
     macro_rules! generate_menu_items {
         () => (vec![MenuItem::new("Quit", true, None)])
     }
 
-    // This is to provide the items ids to the event processing thread.
+    // Vector storing the IDs of the menu items that would interact with both
+    // the egui event loop in this thread, and the custom event processing loop
+    // in another thread.
     let menu_items_id = Arc::new(Mutex::new(Vec::<MenuId>::new()));
 
     // In the case of having more than one item to process, this could be a
@@ -34,7 +39,6 @@ fn main() -> Result<(), eframe::Error> {
     enum MenuItemsCmd {
         Exit = 0,
     }
-
 
     // Since egui uses winit under the hood and doesn't use gtk on Linux, and we
     // need gtk for the tray icon to show up, we need to spawn a thread where we
@@ -93,6 +97,8 @@ fn main() -> Result<(), eframe::Error> {
     )))]
     let menu_items;
 
+    // Generate the menu items in Windows, get their IDs, and store them in a
+    // multi-threaded safe way.
     #[cfg(not(any(
         target_os = "linux",
         target_os = "dragonfly",
@@ -112,11 +118,12 @@ fn main() -> Result<(), eframe::Error> {
         }
     }
 
-    // Thread that will process all the menu item events made by the user. This
-    // thread will be destroyed when the main thread ends by design.
+    // Process all the menu item events made by the user in a separate thread.
+    //
+    // This thread will be destroyed when the main thread ends by design.
     //
     // The function 'recv()' is a locking one, and that means the loop will get
-    // stuck until some event is generated, then it will continue running.
+    // stuck until some event is generated.
     let ids_loop_thread = Arc::clone(&menu_items_id);
     std::thread::spawn(move || {
         loop {
@@ -160,6 +167,7 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 
+// Create the tray menu, add items to it, and create the tray icon that will have them.
 fn create_tray_icon(icon: tray_icon::Icon, menu_items: &Vec<MenuItem>) -> TrayIcon {
     // Create the tray menu
     let tray_menu = Menu::new();
@@ -214,7 +222,7 @@ impl eframe::App for MyApp {
         // Those printing function of the tray event won't work when the window
         // isn't both openend and focused, as the egui event loop won't be running.
 
-        // Print tray icon events.
+        // Print tray icon events. This is not supported in Linux.
         if let Ok(event) = TrayIconEvent::receiver().try_recv() {
             println!("tray event: {event:?}");
         }

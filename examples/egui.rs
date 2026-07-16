@@ -10,16 +10,11 @@
 use std::{cell::RefCell, rc::Rc};
 
 use eframe::egui;
-use tray_icon::{
-    TrayIcon, TrayIconBuilder, TrayIconEvent,
-    menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem}
-};
-
+use tray_icon::TrayIconBuilder;
 
 fn main() -> Result<(), eframe::Error> {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/icon.png");
     let icon = load_icon(std::path::Path::new(path));
-    let menu_items = vec![MenuItem::new("Exit", true, None)];
 
     // Since egui uses winit under the hood and doesn't use gtk on Linux, and we need gtk for
     // the tray icon to show up, we need to spawn a thread
@@ -32,8 +27,14 @@ fn main() -> Result<(), eframe::Error> {
         target_os = "openbsd"
     ))]
     std::thread::spawn(|| {
+        use tray_icon::menu::Menu;
+
         gtk::init().unwrap();
-        let _tray_icon = create_tray_icon(icon, &menu_items);
+        let _tray_icon = TrayIconBuilder::new()
+            .with_menu(Box::new(Menu::new()))
+            .with_icon(icon)
+            .build()
+            .unwrap();
 
         gtk::main();
     });
@@ -59,8 +60,6 @@ fn main() -> Result<(), eframe::Error> {
         "My egui App",
         eframe::NativeOptions::default(),
         Box::new(move |_cc| {
-            let mut app_struc = Box::<MyApp>::default();
-
             #[cfg(not(any(
                 target_os = "linux",
                 target_os = "dragonfly",
@@ -71,60 +70,16 @@ fn main() -> Result<(), eframe::Error> {
             {
                 tray_c
                     .borrow_mut()
-                    .replace(create_tray_icon(icon, &menu_items));
+                    .replace(TrayIconBuilder::new().with_icon(icon).build().unwrap());
             }
-
-            // Add the ID list to the eframe data to being able to filter event
-            // sources
-            for item in &menu_items {
-                let id = item.id().clone();
-                app_struc.tray_icon_ids.push(id);
-            }
-
-            Ok(app_struc)
+            Ok(Box::<MyApp>::default())
         }),
     )
 }
 
-// Create a tray icon with some custom settings, a menu, and some menu items
-fn create_tray_icon(icon: tray_icon::Icon, menu_items: &Vec<MenuItem>) -> TrayIcon {
-    // Create the tray menu
-    let tray_menu = Menu::new();
-
-    // Append those items that doesn't need to interact with the rest of
-    // the UI code
-    tray_menu.append_items(&[
-        &PredefinedMenuItem::about(
-            None,
-            Some(AboutMetadata {
-                name: Some("egui example".to_string()),
-                copyright: Some("Copyright egui example".to_string()),
-                ..Default::default()
-            }),
-        ),
-        &PredefinedMenuItem::separator(),
-    ]).expect("Error creating the tray icon menu.");
-
-    for item in menu_items {
-        tray_menu.append(item).unwrap();
-    }
-
-    // Create the tray icon and add the menu
-    let tray_icon = TrayIconBuilder::new()
-        .with_menu(Box::new(tray_menu))
-        .with_tooltip("Some tray example text :-)")
-        .with_icon(icon)
-        .build()
-        .unwrap();
-
-    return tray_icon;
-}
-
-
 struct MyApp {
     name: String,
     age: u32,
-    tray_icon_ids: Vec<tray_icon::menu::MenuId>
 }
 
 impl Default for MyApp {
@@ -132,28 +87,18 @@ impl Default for MyApp {
         Self {
             name: "Arthur".to_owned(),
             age: 42,
-            tray_icon_ids: Vec::new()
         }
     }
 }
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Those printing function of the tray event won't work when the window
-        // isn't both openend and focused, as the egui event loop won't be running.
+        use tray_icon::TrayIconEvent;
 
         if let Ok(event) = TrayIconEvent::receiver().try_recv() {
             println!("tray event: {event:?}");
         }
 
-        if let Ok(event) = MenuEvent::receiver().try_recv() {
-            println!("menu event: {event:?}");
-            if event.id == self.tray_icon_ids[0] {
-                println!("Wanna close this?");
-            }
-        }
-
-        // Design of the egui window
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("My egui Application");
             ui.horizontal(|ui| {

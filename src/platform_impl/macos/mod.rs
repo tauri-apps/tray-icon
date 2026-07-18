@@ -12,7 +12,7 @@ use objc2_app_kit::{
     NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
-use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
+use objc2_core_graphics::{CGDisplayBounds, CGMainDisplayID};
 use objc2_foundation::{MainThreadMarker, NSData, NSSize, NSString};
 
 pub(crate) use self::icon::PlatformIcon;
@@ -607,6 +607,11 @@ struct MouseClickEvent {
 ///
 /// This conversion happens to be symmetric, so we only need this one function
 /// to convert between the two coordinate systems.
+///
+/// The flip must happen in points, the unit of the incoming `NSWindow` and
+/// `NSEvent` values: `CGDisplayBounds` is in points, while
+/// `CGDisplayPixelsHigh` is not on a Retina main display, which skewed every
+/// tray rect and cursor position by the scale factor.
 fn flip_window_screen_coordinates(y: f64) -> f64 {
-    unsafe { CGDisplayPixelsHigh(CGMainDisplayID()) as f64 - y }
+    unsafe { CGDisplayBounds(CGMainDisplayID()).size.height - y }
 }

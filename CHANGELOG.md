@@ -1,5 +1,11 @@
 # Changelog
 
+## \[0.24.2]
+
+- [`962c9be`](https://www.github.com/tauri-apps/tray-icon/commit/962c9be6fcc6f82782abe86e9a3a86427ba7bbb8) ([#337](https://www.github.com/tauri-apps/tray-icon/pull/337) by [@Legend-Master](https://www.github.com/tauri-apps/tray-icon/../../Legend-Master)) Migrated to use `NIS_HIDDEN` to change visible states on Windows
+- [`9826ff4`](https://www.github.com/tauri-apps/tray-icon/commit/9826ff42e52be0ac92e0803eed16d517299ec7c0) ([#327](https://www.github.com/tauri-apps/tray-icon/pull/327) by [@Tunglies](https://www.github.com/tauri-apps/tray-icon/../../Tunglies)) Avoid unnecessary cloning when applying tray icons, titles, and tooltips on macOS.
+- [`962c9be`](https://www.github.com/tauri-apps/tray-icon/commit/962c9be6fcc6f82782abe86e9a3a86427ba7bbb8) ([#337](https://www.github.com/tauri-apps/tray-icon/pull/337) by [@Legend-Master](https://www.github.com/tauri-apps/tray-icon/../../Legend-Master)) Set `NOTIFYICONDATAW.cbSize` to `size_of::<NOTIFYICONDATAW>()`, this increased the max tooltip length from 64 to 128 characters.
+
 ## \[0.24.1]
 
 - [`7adc007`](https://www.github.com/tauri-apps/tray-icon/commit/7adc007bb54a91e7e6de4baac87ae534e1aa0550) ([#325](https://www.github.com/tauri-apps/tray-icon/pull/325) by [@Y-ASLant](https://www.github.com/tauri-apps/tray-icon/../../Y-ASLant)) On Windows, preserve tray icon visibility on Explorer restart so a hidden tray icon won't become visible.

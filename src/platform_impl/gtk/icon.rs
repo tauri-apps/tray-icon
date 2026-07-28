@@ -6,7 +6,7 @@ use std::{fs::File, io::BufWriter, path::Path};
 
 use crate::icon::BadIcon;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlatformIcon {
     rgba: Vec<u8>,
     width: i32,

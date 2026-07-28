@@ -15,9 +15,37 @@ pub struct TrayIcon {
     id: TrayIconId,
     indicator: AppIndicator,
     temp_dir_path: Option<PathBuf>,
-    path: PathBuf,
     counter: u32,
+    icon_cache: Vec<CachedIcon>,
     menu: Option<Box<dyn muda::ContextMenu>>,
+}
+
+struct CachedIcon {
+    icon: PlatformIcon,
+    theme_path: PathBuf,
+    icon_path: PathBuf,
+}
+
+impl CachedIcon {
+    fn ensure_file(&self) -> crate::Result<()> {
+        if self.icon_path.try_exists()? {
+            return Ok(());
+        }
+
+        std::fs::create_dir_all(&self.theme_path)?;
+        let temp_path = self.icon_path.with_extension("png.tmp");
+        let result = (|| {
+            self.icon.write_to_png(&temp_path)?;
+            std::fs::rename(&temp_path, &self.icon_path)?;
+            Ok(())
+        })();
+
+        if result.is_err() {
+            let _ = std::fs::remove_file(temp_path);
+        }
+
+        result
+    }
 }
 
 impl TrayIcon {
@@ -27,8 +55,14 @@ impl TrayIcon {
 
         let (parent_path, icon_path) = temp_icon_path(attrs.temp_dir_path.as_ref(), &id, 0)?;
 
+        let mut icon_cache = Vec::new();
         if let Some(icon) = attrs.icon {
             icon.inner.write_to_png(&icon_path)?;
+            icon_cache.push(CachedIcon {
+                icon: icon.inner,
+                theme_path: parent_path.clone(),
+                icon_path: icon_path.clone(),
+            });
         }
 
         indicator.set_icon_theme_path(&parent_path.to_string_lossy());
@@ -45,29 +79,41 @@ impl TrayIcon {
         Ok(Self {
             id,
             indicator,
-            path: icon_path,
             temp_dir_path: attrs.temp_dir_path,
             counter: 0,
+            icon_cache,
             menu: attrs.menu,
         })
     }
     pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
-        let _ = std::fs::remove_file(&self.path);
-
-        self.counter += 1;
-
-        let (parent_path, icon_path) =
-            temp_icon_path(self.temp_dir_path.as_ref(), &self.id, self.counter)?;
-
-        if let Some(icon) = icon {
-            icon.inner.write_to_png(&icon_path)?;
-        }
+        let (parent_path, icon_path) = match icon {
+            Some(icon) => {
+                if let Some(cached) = cached_icon(&self.icon_cache, &icon.inner) {
+                    cached.ensure_file()?;
+                    (cached.theme_path.clone(), cached.icon_path.clone())
+                } else {
+                    self.counter += 1;
+                    let (parent_path, icon_path) =
+                        temp_icon_path(self.temp_dir_path.as_ref(), &self.id, self.counter)?;
+                    icon.inner.write_to_png(&icon_path)?;
+                    self.icon_cache.push(CachedIcon {
+                        icon: icon.inner,
+                        theme_path: parent_path.clone(),
+                        icon_path: icon_path.clone(),
+                    });
+                    (parent_path, icon_path)
+                }
+            }
+            None => {
+                self.counter += 1;
+                temp_icon_path(self.temp_dir_path.as_ref(), &self.id, self.counter)?
+            }
+        };
 
         self.indicator
             .set_icon_theme_path(&parent_path.to_string_lossy());
         self.indicator
             .set_icon_full(&icon_path.to_string_lossy(), "tray icon");
-        self.path = icon_path;
 
         Ok(())
     }
@@ -114,8 +160,16 @@ impl TrayIcon {
 impl Drop for TrayIcon {
     fn drop(&mut self) {
         self.indicator.set_status(AppIndicatorStatus::Passive);
-        let _ = std::fs::remove_file(&self.path);
+        // AppIndicator consumers load icon paths asynchronously, so cached files
+        // must remain available until the indicator is destroyed.
+        for cached in &self.icon_cache {
+            let _ = std::fs::remove_file(&cached.icon_path);
+        }
     }
+}
+
+fn cached_icon<'a>(icon_cache: &'a [CachedIcon], icon: &PlatformIcon) -> Option<&'a CachedIcon> {
+    icon_cache.iter().find(|cached| cached.icon == *icon)
 }
 
 /// Generates an icon path in one of the following dirs:
@@ -156,4 +210,43 @@ fn temp_icon_path_preference_order() {
     }
 
     assert_eq!(dir3, PathBuf::from("/tmp/tray-icon"));
+}
+
+#[test]
+fn cached_icon_matches_icon_contents() {
+    let icon = PlatformIcon::from_rgba(vec![0, 0, 0, 255], 1, 1).unwrap();
+    let other_icon = PlatformIcon::from_rgba(vec![255, 255, 255, 255], 1, 1).unwrap();
+    let cached = CachedIcon {
+        icon: icon.clone(),
+        theme_path: PathBuf::from("/tmp/tray-icon"),
+        icon_path: PathBuf::from("/tmp/tray-icon/cached.png"),
+    };
+    let icon_cache = vec![cached];
+
+    assert_eq!(
+        cached_icon(&icon_cache, &icon).map(|cached| cached.icon_path.as_path()),
+        Some(Path::new("/tmp/tray-icon/cached.png"))
+    );
+    assert!(cached_icon(&icon_cache, &other_icon).is_none());
+}
+
+#[test]
+fn cached_icon_restores_a_missing_file() {
+    let theme_path = std::env::temp_dir().join(format!("tray-icon-test-{}", std::process::id()));
+    let icon_path = theme_path.join("cached.png");
+    let cached = CachedIcon {
+        icon: PlatformIcon::from_rgba(vec![0, 0, 0, 255], 1, 1).unwrap(),
+        theme_path: theme_path.clone(),
+        icon_path: icon_path.clone(),
+    };
+
+    let _ = std::fs::remove_dir_all(&theme_path);
+    cached.ensure_file().unwrap();
+    assert!(icon_path.is_file());
+
+    std::fs::remove_file(&icon_path).unwrap();
+    cached.ensure_file().unwrap();
+    assert!(icon_path.is_file());
+
+    std::fs::remove_dir_all(theme_path).unwrap();
 }

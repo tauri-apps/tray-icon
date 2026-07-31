@@ -59,7 +59,10 @@ impl fmt::Display for BadIcon {
 
 impl Error for BadIcon {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        Some(self)
+        match self {
+            BadIcon::OsError(e) => Some(e),
+            _ => None,
+        }
     }
 }
 

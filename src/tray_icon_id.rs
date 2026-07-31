@@ -1,5 +1,7 @@
 use std::{convert::Infallible, str::FromStr};
 
+use crate::COUNTER;
+
 /// An unique id that is associated with a tray icon.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -9,6 +11,11 @@ impl TrayIconId {
     /// Create a new tray icon id.
     pub fn new<S: AsRef<str>>(id: S) -> Self {
         Self(id.as_ref().to_string())
+    }
+
+    /// Generate id based on process id for internal use
+    pub(crate) fn new_unique() -> Self {
+        Self(format!("{}-{}", std::process::id(), COUNTER.next()))
     }
 }
 

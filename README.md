@@ -4,22 +4,24 @@ tray-icon lets you create tray icons for desktop applications.
 
 - Windows
 - macOS
-- Linux
+- Linux (gtk or linux-ksni)
+- FreeBSD (gtk Only)
 
 ## Platform-specific notes:
 
-- On Windows and Linux, an event loop must be running on the thread, on Windows, a win32 event loop and on Linux, a gtk event loop. It doesn't need to be the main thread but you have to create the tray icon on the same thread as the event loop.
+- On Windows and Linux or FreeBSD with the gtk backend, an event loop must be running on the thread, on Windows, a win32 event loop and on Linux or FreeBSD, a gtk event loop. It doesn't need to be the main thread but you have to create the tray icon on the same thread as the event loop.
 - On macOS, an event loop must be running on the main thread so you also need to create the tray icon on the main thread.
 
 ## Cargo Features
 
 - `common-controls-v6`: Use `TaskDialogIndirect` API from `ComCtl32.dll` v6 on Windows for showing the predefined `About` menu item dialog.
 - `serde`: Enables de/serializing derives.
+- `gtk`: Use gtk and libappindicator to create tray icons on Linux and FreeBSD. Enabled by default.
 - `linux-ksni`: Use ksni and the xdg standard to create and manage tray icons on Linux. (experimental)
 
 ## Dependencies (Linux Only)
 
-On Linux, `gtk`, `libappindicator` or `libayatana-appindicator` are used to create the tray icon. When using the `linux-ksni` feature, `libdbus-1-dev` is needed as well. So make sure to install these packages on your system.
+On Linux, `gtk`, `libappindicator` or `libayatana-appindicator` are used to create the tray icon by default. When using `--no-default-features --features linux-ksni`, `gtk` is still used for menu compatibility and `libdbus-1-dev` is needed instead of libappindicator.
 
 #### Arch Linux / Manjaro:
 
@@ -31,6 +33,14 @@ pacman -S gtk3 libappindicator-gtk3 # or `libayatana-appindicator` and optionall
 
 ```sh
 sudo apt install libgtk-3-dev libappindicator3-dev # or `libayatana-appindicator3-dev` and optionally `libdbus-1-dev`
+```
+
+## Dependencies in FreeBSD
+
+Install this dependencies in order to compile `tray-icon`. Instructions using `pkg`:
+
+```sh
+pkg install -y rust glib pkgconf gtk3
 ```
 
 ## Examples

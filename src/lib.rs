@@ -10,22 +10,24 @@
 //!
 //! - Windows
 //! - macOS
-//! - Linux
+//! - Linux (gtk or linux-ksni)
+//! - FreeBSD (gtk only)
 //!
 //! # Platform-specific notes:
 //!
-//! - On Windows and Linux, an event loop must be running on the thread, on Windows, a win32 event loop and on Linux, a gtk event loop. It doesn't need to be the main thread but you have to create the tray icon on the same thread as the event loop.
+//! - On Windows and Linux or FreeBSD with the gtk backend, an event loop must be running on the thread, on Windows, a win32 event loop and on Linux or FreeBSD, a gtk event loop. It doesn't need to be the main thread but you have to create the tray icon on the same thread as the event loop.
 //! - On macOS, an event loop must be running on the main thread so you also need to create the tray icon on the main thread. You must make sure that the event loop is already running and not just created before creating a TrayIcon to prevent issues with fullscreen apps. In Winit for example the earliest you can create icons is on [`StartCause::Init`](https://docs.rs/winit/latest/winit/event/enum.StartCause.html#variant.Init).
 //!
 //! # Cargo Features
 //!
 //! - `common-controls-v6`: Use `TaskDialogIndirect` API from `ComCtl32.dll` v6 on Windows for showing the predefined `About` menu item dialog.
 //! - `serde`: Enables de/serializing derives.
+//! - `gtk`: Use gtk and libappindicator to create tray icons on Linux and FreeBSD. Enabled by default.
 //! - `linux-ksni`: Use ksni and the xdg standard to create and manage tray icons on Linux. (experimental)
 //!
 //! # Dependencies (Linux Only)
 //!
-//! On Linux, `gtk`, `libappindicator` or `libayatana-appindicator` are used to create the tray icon. When using the `linux-ksni` feature, `libdbus-1-dev` is needed as well. So make sure to install these packages on your system.
+//! On Linux, `gtk`, `libappindicator` or `libayatana-appindicator` are used to create the tray icon by default. When using `--no-default-features --features linux-ksni`, `gtk` is still used for menu compatibility and `libdbus-1-dev` is needed instead of libappindicator.
 //!
 //! #### Arch Linux / Manjaro:
 //!
@@ -128,7 +130,13 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-#[cfg(all(target_os = "linux", not(feature = "linux-ksni")))]
+#[cfg(any(
+    all(target_os = "linux", feature = "gtk", not(feature = "linux-ksni")),
+    all(target_os = "dragonfly", feature = "gtk"),
+    all(target_os = "freebsd", feature = "gtk"),
+    all(target_os = "netbsd", feature = "gtk"),
+    all(target_os = "openbsd", feature = "gtk")
+))]
 use std::path::{Path, PathBuf};
 
 use counter::Counter;
@@ -174,19 +182,36 @@ pub struct TrayIconAttributes {
     /// ## Platform-specific:
     ///
     /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
-    ///     Setting an empty [`Menu`](crate::menu::Menu) is enough.
-    ///     Works with feature `linux-ksni`.
+    ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
+    ///   Works with feature `linux-ksni`.
     pub icon: Option<Icon>,
 
-    /// Tray icon temp dir path. **Linux only**.
-    #[cfg(all(target_os = "linux", not(feature = "linux-ksni")))]
+    /// Tray icon temp dir path. **Linux/FreeBSD gtk backend only**.
+    #[cfg(any(
+        all(target_os = "linux", feature = "gtk", not(feature = "linux-ksni")),
+        all(target_os = "dragonfly", feature = "gtk"),
+        all(target_os = "freebsd", feature = "gtk"),
+        all(target_os = "netbsd", feature = "gtk"),
+        all(target_os = "openbsd", feature = "gtk")
+    ))]
     pub temp_dir_path: Option<PathBuf>,
 
     /// Use the icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
     pub icon_is_template: bool,
 
-    /// Whether to show the tray menu on left click or not, default is `true`. **macOS & Windows only**.
+    /// Whether to show the tray menu on left click or not, default is `true`.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
     pub menu_on_left_click: bool,
+
+    /// Whether to show the tray menu on right click or not, default is `true`.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
+    pub menu_on_right_click: bool,
 
     /// Tray icon title.
     ///
@@ -208,10 +233,17 @@ impl Default for TrayIconAttributes {
             tooltip: None,
             menu: None,
             icon: None,
-            #[cfg(all(target_os = "linux", not(feature = "linux-ksni")))]
+            #[cfg(any(
+                all(target_os = "linux", feature = "gtk", not(feature = "linux-ksni")),
+                all(target_os = "dragonfly", feature = "gtk"),
+                all(target_os = "freebsd", feature = "gtk"),
+                all(target_os = "netbsd", feature = "gtk"),
+                all(target_os = "openbsd", feature = "gtk")
+            ))]
             temp_dir_path: None,
             icon_is_template: false,
             menu_on_left_click: true,
+            menu_on_right_click: true,
             title: None,
         }
     }
@@ -230,7 +262,7 @@ impl TrayIconBuilder {
     /// See [`TrayIcon::new`] for more info.
     pub fn new() -> Self {
         Self {
-            id: TrayIconId(COUNTER.next().to_string()),
+            id: TrayIconId::new_unique(),
             attrs: TrayIconAttributes::default(),
         }
     }
@@ -256,8 +288,8 @@ impl TrayIconBuilder {
     /// ## Platform-specific:
     ///
     /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
-    ///     Setting an empty [`Menu`](crate::menu::Menu) is enough.
-    ///     Works with feature `linux-ksni`.
+    ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
+    ///   Works with feature `linux-ksni`.
     pub fn with_icon(mut self, icon: Icon) -> Self {
         self.attrs.icon = Some(icon);
         self
@@ -283,13 +315,19 @@ impl TrayIconBuilder {
         self
     }
 
-    /// Set tray icon temp dir path. **Linux only**.
+    /// Set tray icon temp dir path. **Linux/FreeBSD gtk backend only**.
     ///
-    /// Not availabe with feature `linux-ksni`.
+    /// Not available with feature `linux-ksni`.
     ///
     /// On Linux, we need to write the icon to the disk and usually it will
     /// be `$XDG_RUNTIME_DIR/tray-icon` or `$TEMP/tray-icon`.
-    #[cfg(all(target_os = "linux", not(feature = "linux-ksni")))]
+    #[cfg(any(
+        all(target_os = "linux", feature = "gtk", not(feature = "linux-ksni")),
+        all(target_os = "dragonfly", feature = "gtk"),
+        all(target_os = "freebsd", feature = "gtk"),
+        all(target_os = "netbsd", feature = "gtk"),
+        all(target_os = "openbsd", feature = "gtk")
+    ))]
     pub fn with_temp_dir_path<P: AsRef<Path>>(mut self, s: P) -> Self {
         self.attrs.temp_dir_path = Some(s.as_ref().to_path_buf());
         self
@@ -301,9 +339,23 @@ impl TrayIconBuilder {
         self
     }
 
-    /// Whether to show the tray menu on left click or not, default is `true`. **macOS only**.
+    /// Whether to show the tray menu on left click or not, default is `true`.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
     pub fn with_menu_on_left_click(mut self, enable: bool) -> Self {
         self.attrs.menu_on_left_click = enable;
+        self
+    }
+
+    /// Whether to show the tray menu on right click or not, default is `true`.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
+    pub fn with_menu_on_right_click(mut self, enable: bool) -> Self {
+        self.attrs.menu_on_right_click = enable;
         self
     }
 
@@ -331,7 +383,7 @@ pub struct TrayIcon {
 impl TrayIcon {
     /// Builds and adds a new tray icon to the system tray.
     pub fn new(attrs: TrayIconAttributes) -> Result<Self> {
-        let id = TrayIconId(COUNTER.next().to_string());
+        let id = TrayIconId::new_unique();
         Ok(Self {
             tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(
                 id.clone(),
@@ -365,8 +417,8 @@ impl TrayIcon {
     /// ## Platform-specific:
     ///
     /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
-    ///     Setting an empty [`Menu`](crate::menu::Menu) is enough.
-    ///     Works with feature `linux-ksni`.
+    ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
+    ///   Works with feature `linux-ksni`.
     pub fn set_icon(&self, icon: Option<Icon>) -> Result<()> {
         self.tray.borrow_mut().set_icon(icon)
     }
@@ -398,13 +450,19 @@ impl TrayIcon {
         self.tray.borrow_mut().set_title(title)
     }
 
-    /// Sets the tray icon temp dir path. **Linux only**.
+    /// Sets the tray icon temp dir path. **Linux/FreeBSD gtk backend only**.
     ///
-    /// Not availabe with feature `linux-ksni`.
+    /// Not available with feature `linux-ksni`.
     ///
     /// On Linux, we need to write the icon to the disk and usually it will
     /// be `$XDG_RUNTIME_DIR/tray-icon` or `$TEMP/tray-icon`.
-    #[cfg(all(target_os = "linux", not(feature = "linux-ksni")))]
+    #[cfg(any(
+        all(target_os = "linux", feature = "gtk", not(feature = "linux-ksni")),
+        all(target_os = "dragonfly", feature = "gtk"),
+        all(target_os = "freebsd", feature = "gtk"),
+        all(target_os = "netbsd", feature = "gtk"),
+        all(target_os = "openbsd", feature = "gtk")
+    ))]
     pub fn set_temp_dir_path<P: AsRef<Path>>(&self, path: Option<P>) {
         self.tray.borrow_mut().set_temp_dir_path(path);
     }
@@ -448,6 +506,31 @@ impl TrayIcon {
         let _ = enable;
     }
 
+    /// Disable or enable showing the tray menu on right click.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
+    pub fn set_show_menu_on_right_click(&self, enable: bool) {
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        self.tray.borrow_mut().set_show_menu_on_right_click(enable);
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        let _ = enable;
+    }
+
+    /// Manually show the tray menu at the current cursor position.
+    ///
+    /// This is useful when you want to control when the menu is displayed,
+    /// for example after updating menu items dynamically.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux:** Unsupported.
+    pub fn show_menu(&self) {
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        self.tray.borrow().show_menu();
+    }
+
     /// Get tray icon rect.
     ///
     /// ## Platform-specific:
@@ -455,6 +538,38 @@ impl TrayIcon {
     /// - **Linux**: Unsupported.
     pub fn rect(&self) -> Option<Rect> {
         self.tray.borrow().rect()
+    }
+
+    /// Get the tray icon's underlying [window handle](windows_sys::Win32::Foundation::HWND) **Windows only**.
+    ///
+    /// This window handle is valid as long as the tray icon.
+    #[cfg(windows)]
+    pub fn window_handle(&self) -> windows_sys::Win32::Foundation::HWND {
+        self.tray.borrow().hwnd()
+    }
+
+    /// Get the tray icon's underlying [NSStatusItem](objc2_app_kit::NSStatusItem) **macOS only**.
+    ///
+    /// Returns `None` if the status item is not available.
+    #[cfg(target_os = "macos")]
+    pub fn ns_status_item(&self) -> Option<objc2::rc::Retained<objc2_app_kit::NSStatusItem>> {
+        self.tray.borrow().ns_status_item().cloned()
+    }
+
+    /// Get the tray icon's underlying [AppIndicator](libappindicator::AppIndicator) **Linux only**.
+    ///
+    /// # Safety
+    ///
+    /// The returned pointer is valid as long as the `TrayIcon` is.
+    #[cfg(any(
+        all(target_os = "linux", feature = "gtk", not(feature = "linux-ksni")),
+        all(target_os = "dragonfly", feature = "gtk"),
+        all(target_os = "freebsd", feature = "gtk"),
+        all(target_os = "netbsd", feature = "gtk"),
+        all(target_os = "openbsd", feature = "gtk")
+    ))]
+    pub unsafe fn app_indicator(&self) -> *const libappindicator::AppIndicator {
+        self.tray.borrow().app_indicator() as *const _
     }
 }
 
@@ -527,30 +642,22 @@ pub enum TrayIconEvent {
 /// Describes the mouse button state.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Default)]
 pub enum MouseButtonState {
+    #[default]
     Up,
     Down,
-}
-
-impl Default for MouseButtonState {
-    fn default() -> Self {
-        Self::Up
-    }
 }
 
 /// Describes which mouse button triggered the event..
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Default)]
 pub enum MouseButton {
+    #[default]
     Left,
     Right,
     Middle,
-}
-
-impl Default for MouseButton {
-    fn default() -> Self {
-        Self::Left
-    }
 }
 
 /// Describes a rectangle including position (x - y axis) and size.

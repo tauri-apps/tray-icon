@@ -10,7 +10,16 @@ use thiserror::Error;
 pub enum Error {
     #[error(transparent)]
     OsError(#[from] std::io::Error),
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(any(
+        any(
+            target_os = "linux",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        ),
+        target_os = "macos"
+    ))]
     #[error(transparent)]
     PngEncodingError(#[from] png::EncodingError),
     #[error("not on the main thread")]

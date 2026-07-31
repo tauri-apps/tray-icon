@@ -57,7 +57,7 @@ impl TrayIcon {
 
         set_icon_for_ns_status_item_button(
             &ns_status_item,
-            attrs.icon.clone(),
+            attrs.icon.as_ref(),
             attrs.icon_is_template,
             mtm,
         )?;
@@ -68,8 +68,8 @@ impl TrayIcon {
             }
         }
 
-        Self::set_tooltip_inner(&ns_status_item, attrs.tooltip.clone(), mtm)?;
-        Self::set_title_inner(&ns_status_item, attrs.title.clone(), mtm);
+        Self::set_tooltip_inner(&ns_status_item, attrs.tooltip.as_deref(), mtm)?;
+        Self::set_title_inner(&ns_status_item, attrs.title.as_deref(), mtm);
 
         let tray_target = unsafe {
             let button = ns_status_item.button(mtm).unwrap();
@@ -86,6 +86,7 @@ impl TrayIcon {
                 ),
                 status_item: ns_status_item.retain(),
                 menu_on_left_click: Cell::new(attrs.menu_on_left_click),
+                menu_on_right_click: Cell::new(attrs.menu_on_right_click),
             });
             let tray_target: Retained<TrayTarget> = msg_send![super(target), initWithFrame: frame];
             tray_target.setWantsLayer(true);
@@ -114,7 +115,7 @@ impl TrayIcon {
     pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
         if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
         {
-            set_icon_for_ns_status_item_button(ns_status_item, icon.clone(), false, self.mtm)?;
+            set_icon_for_ns_status_item_button(ns_status_item, icon.as_ref(), false, self.mtm)?;
             tray_target.update_dimensions();
         }
         self.attrs.icon = icon;
@@ -144,7 +145,7 @@ impl TrayIcon {
         let tooltip = tooltip.map(|s| s.as_ref().to_string());
         if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
         {
-            Self::set_tooltip_inner(ns_status_item, tooltip.clone(), self.mtm)?;
+            Self::set_tooltip_inner(ns_status_item, tooltip.as_deref(), self.mtm)?;
             tray_target.update_dimensions();
         }
         self.attrs.tooltip = tooltip;
@@ -169,7 +170,7 @@ impl TrayIcon {
         let title = title.map(|s| s.as_ref().to_string());
         if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
         {
-            Self::set_title_inner(ns_status_item, title.clone(), self.mtm);
+            Self::set_title_inner(ns_status_item, title.as_deref(), self.mtm);
             tray_target.update_dimensions();
         }
         self.attrs.title = title;
@@ -225,7 +226,7 @@ impl TrayIcon {
         {
             set_icon_for_ns_status_item_button(
                 ns_status_item,
-                icon.clone(),
+                icon.as_ref(),
                 is_template,
                 self.mtm,
             )?;
@@ -243,6 +244,22 @@ impl TrayIcon {
         self.attrs.menu_on_left_click = enable;
     }
 
+    pub fn set_show_menu_on_right_click(&mut self, enable: bool) {
+        if let Some(tray_target) = &self.tray_target {
+            tray_target.ivars().menu_on_right_click.set(enable);
+        }
+        self.attrs.menu_on_right_click = enable;
+    }
+
+    pub fn show_menu(&self) {
+        if let Some(ns_status_item) = &self.ns_status_item {
+            unsafe {
+                let button = ns_status_item.button(self.mtm).unwrap();
+                button.performClick(None);
+            }
+        }
+    }
+
     pub fn rect(&self) -> Option<Rect> {
         let ns_status_item = self.ns_status_item.as_deref()?;
         unsafe {
@@ -250,6 +267,10 @@ impl TrayIcon {
             let window = button.window();
             window.map(|window| get_tray_rect(&window))
         }
+    }
+
+    pub fn ns_status_item(&self) -> Option<&Retained<NSStatusItem>> {
+        self.ns_status_item.as_ref()
     }
 }
 
@@ -261,7 +282,7 @@ impl Drop for TrayIcon {
 
 fn set_icon_for_ns_status_item_button(
     ns_status_item: &NSStatusItem,
-    icon: Option<Icon>,
+    icon: Option<&Icon>,
     icon_is_template: bool,
     mtm: MainThreadMarker,
 ) -> crate::Result<()> {
@@ -301,6 +322,7 @@ struct TrayTargetIvars {
     menu: RefCell<Option<Retained<NSMenu>>>,
     status_item: Retained<NSStatusItem>,
     menu_on_left_click: Cell<bool>,
+    menu_on_right_click: Cell<bool>,
 }
 
 define_class!(
@@ -470,7 +492,10 @@ fn on_tray_click(this: &TrayTarget, button: MouseButton) {
         let ns_button = this.ivars().status_item.button(mtm).unwrap();
 
         let menu_on_left_click = this.ivars().menu_on_left_click.get();
-        if button == MouseButton::Right || (menu_on_left_click && button == MouseButton::Left) {
+        let menu_on_right_click = this.ivars().menu_on_right_click.get();
+        if (menu_on_right_click && button == MouseButton::Right)
+            || (menu_on_left_click && button == MouseButton::Left)
+        {
             let has_items = if let Some(menu) = &*this.ivars().menu.borrow() {
                 menu.numberOfItems() > 0
             } else {

@@ -71,7 +71,13 @@ impl ApplicationHandler<UserEvent> for Application {
         // We create the icon once the event loop is actually running
         // to prevent issues like https://github.com/tauri-apps/tray-icon/issues/90
         if winit::event::StartCause::Init == cause {
-            #[cfg(not(target_os = "linux"))]
+            #[cfg(not(any(
+                target_os = "linux",
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "netbsd",
+                target_os = "openbsd"
+            )))]
             {
                 self.tray_icon = Some(Self::new_tray_icon());
             }
@@ -114,7 +120,13 @@ fn main() {
     // Since winit doesn't use gtk on Linux, and we need gtk for
     // the tray icon to show up, we need to spawn a thread
     // where we initialize gtk and create the tray_icon
-    #[cfg(target_os = "linux")]
+    #[cfg(any(
+        target_os = "linux",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    ))]
     std::thread::spawn(|| {
         gtk::init().unwrap();
 

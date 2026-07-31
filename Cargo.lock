@@ -2362,7 +2362,7 @@ dependencies = [
 [[package]]
 name = "muda"
 version = "0.19.3"
-source = "git+https://github.com/dfaust/muda?branch=ksni#84be6ea9f002cf676115dc8b9c49decd9e2f96a7"
+source = "git+https://github.com/dfaust/muda?branch=ksni#02359f9802ba1e60d546a5daefe9ca63bafe1f45"
 dependencies = [
  "arc-swap",
  "crossbeam-channel",

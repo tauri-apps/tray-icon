@@ -13,7 +13,7 @@ pub struct PlatformIcon {
 
 impl PlatformIcon {
     pub fn from_rgba(rgba: Vec<u8>, width: u32, height: u32) -> Result<Self, BadIcon> {
-        if rgba.len() % 4 != 0 {
+        if !rgba.len().is_multiple_of(4) {
             return Err(BadIcon::ByteCountNotDivisibleBy4 {
                 byte_count: rgba.len(),
             });

@@ -5,6 +5,7 @@
 mod icon;
 use std::cell::{Cell, RefCell};
 
+use dispatch2::DispatchQueue;
 use objc2::rc::Retained;
 use objc2::{define_class, msg_send, AllocAnyThread, DeclaredClass, Message};
 use objc2_app_kit::{
@@ -100,16 +101,32 @@ impl TrayIcon {
     }
 
     fn remove(&mut self) {
-        if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
-        {
-            unsafe {
-                NSStatusBar::systemStatusBar().removeStatusItem(ns_status_item);
-                tray_target.removeFromSuperview();
-            }
+        let ns_status_item = self.ns_status_item.take();
+        let tray_target = self.tray_target.take();
+        if ns_status_item.is_none() && tray_target.is_none() {
+            return;
         }
 
-        self.ns_status_item = None;
-        self.tray_target = None;
+        // A fresh marker, never `self.mtm`: this may run on any thread, and a marker stored at
+        // construction time says nothing about the current one.
+        if MainThreadMarker::new().is_some() {
+            unsafe { remove_status_item(ns_status_item.as_deref(), tray_target.as_deref()) };
+            return;
+        }
+
+        #[cfg(debug_assertions)]
+        eprintln!(
+            "tray-icon: TrayIcon removed off the main thread, deferring NSStatusItem teardown to the main queue"
+        );
+
+        let teardown = MainThreadTeardown {
+            ns_status_item,
+            tray_target,
+        };
+        DispatchQueue::main().exec_async(move || {
+            // SAFETY: the main dispatch queue runs this closure on the main thread.
+            unsafe { teardown.run() };
+        });
     }
 
     pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
@@ -277,6 +294,52 @@ impl TrayIcon {
 impl Drop for TrayIcon {
     fn drop(&mut self) {
         self.remove()
+    }
+}
+
+/// Carries the AppKit handles of a tray icon to the main queue for teardown.
+struct MainThreadTeardown {
+    ns_status_item: Option<Retained<NSStatusItem>>,
+    tray_target: Option<Retained<TrayTarget>>,
+}
+
+// SAFETY: `Retained<NSStatusItem>` and `Retained<TrayTarget>` are `!Send` because AppKit
+// requires them to be used and released on the main thread. The only value of this type is
+// moved directly into a closure submitted to the main dispatch queue, so it is never touched
+// off the main thread — including its final release, which happens when that closure drops it.
+//
+// The closure must consume the whole struct via `run`, never its fields: under edition 2021
+// disjoint capture, touching the fields would capture the `!Send` `Retained`s individually and
+// this `Send` impl would no longer apply.
+unsafe impl Send for MainThreadTeardown {}
+
+impl MainThreadTeardown {
+    /// # Safety
+    ///
+    /// Must be called on the main thread.
+    unsafe fn run(self) {
+        unsafe { remove_status_item(self.ns_status_item.as_deref(), self.tray_target.as_deref()) };
+    }
+}
+
+/// Detaches the status item and its target view from the status bar.
+///
+/// # Safety
+///
+/// Must be called on the main thread. On macOS 26 `NSStatusItem`s are scene-backed, and
+/// `-[NSStatusBar removeStatusItem:]` trips a BoardServices main-queue barrier assertion
+/// (`EXC_BREAKPOINT`) when it runs anywhere else.
+unsafe fn remove_status_item(
+    ns_status_item: Option<&NSStatusItem>,
+    tray_target: Option<&TrayTarget>,
+) {
+    unsafe {
+        if let Some(ns_status_item) = ns_status_item {
+            NSStatusBar::systemStatusBar().removeStatusItem(ns_status_item);
+        }
+        if let Some(tray_target) = tray_target {
+            tray_target.removeFromSuperview();
+        }
     }
 }
 

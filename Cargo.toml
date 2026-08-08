@@ -23,6 +23,10 @@ libxdo = ["muda/libxdo"]
 serde = ["muda/serde", "dep:serde"]
 common-controls-v6 = ["muda/common-controls-v6"]
 gtk = ["muda/gtk", "dep:libappindicator"]
+# Serves the tray over StatusNotifierItem directly instead of going through
+# libappindicator, which never implemented the spec's Activate method and so
+# cannot report left clicks.
+ksni = ["muda/gtk", "dep:ksni", "dep:async-io"]
 
 [dependencies]
 muda = { version = "0.19.1", default-features = false }
@@ -43,6 +47,10 @@ features = [
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"netbsd\", target_os = \"openbsd\"))".dependencies]
 libappindicator = { version = "0.9", optional = true }
+ksni = { version = "0.3", optional = true, default-features = false, features = [
+  "async-io",
+] }
+async-io = { version = "2", optional = true }
 dirs = "6"
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"netbsd\", target_os = \"openbsd\"))".dev-dependencies]

@@ -608,5 +608,5 @@ struct MouseClickEvent {
 /// This conversion happens to be symmetric, so we only need this one function
 /// to convert between the two coordinate systems.
 fn flip_window_screen_coordinates(y: f64) -> f64 {
-    unsafe { CGDisplayPixelsHigh(CGMainDisplayID()) as f64 - y }
+    CGDisplayPixelsHigh(CGMainDisplayID()) as f64 - y
 }

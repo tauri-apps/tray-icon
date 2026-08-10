@@ -199,12 +199,10 @@ impl TrayIcon {
 
     pub fn set_icon_as_template(&mut self, is_template: bool) {
         if let Some(ns_status_item) = &self.ns_status_item {
-            unsafe {
-                let button = ns_status_item.button(self.mtm).unwrap();
-                if let Some(nsimage) = button.image() {
-                    nsimage.setTemplate(is_template);
-                    button.setImage(Some(&nsimage));
-                }
+            let button = ns_status_item.button(self.mtm).unwrap();
+            if let Some(nsimage) = button.image() {
+                nsimage.setTemplate(is_template);
+                button.setImage(Some(&nsimage));
             }
         }
         self.attrs.icon_is_template = is_template;
@@ -255,11 +253,9 @@ impl TrayIcon {
 
     pub fn rect(&self) -> Option<Rect> {
         let ns_status_item = self.ns_status_item.as_deref()?;
-        unsafe {
-            let button = ns_status_item.button(self.mtm).unwrap();
-            let window = button.window();
-            window.map(|window| get_tray_rect(&window))
-        }
+        let button = ns_status_item.button(self.mtm).unwrap();
+        let window = button.window();
+        window.map(|window| get_tray_rect(&window))
     }
 
     pub fn ns_status_item(&self) -> Option<&Retained<NSStatusItem>> {
@@ -279,7 +275,7 @@ fn set_icon_for_ns_status_item_button(
     icon_is_template: bool,
     mtm: MainThreadMarker,
 ) -> crate::Result<()> {
-    let button = unsafe { ns_status_item.button(mtm).unwrap() };
+    let button = ns_status_item.button(mtm).unwrap();
 
     if let Some(icon) = icon {
         let png_icon = icon.inner.to_png()?;
@@ -289,21 +285,19 @@ fn set_icon_for_ns_status_item_button(
         let icon_height: f64 = 18.0;
         let icon_width: f64 = (width as f64) / (height as f64 / icon_height);
 
-        unsafe {
-            // build our icon
-            let nsdata = NSData::from_vec(png_icon);
+        // build our icon
+        let nsdata = NSData::from_vec(png_icon);
 
-            let nsimage = NSImage::initWithData(NSImage::alloc(), &nsdata).unwrap();
-            let new_size = NSSize::new(icon_width, icon_height);
+        let nsimage = NSImage::initWithData(NSImage::alloc(), &nsdata).unwrap();
+        let new_size = NSSize::new(icon_width, icon_height);
 
-            button.setImage(Some(&nsimage));
-            nsimage.setSize(new_size);
-            // The image is to the right of the title
-            button.setImagePosition(NSCellImagePosition::ImageLeft);
-            nsimage.setTemplate(icon_is_template);
-        }
+        button.setImage(Some(&nsimage));
+        nsimage.setSize(new_size);
+        // The image is to the right of the title
+        button.setImagePosition(NSCellImagePosition::ImageLeft);
+        nsimage.setTemplate(icon_is_template);
     } else {
-        unsafe { button.setImage(None) };
+        button.setImage(None);
     }
 
     Ok(())
@@ -343,10 +337,8 @@ define_class!(
         #[unsafe(method(mouseUp:))]
         fn on_mouse_up(&self, event: &NSEvent) {
             let mtm = MainThreadMarker::from(self);
-            unsafe {
-                let button = self.ivars().status_item.button(mtm).unwrap();
-                button.highlight(false);
-            }
+            let button = self.ivars().status_item.button(mtm).unwrap();
+            button.highlight(false);
             send_mouse_event(
                 self,
                 event,
@@ -472,10 +464,8 @@ define_class!(
 impl TrayTarget {
     fn update_dimensions(&self) {
         let mtm = MainThreadMarker::from(self);
-        unsafe {
-            let button = self.ivars().status_item.button(mtm).unwrap();
-            self.setFrame(button.frame());
-        }
+        let button = self.ivars().status_item.button(mtm).unwrap();
+        self.setFrame(button.frame());
     }
 }
 

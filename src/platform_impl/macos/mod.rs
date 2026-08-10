@@ -51,9 +51,8 @@ impl TrayIcon {
         attrs: &TrayIconAttributes,
         mtm: MainThreadMarker,
     ) -> crate::Result<(Retained<NSStatusItem>, Retained<TrayTarget>)> {
-        let ns_status_item = unsafe {
-            NSStatusBar::systemStatusBar().statusItemWithLength(NSVariableStatusItemLength)
-        };
+        let ns_status_item =
+            NSStatusBar::systemStatusBar().statusItemWithLength(NSVariableStatusItemLength);
 
         set_icon_for_ns_status_item_button(
             &ns_status_item,
@@ -102,10 +101,8 @@ impl TrayIcon {
     fn remove(&mut self) {
         if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
         {
-            unsafe {
-                NSStatusBar::systemStatusBar().removeStatusItem(ns_status_item);
-                tray_target.removeFromSuperview();
-            }
+            NSStatusBar::systemStatusBar().removeStatusItem(ns_status_item);
+            tray_target.removeFromSuperview();
         }
 
         self.ns_status_item = None;
@@ -157,11 +154,9 @@ impl TrayIcon {
         tooltip: Option<S>,
         mtm: MainThreadMarker,
     ) -> crate::Result<()> {
-        unsafe {
-            let tooltip = tooltip.map(|tooltip| NSString::from_str(tooltip.as_ref()));
-            if let Some(button) = ns_status_item.button(mtm) {
-                button.setToolTip(tooltip.as_deref());
-            }
+        let tooltip = tooltip.map(|tooltip| NSString::from_str(tooltip.as_ref()));
+        if let Some(button) = ns_status_item.button(mtm) {
+            button.setToolTip(tooltip.as_deref());
         }
         Ok(())
     }
@@ -182,10 +177,8 @@ impl TrayIcon {
         mtm: MainThreadMarker,
     ) {
         if let Some(title) = title {
-            unsafe {
-                if let Some(button) = ns_status_item.button(mtm) {
-                    button.setTitle(&NSString::from_str(title.as_ref()));
-                }
+            if let Some(button) = ns_status_item.button(mtm) {
+                button.setTitle(&NSString::from_str(title.as_ref()));
             }
         }
     }
@@ -394,7 +387,7 @@ define_class!(
 
         #[unsafe(method(otherMouseDown:))]
         fn on_other_mouse_down(&self, event: &NSEvent) {
-            let button_number = unsafe { event.buttonNumber() };
+            let button_number = event.buttonNumber();
             if button_number == 2 {
                 send_mouse_event(
                     self,
@@ -410,7 +403,7 @@ define_class!(
 
         #[unsafe(method(otherMouseUp:))]
         fn on_other_mouse_up(&self, event: &NSEvent) {
-            let button_number = unsafe { event.buttonNumber() };
+            let button_number = event.buttonNumber();
             if button_number == 2 {
                 send_mouse_event(
                     self,
@@ -534,52 +527,50 @@ fn send_mouse_event(
     click_event: Option<MouseClickEvent>,
 ) {
     let mtm = MainThreadMarker::from(this);
-    unsafe {
-        let tray_id = TrayIconId(this.ivars().id.to_string());
+    let tray_id = TrayIconId(this.ivars().id.to_string());
 
-        // icon position & size
-        let window = event.window(mtm).unwrap();
-        let icon_rect = get_tray_rect(&window);
+    // icon position & size
+    let window = event.window(mtm).unwrap();
+    let icon_rect = get_tray_rect(&window);
 
-        // cursor position
-        let mouse_location = NSEvent::mouseLocation();
-        let scale_factor = window.backingScaleFactor();
-        let cursor_position = crate::dpi::LogicalPosition::new(
-            mouse_location.x,
-            flip_window_screen_coordinates(mouse_location.y),
-        )
-        .to_physical(scale_factor);
+    // cursor position
+    let mouse_location = NSEvent::mouseLocation();
+    let scale_factor = window.backingScaleFactor();
+    let cursor_position = crate::dpi::LogicalPosition::new(
+        mouse_location.x,
+        flip_window_screen_coordinates(mouse_location.y),
+    )
+    .to_physical(scale_factor);
 
-        let event = match mouse_event_type {
-            MouseEventType::Click => {
-                let click_event = click_event.unwrap();
-                TrayIconEvent::Click {
-                    id: tray_id,
-                    position: cursor_position,
-                    rect: icon_rect,
-                    button: click_event.button,
-                    button_state: click_event.state,
-                }
+    let event = match mouse_event_type {
+        MouseEventType::Click => {
+            let click_event = click_event.unwrap();
+            TrayIconEvent::Click {
+                id: tray_id,
+                position: cursor_position,
+                rect: icon_rect,
+                button: click_event.button,
+                button_state: click_event.state,
             }
-            MouseEventType::Enter => TrayIconEvent::Enter {
-                id: tray_id,
-                position: cursor_position,
-                rect: icon_rect,
-            },
-            MouseEventType::Leave => TrayIconEvent::Leave {
-                id: tray_id,
-                position: cursor_position,
-                rect: icon_rect,
-            },
-            MouseEventType::Move => TrayIconEvent::Move {
-                id: tray_id,
-                position: cursor_position,
-                rect: icon_rect,
-            },
-        };
+        }
+        MouseEventType::Enter => TrayIconEvent::Enter {
+            id: tray_id,
+            position: cursor_position,
+            rect: icon_rect,
+        },
+        MouseEventType::Leave => TrayIconEvent::Leave {
+            id: tray_id,
+            position: cursor_position,
+            rect: icon_rect,
+        },
+        MouseEventType::Move => TrayIconEvent::Move {
+            id: tray_id,
+            position: cursor_position,
+            rect: icon_rect,
+        },
+    };
 
-        TrayIconEvent::send(event);
-    }
+    TrayIconEvent::send(event);
 }
 
 #[derive(Debug)]

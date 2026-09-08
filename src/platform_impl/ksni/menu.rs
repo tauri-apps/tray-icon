@@ -73,7 +73,15 @@ fn into_ksni_item(item: &MenuItemKindSnapshot) -> Option<ksni::MenuItem<StatusNo
                 .into(),
             )
         }
-        MenuItemKindSnapshot::Predefined(_) => None,
+        // TODO: support some predefined items like "Quit" or "About"
+        MenuItemKindSnapshot::Predefined(item) => Some(
+            ksni::menu::StandardItem {
+                label: to_ksni_mnemonic(&item.text()),
+                enabled: false,
+                ..Default::default()
+            }
+            .into(),
+        ),
     }
 }
 

@@ -131,19 +131,6 @@
         target_os = "netbsd",
         target_os = "openbsd"
     ),
-    feature = "gtk",
-    feature = "ksni"
-))]
-compile_error!("the `gtk` and `ksni` features are mutually exclusive");
-
-#[cfg(all(
-    any(
-        target_os = "linux",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "netbsd",
-        target_os = "openbsd"
-    ),
     not(any(feature = "gtk", feature = "ksni"))
 ))]
 compile_error!("either the `gtk` or `ksni` feature must be enabled on Linux and BSD");
@@ -568,7 +555,7 @@ impl TrayIcon {
     /// # Safety
     ///
     /// The returned pointer is valid as long as the `TrayIcon` is.
-    #[cfg(all(unix, not(target_os = "macos"), feature = "gtk"))]
+    #[cfg(all(unix, not(target_os = "macos"), feature = "gtk", not(feature = "ksni")))]
     pub unsafe fn app_indicator(&self) -> *const libappindicator::AppIndicator {
         self.tray.borrow().app_indicator() as *const _
     }

@@ -13,7 +13,8 @@ mod platform;
         target_os = "netbsd",
         target_os = "openbsd"
     ),
-    feature = "gtk"
+    feature = "gtk",
+    not(feature = "ksni")
 ))]
 #[path = "gtk/mod.rs"]
 mod platform;

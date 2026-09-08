@@ -18,9 +18,11 @@ tray-icon lets you create tray icons for desktop applications.
 - `libxdo`: Enables linking to `libxdo` which is used for the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu item, see https://github.com/tauri-apps/muda#cargo-features
 - `serde`: Enables de/serializing derives.
 - `gtk`: Uses the GTK 3/AppIndicator backend on Linux and BSD. This is enabled by default.
-- `ksni`: Uses the StatusNotifierItem D-Bus backend on Linux and BSD without GTK or AppIndicator dependencies. Enable it with `default-features = false`.
+- `ksni`: Uses the StatusNotifierItem D-Bus backend on Linux and BSD. It takes precedence if
+  `gtk` is also enabled.
 
-The `gtk` and `ksni` features are mutually exclusive.
+Use `default-features = false` to avoid compiling the GTK and AppIndicator dependencies when using
+the KSNI backend.
 
 ## Dependencies (Linux/BSD)
 

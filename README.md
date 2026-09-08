@@ -4,35 +4,35 @@ tray-icon lets you create tray icons for desktop applications.
 
 - Windows
 - macOS
-- Linux (GTK or KSNI)
-- FreeBSD (GTK or KSNI)
+- Linux (AppIndicator or KSNI)
+- FreeBSD (AppIndicator or KSNI)
 
 ## Platform-specific notes:
 
-- On Windows and the Linux/FreeBSD GTK backend, an event loop must be running on the thread. The KSNI backend manages its own worker thread.
+- On Windows and the Linux/FreeBSD AppIndicator backend, an event loop must be running on the thread. The KSNI backend manages its own worker thread.
 - On macOS, an event loop must be running on the main thread so you also need to create the tray icon on the main thread.
 
 ### Cargo Features
 
-- `common-controls-v6`: Use `TaskDialogIndirect` API from `ComCtl32.dll` v6 on Windows for showing the predefined `About` menu item dialog.
-- `libxdo`: Enables linking to `libxdo` which is used for the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu item, see https://github.com/tauri-apps/muda#cargo-features
+- `libappindicator`: Uses the GTK 3 AppIndicator backend on Linux and BSD. This is enabled by
+  default and also enables `muda-gtk3`.
+- `ksni`: Uses the StatusNotifierItem D-Bus backend on Linux and BSD.
 - `serde`: Enables de/serializing derives.
-- `gtk`: Uses the GTK 3/AppIndicator backend on Linux and BSD. This is enabled by default.
-- `ksni`: Uses the StatusNotifierItem D-Bus backend on Linux and BSD. It takes precedence if
-  `gtk` is also enabled.
+- `muda-common-controls-v6`: Forwards muda's `common-controls-v6` feature.
+- `muda-gtk3`: Forwards muda's `gtk3` feature.
+- `muda-gtk4`: Forwards muda's `gtk4` feature.
+- `muda-libxdo`: Forwards muda's `libxdo` feature. This is enabled by default.
+- `muda-serde`: Forwards muda's `serde` feature. The `serde` feature also enables it.
+- `muda-snapshot`: Forwards muda's `snapshot` feature. The `ksni` feature also enables it.
 
-Use `default-features = false` to avoid compiling the GTK and AppIndicator dependencies when using
-the KSNI backend.
+`libappindicator` and `ksni` are mutually exclusive. Muda's `muda-gtk3` and `muda-gtk4` features
+are also mutually exclusive. Use `default-features = false` when selecting a non-default backend.
 
 ## Dependencies (Linux/BSD)
 
-The default Linux backend uses GTK, `libxdo`, and `libappindicator` or
-`libayatana-appindicator`. The `ksni` backend is pure Rust and does not require these system
-libraries:
-
-```toml
-tray-icon = { version = "0.24", default-features = false, features = ["ksni"] }
-```
+The default Linux backend uses GTK 3, `libxdo`, and `libappindicator` or
+`libayatana-appindicator`. The `ksni` backend does not require these system libraries unless a
+muda GTK backend is also enabled.
 
 #### Arch Linux / Manjaro:
 

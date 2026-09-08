@@ -858,7 +858,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2223,7 +2223,7 @@ dependencies = [
 [[package]]
 name = "muda"
 version = "0.19.3"
-source = "git+https://github.com/tauri-apps/muda?branch=amr%2Ffeat%2Fsnapshot#67b96973234139c128a33ff61b2fd092cbf5a740"
+source = "git+https://github.com/tauri-apps/muda?branch=dev#abe2d793d3c208ec3b0ee225137277d8c3aca28c"
 dependencies = [
  "crossbeam-channel",
  "dpi",
@@ -3151,7 +3151,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

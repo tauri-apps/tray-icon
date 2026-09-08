@@ -18,14 +18,18 @@ include = [
 ]
 
 [features]
-default = ["gtk"]
+default = ["libxdo", "gtk"]
+libxdo = ["muda/libxdo"]
 serde = ["muda/serde", "dep:serde"]
 common-controls-v6 = ["muda/common-controls-v6"]
-gtk = ["muda/gtk", "dep:libappindicator"]
-linux-ksni = ["dep:ksni", "dep:arc-swap", "muda/gtk", "muda/linux-ksni"]
+gtk = ["muda/gtk", "dep:dirs", "dep:libappindicator"]
+ksni = ["dep:ksni", "muda/snapshot"]
 
 [dependencies]
-muda = { version = "0.19.1", default-features = false }
+muda = { git = "https://github.com/tauri-apps/muda", branch = "amr/feat/snapshot", default-features = false, features = [
+  "appkit",
+  "win32",
+] }
 crossbeam-channel = "0.5"
 once_cell = "1"
 thiserror = "2"
@@ -43,27 +47,27 @@ features = [
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"netbsd\", target_os = \"openbsd\"))".dependencies]
 libappindicator = { version = "0.9", optional = true }
-dirs = "6"
-
-[target."cfg(target_os = \"linux\")".dependencies]
-arc-swap = { version = "1.7.1", optional = true }
-ksni = { version = "0.2.2", optional = true }
+dirs = { version = "6", optional = true }
+ksni = { version = "0.3.6", default-features = false, features = [
+  "async-io",
+  "blocking",
+], optional = true }
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"netbsd\", target_os = \"openbsd\"))".dev-dependencies]
 gtk = "0.18"
 
 [target."cfg(target_os = \"macos\")".dependencies]
 objc2 = "0.6"
-objc2-core-graphics = { version = "0.3", default-features = false, features = [
+objc2-core-graphics = { version = "0.3.2", default-features = false, features = [
   "std",
   "CGDirectDisplay",
 ] }
-objc2-core-foundation = { version = "0.3", default-features = false, features = [
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = [
   "std",
   "CFCGTypes",
   "CFRunLoop",
 ] }
-objc2-foundation = { version = "0.3", default-features = false, features = [
+objc2-foundation = { version = "0.3.2", default-features = false, features = [
   "std",
   "block2",
   "objc2-core-foundation",
@@ -74,7 +78,7 @@ objc2-foundation = { version = "0.3", default-features = false, features = [
   "NSString",
   "NSThread",
 ] }
-objc2-app-kit = { version = "0.3", default-features = false, features = [
+objc2-app-kit = { version = "0.3.2", default-features = false, features = [
   "std",
   "objc2-core-foundation",
   "NSButton",
@@ -97,10 +101,7 @@ png = "0.18"
 
 [dev-dependencies]
 winit = "0.30"
-tao = "0.34"
+tao = "0.36"
 eframe = "0.31"
 image = { version = "0.25", default-features = false, features = ["png"] }
 serde_json = "1"
-
-[patch.crates-io]
-muda = { git = "https://github.com/dfaust/muda", branch = "ksni" }

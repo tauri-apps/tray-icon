@@ -9,10 +9,7 @@ use tao::{
     event_loop::{ControlFlow, EventLoopBuilder},
 };
 use tray_icon::{
-    menu::{
-        AboutMetadata, CheckMenuItem, IconMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem,
-        Submenu,
-    },
+    menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
     TrayIconBuilder, TrayIconEvent,
 };
 
@@ -40,16 +37,6 @@ fn main() {
 
     let tray_menu = Menu::new();
 
-    let icon_i = IconMenuItem::new(
-        "Icon",
-        true,
-        Some(load_menu_icon(std::path::Path::new(path))),
-        None,
-    );
-    let check_i = CheckMenuItem::new("Check", true, false, None);
-    let subitem_i = MenuItem::new("Subitem", true, None);
-    let submenu_i = Submenu::new("Submenu", true);
-    submenu_i.append(&subitem_i);
     let quit_i = MenuItem::new("Quit", true, None);
     tray_menu.append_items(&[
         &PredefinedMenuItem::about(
@@ -61,9 +48,6 @@ fn main() {
             }),
         ),
         &PredefinedMenuItem::separator(),
-        &icon_i,
-        &check_i,
-        &submenu_i,
         &quit_i,
     ]);
 
@@ -77,7 +61,7 @@ fn main() {
 
         match event {
             Event::NewEvents(tao::event::StartCause::Init) => {
-                let icon = load_tray_icon(std::path::Path::new(path));
+                let icon = load_icon(std::path::Path::new(path));
 
                 // We create the icon once the event loop is actually running
                 // to prevent issues like https://github.com/tauri-apps/tray-icon/issues/90
@@ -93,7 +77,12 @@ fn main() {
                 // We have to request a redraw here to have the icon actually show up.
                 // Tao only exposes a redraw method on the Window so we use core-foundation directly.
                 #[cfg(target_os = "macos")]
-                objc2_core_foundation::CFRunLoop::main().unwrap().wake_up();
+                unsafe {
+                    use objc2_core_foundation::CFRunLoop;
+
+                    let rl = CFRunLoop::main().unwrap();
+                    CFRunLoop::wake_up(&rl);
+                }
             }
 
             Event::UserEvent(UserEvent::TrayIconEvent(event)) => {
@@ -114,21 +103,14 @@ fn main() {
     })
 }
 
-fn load_icon(path: &std::path::Path) -> (Vec<u8>, u32, u32) {
-    let image = image::open(path)
-        .expect("Failed to open icon path")
-        .into_rgba8();
-    let (width, height) = image.dimensions();
-    let rgba = image.into_raw();
-    (rgba, width, height)
-}
-
-fn load_tray_icon(path: &std::path::Path) -> tray_icon::Icon {
-    let (icon_rgba, icon_width, icon_height) = load_icon(path);
+fn load_icon(path: &std::path::Path) -> tray_icon::Icon {
+    let (icon_rgba, icon_width, icon_height) = {
+        let image = image::open(path)
+            .expect("Failed to open icon path")
+            .into_rgba8();
+        let (width, height) = image.dimensions();
+        let rgba = image.into_raw();
+        (rgba, width, height)
+    };
     tray_icon::Icon::from_rgba(icon_rgba, icon_width, icon_height).expect("Failed to open icon")
-}
-
-fn load_menu_icon(path: &std::path::Path) -> muda::Icon {
-    let (icon_rgba, icon_width, icon_height) = load_icon(path);
-    muda::Icon::from_rgba(icon_rgba, icon_width, icon_height).expect("Failed to open icon")
 }

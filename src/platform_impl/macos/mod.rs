@@ -244,8 +244,8 @@ impl TrayIcon {
 
     pub fn show_menu(&self) {
         if let Some(ns_status_item) = &self.ns_status_item {
-            let button = ns_status_item.button(self.mtm).unwrap();
             unsafe {
+                let button = ns_status_item.button(self.mtm).unwrap();
                 button.performClick(None);
             }
         }

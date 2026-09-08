@@ -17,12 +17,25 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   test:
     strategy:
       fail-fast: false
       matrix:
-        platform: ["windows-latest", "macos-latest", "ubuntu-latest"]
+        include:
+          - platform: windows-latest
+            cargo-args: ""
+          - platform: macos-latest
+            cargo-args: ""
+          - platform: ubuntu-latest
+            backend: (gtk)
+            cargo-args: ""
+          - platform: ubuntu-latest
+            backend: (ksni)
+            cargo-args: --no-default-features --features ksni
 
     runs-on: ${{ matrix.platform }}
 
@@ -33,10 +46,10 @@ jobs:
         if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libayatana-appindicator3-dev libdbus-1-dev
+          sudo apt-get install -y libgtk-3-dev libxdo-dev libayatana-appindicator3-dev
 
       - uses: dtolnay/rust-toolchain@1.90
-      - run: cargo build
+      - run: cargo build ${{ matrix.cargo-args }}
 
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test
+      - run: cargo test ${{ matrix.cargo-args }}

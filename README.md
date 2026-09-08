@@ -4,35 +4,46 @@ tray-icon lets you create tray icons for desktop applications.
 
 - Windows
 - macOS
-- Linux (gtk or linux-ksni)
-- FreeBSD (gtk Only)
+- Linux (GTK or KSNI)
+- FreeBSD (GTK or KSNI)
 
 ## Platform-specific notes:
 
-- On Windows and Linux or FreeBSD with the gtk backend, an event loop must be running on the thread, on Windows, a win32 event loop and on Linux or FreeBSD, a gtk event loop. It doesn't need to be the main thread but you have to create the tray icon on the same thread as the event loop.
+- On Windows and the Linux/FreeBSD GTK backend, an event loop must be running on the thread. The KSNI backend manages its own worker thread.
 - On macOS, an event loop must be running on the main thread so you also need to create the tray icon on the main thread.
 
-## Cargo Features
+### Cargo Features
 
 - `common-controls-v6`: Use `TaskDialogIndirect` API from `ComCtl32.dll` v6 on Windows for showing the predefined `About` menu item dialog.
+- `libxdo`: Enables linking to `libxdo` which is used for the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu item, see https://github.com/tauri-apps/muda#cargo-features
 - `serde`: Enables de/serializing derives.
-- `gtk`: Use gtk and libappindicator to create tray icons on Linux and FreeBSD. Enabled by default.
-- `linux-ksni`: Use ksni and the xdg standard to create and manage tray icons on Linux. (experimental)
+- `gtk`: Uses the GTK 3/AppIndicator backend on Linux and BSD. This is enabled by default.
+- `ksni`: Uses the StatusNotifierItem D-Bus backend on Linux and BSD. It takes precedence if
+  `gtk` is also enabled.
 
-## Dependencies (Linux Only)
+Use `default-features = false` to avoid compiling the GTK and AppIndicator dependencies when using
+the KSNI backend.
 
-On Linux, `gtk`, `libappindicator` or `libayatana-appindicator` are used to create the tray icon by default. When using `--no-default-features --features linux-ksni`, `gtk` is still used for menu compatibility and `libdbus-1-dev` is needed instead of libappindicator.
+## Dependencies (Linux/BSD)
+
+The default Linux backend uses GTK, `libxdo`, and `libappindicator` or
+`libayatana-appindicator`. The `ksni` backend is pure Rust and does not require these system
+libraries:
+
+```toml
+tray-icon = { version = "0.24", default-features = false, features = ["ksni"] }
+```
 
 #### Arch Linux / Manjaro:
 
 ```sh
-pacman -S gtk3 libappindicator-gtk3 # or `libayatana-appindicator` and optionally `dbus`
+pacman -S gtk3 xdotool libappindicator-gtk3 #or libayatana-appindicator
 ```
 
 #### Debian / Ubuntu:
 
 ```sh
-sudo apt install libgtk-3-dev libappindicator3-dev # or `libayatana-appindicator3-dev` and optionally `libdbus-1-dev`
+sudo apt install libgtk-3-dev libxdo-dev libappindicator3-dev #or libayatana-appindicator3-dev
 ```
 
 ## Dependencies in FreeBSD

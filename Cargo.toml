@@ -47,7 +47,7 @@ features = [
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"netbsd\", target_os = \"openbsd\"))".dependencies]
 libappindicator = { version = "0.9", optional = true }
-dirs = { version = "6", optional = true }
+dirs = { version = "7", optional = true }
 ksni = { version = "0.3.6", default-features = false, features = [
   "async-io",
   "blocking",

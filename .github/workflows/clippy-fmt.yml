@@ -22,7 +22,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - platform: windows-latest
+            cargo-args: --all-targets --all-features
+          - platform: macos-latest
+            cargo-args: --all-targets --all-features
+          - platform: ubuntu-latest
+            backend: (gtk)
+            cargo-args: --all-targets --features serde,common-controls-v6
+          - platform: ubuntu-latest
+            backend: (ksni)
+            cargo-args: --all-targets --no-default-features --features ksni,serde,common-controls-v6
 
     runs-on: ${{ matrix.platform }}
 
@@ -38,7 +48,7 @@ jobs:
         with:
           components: clippy
 
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo clippy ${{ matrix.cargo-args }} -- -D warnings
 
   fmt:
     runs-on: ubuntu-latest

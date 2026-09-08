@@ -7,7 +7,7 @@ homepage = "https://github.com/tauri-apps/tray-icon"
 repository = "https://github.com/tauri-apps/tray-icon"
 license = "MIT OR Apache-2.0"
 categories = ["gui"]
-rust-version = "1.73"
+rust-version = "1.90"
 include = [
   "README.md",
   "src/**/*.rs",
@@ -22,10 +22,14 @@ default = ["libxdo", "gtk"]
 libxdo = ["muda/libxdo"]
 serde = ["muda/serde", "dep:serde"]
 common-controls-v6 = ["muda/common-controls-v6"]
-gtk = ["muda/gtk", "dep:libappindicator"]
+gtk = ["muda/gtk", "dep:dirs", "dep:libappindicator"]
+ksni = ["dep:ksni", "muda/snapshot"]
 
 [dependencies]
-muda = { version = "0.19.1", default-features = false }
+muda = { git = "https://github.com/tauri-apps/muda", branch = "amr/feat/snapshot", default-features = false, features = [
+  "appkit",
+  "win32",
+] }
 crossbeam-channel = "0.5"
 once_cell = "1"
 thiserror = "2"
@@ -43,7 +47,11 @@ features = [
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"netbsd\", target_os = \"openbsd\"))".dependencies]
 libappindicator = { version = "0.9", optional = true }
-dirs = "6"
+dirs = { version = "6", optional = true }
+ksni = { version = "0.3.6", default-features = false, features = [
+  "async-io",
+  "blocking",
+], optional = true }
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"netbsd\", target_os = \"openbsd\"))".dev-dependencies]
 gtk = "0.18"

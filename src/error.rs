@@ -24,6 +24,18 @@ pub enum Error {
     PngEncodingError(#[from] png::EncodingError),
     #[error("not on the main thread")]
     NotMainThread,
+    #[cfg(all(
+        any(
+            target_os = "linux",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        ),
+        feature = "ksni"
+    ))]
+    #[error(transparent)]
+    Ksni(#[from] ksni::Error),
 }
 
 /// Convenient type alias of Result type for tray-icon.

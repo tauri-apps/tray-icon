@@ -12,7 +12,7 @@ fn main() {
         && std::env::var_os("CARGO_FEATURE_KSNI").is_some()
     {
         println!(
-            "cargo::warning=features `libappindicator` and `ksni` are enabled together; tray-icon will use its no-op backend"
+            "cargo::warning=features `libappindicator` and `ksni` are enabled together; tray-icon will use the `ksni` backend"
         );
     }
 }

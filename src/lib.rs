@@ -135,9 +135,6 @@
 ))]
 compile_error!("either the `libappindicator` or `ksni` feature must be enabled on Linux and BSD");
 
-#[cfg(all(feature = "libappindicator", feature = "ksni"))]
-compile_error!("features `libappindicator` and `ksni` cannot be enabled together");
-
 use std::{
     cell::RefCell,
     path::{Path, PathBuf},

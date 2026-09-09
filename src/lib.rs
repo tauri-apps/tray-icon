@@ -16,6 +16,8 @@
 //!
 //! - On Windows and the Linux/BSD AppIndicator backend, an event loop must be running on the thread. The
 //!   KSNI backend runs its D-Bus service on a worker thread and does not require a GTK event loop.
+//! - When both the `libappindicator` and `ksni` features are enabled on Linux or BSD, tray-icon
+//!   uses the KSNI backend and emits a Cargo warning.
 //! - On macOS, an event loop must be running on the main thread so you also need to create the tray icon on the main thread. You must make sure that the event loop is already running and not just created before creating a TrayIcon to prevent issues with fullscreen apps. In Winit for example the earliest you can create icons is on [`StartCause::Init`](https://docs.rs/winit/latest/winit/event/enum.StartCause.html#variant.Init).
 //!
 //! # Dependencies (Linux/BSD)

@@ -25,8 +25,8 @@ tray-icon lets you create tray icons for desktop applications.
 - `muda-serde`: Forwards muda's `serde` feature. The `serde` feature also enables it.
 - `muda-snapshot`: Forwards muda's `snapshot` feature. The `ksni` feature also enables it.
 
-`libappindicator` and `ksni` are mutually exclusive. Muda's `muda-gtk3` and `muda-gtk4` features
-are also mutually exclusive. Use `default-features = false` when selecting a non-default backend.
+When both `libappindicator` and `ksni` are enabled on Linux or BSD, tray-icon uses the `ksni`
+backend and emits a Cargo warning.
 
 ## Dependencies (Linux/BSD)
 

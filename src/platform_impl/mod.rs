@@ -26,23 +26,9 @@ mod platform;
         target_os = "netbsd",
         target_os = "openbsd"
     ),
-    feature = "ksni",
-    not(feature = "libappindicator")
-))]
-#[path = "ksni/mod.rs"]
-mod platform;
-#[cfg(all(
-    any(
-        target_os = "linux",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "netbsd",
-        target_os = "openbsd"
-    ),
-    feature = "libappindicator",
     feature = "ksni"
 ))]
-#[path = "noop/mod.rs"]
+#[path = "ksni/mod.rs"]
 mod platform;
 #[cfg(target_os = "macos")]
 #[path = "macos/mod.rs"]

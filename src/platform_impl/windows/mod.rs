@@ -13,28 +13,32 @@ use windows_sys::{
         Foundation::{FALSE, HWND, LPARAM, LRESULT, POINT, RECT, S_OK, TRUE, WPARAM},
         UI::{
             Shell::{
-                Shell_NotifyIconGetRect, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_STATE,
-                NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIS_HIDDEN, NOTIFYICONDATAW,
-                NOTIFYICONIDENTIFIER,
+                Shell_NotifyIconGetRect, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_SHOWTIP,
+                NIF_STATE, NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NIN_SELECT,
+                NIS_HIDDEN, NOTIFYICONDATAW, NOTIFYICONDATAW_0, NOTIFYICONIDENTIFIER,
+                NOTIFYICON_VERSION_4,
             },
             WindowsAndMessaging::{
                 ChangeWindowMessageFilterEx, CreateWindowExW, DefWindowProcW, DestroyWindow,
                 GetCursorPos, KillTimer, PostMessageW, RegisterClassW, RegisterWindowMessageA,
                 SendMessageW, SetForegroundWindow, SetTimer, TrackPopupMenu, CREATESTRUCTW,
                 CW_USEDEFAULT, GWL_USERDATA, HICON, HMENU, MSGFLT_ALLOW, TPM_BOTTOMALIGN,
-                TPM_LEFTALIGN, WM_CREATE, WM_DESTROY, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
-                WM_LBUTTONUP, WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE,
-                WM_NCCREATE, WM_NULL, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_TIMER,
-                WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
-                WS_OVERLAPPED,
+                TPM_LEFTALIGN, WM_CONTEXTMENU, WM_CREATE, WM_DESTROY, WM_LBUTTONDBLCLK,
+                WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDBLCLK, WM_MBUTTONDOWN, WM_MBUTTONUP,
+                WM_MOUSEMOVE, WM_NCCREATE, WM_NULL, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP,
+                WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+                WS_EX_TRANSPARENT, WS_OVERLAPPED,
             },
         },
     },
 };
 
 use crate::{
-    dpi::PhysicalPosition, icon::Icon, menu, MouseButton, MouseButtonState, Rect,
-    TrayIconAttributes, TrayIconEvent, TrayIconId, COUNTER,
+    dpi::PhysicalPosition,
+    icon::Icon,
+    menu,
+    platform_impl::platform::util::{GET_X_LPARAM, GET_Y_LPARAM, NIN_KEYSELECT},
+    MouseButton, MouseButtonState, Rect, TrayIconAttributes, TrayIconEvent, TrayIconId, COUNTER,
 };
 
 pub(crate) use self::icon::WinIcon as PlatformIcon;
@@ -170,7 +174,7 @@ impl TrayIcon {
     pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
         unsafe {
             let mut nid = NOTIFYICONDATAW {
-                uFlags: NIF_ICON,
+                uFlags: NIF_ICON | NIF_SHOWTIP,
                 hWnd: self.hwnd,
                 uID: self.internal_id,
                 cbSize: size_of::<NOTIFYICONDATAW>() as u32,
@@ -222,7 +226,7 @@ impl TrayIcon {
     pub fn set_tooltip<S: AsRef<str>>(&mut self, tooltip: Option<S>) -> crate::Result<()> {
         unsafe {
             let mut nid = NOTIFYICONDATAW {
-                uFlags: NIF_TIP,
+                uFlags: NIF_TIP | NIF_SHOWTIP,
                 hWnd: self.hwnd,
                 uID: self.internal_id,
                 cbSize: size_of::<NOTIFYICONDATAW>() as u32,
@@ -377,123 +381,161 @@ unsafe extern "system" fn tray_proc(
             userdata.menu_on_right_click = wparam != 0;
         }
 
-        WM_USER_TRAYICON
-            if matches!(
-                lparam as u32,
-                WM_LBUTTONDOWN
-                    | WM_RBUTTONDOWN
-                    | WM_MBUTTONDOWN
-                    | WM_LBUTTONUP
-                    | WM_RBUTTONUP
-                    | WM_MBUTTONUP
-                    | WM_LBUTTONDBLCLK
-                    | WM_RBUTTONDBLCLK
-                    | WM_MBUTTONDBLCLK
-                    | WM_MOUSEMOVE
-            ) =>
-        {
-            let mut cursor = POINT { x: 0, y: 0 };
-            if GetCursorPos(&mut cursor as _) == 0 {
-                return 0;
-            }
-
-            let id = userdata.id.clone();
-            let position = PhysicalPosition::new(cursor.x as f64, cursor.y as f64);
-
-            let rect = match get_tray_rect(userdata.internal_id, hwnd) {
-                Some(rect) => Rect::from(rect),
-                None => return 0,
-            };
-
-            let event = match lparam as u32 {
-                WM_LBUTTONDOWN => TrayIconEvent::Click {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Left,
-                    button_state: MouseButtonState::Down,
-                },
-                WM_RBUTTONDOWN => TrayIconEvent::Click {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Right,
-                    button_state: MouseButtonState::Down,
-                },
-                WM_MBUTTONDOWN => TrayIconEvent::Click {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Middle,
-                    button_state: MouseButtonState::Down,
-                },
-                WM_LBUTTONUP => TrayIconEvent::Click {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Left,
-                    button_state: MouseButtonState::Up,
-                },
-                WM_RBUTTONUP => TrayIconEvent::Click {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Right,
-                    button_state: MouseButtonState::Up,
-                },
-                WM_MBUTTONUP => TrayIconEvent::Click {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Middle,
-                    button_state: MouseButtonState::Up,
-                },
-                WM_LBUTTONDBLCLK => TrayIconEvent::DoubleClick {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Left,
-                },
-                WM_RBUTTONDBLCLK => TrayIconEvent::DoubleClick {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Right,
-                },
-                WM_MBUTTONDBLCLK => TrayIconEvent::DoubleClick {
-                    id,
-                    rect,
-                    position,
-                    button: MouseButton::Middle,
-                },
-                WM_MOUSEMOVE if !userdata.entered => {
-                    userdata.entered = true;
-                    TrayIconEvent::Enter { id, rect, position }
-                }
-                WM_MOUSEMOVE if userdata.entered => {
-                    // handle extra WM_MOUSEMOVE events, ignore if position hasn't changed
-                    let cursor_moved = userdata.last_position != Some(position);
-                    userdata.last_position = Some(position);
-                    if cursor_moved {
-                        // Set or update existing timer, where we check if cursor left
-                        SetTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _, 15, Some(tray_timer_proc));
-
-                        TrayIconEvent::Move { id, rect, position }
-                    } else {
-                        return 0;
-                    }
-                }
-
-                _ => unreachable!(),
-            };
-
-            TrayIconEvent::send(event);
-
-            if (userdata.menu_on_right_click && lparam as u32 == WM_RBUTTONUP)
-                || (userdata.menu_on_left_click && lparam as u32 == WM_LBUTTONUP)
+        WM_USER_TRAYICON => {
+            if let win_event @ (WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN | WM_LBUTTONUP
+            | WM_RBUTTONUP | WM_MBUTTONUP | WM_LBUTTONDBLCLK
+            | WM_RBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_MOUSEMOVE
+            | WM_CONTEXTMENU | NIN_KEYSELECT | NIN_SELECT) = util::LOWORD(lparam as u32) as u32
             {
-                if let Some(menu) = userdata.hpopupmenu {
-                    show_tray_menu(hwnd, menu, cursor.x, cursor.y);
+                let id = userdata.id.clone();
+                let position = PhysicalPosition {
+                    // Yes, `GET_X_LPARAM` from `WPARAM` not `LPARAM`, when we set `NOTIFYICON_VERSION_4`,
+                    // See https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-notifyicondataa
+                    x: GET_X_LPARAM(wparam as _) as f64,
+                    y: GET_Y_LPARAM(wparam as _) as f64,
+                };
+
+                let rect = match get_tray_rect(userdata.internal_id, hwnd) {
+                    Some(rect) => Rect::from(rect),
+                    None => return 0,
+                };
+
+                match win_event {
+                    // This will be triggered in `NIN_SELECT`
+                    // (it's only triggered on left mouse button up before `WM_LBUTTONUP`)
+                    // WM_LBUTTONDOWN => TrayIconEvent::send(TrayIconEvent::Click {
+                    //     id,
+                    //     rect,
+                    //     position,
+                    //     button: MouseButton::Left,
+                    //     button_state: MouseButtonState::Down,
+                    // }),
+                    WM_RBUTTONDOWN => TrayIconEvent::send(TrayIconEvent::Click {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Right,
+                        button_state: MouseButtonState::Down,
+                    }),
+                    WM_MBUTTONDOWN => TrayIconEvent::send(TrayIconEvent::Click {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Middle,
+                        button_state: MouseButtonState::Down,
+                    }),
+                    // This will be triggered in `NIN_SELECT`
+                    // WM_LBUTTONUP => TrayIconEvent::send(TrayIconEvent::Click {
+                    //     id,
+                    //     rect,
+                    //     position,
+                    //     button: MouseButton::Left,
+                    //     button_state: MouseButtonState::Up,
+                    // }),
+                    // This will be triggered in `WM_CONTEXTMENU`
+                    // WM_RBUTTONUP => TrayIconEvent::send(TrayIconEvent::Click {
+                    //     id,
+                    //     rect,
+                    //     position,
+                    //     button: MouseButton::Right,
+                    //     button_state: MouseButtonState::Up,
+                    // }),
+                    WM_MBUTTONUP => TrayIconEvent::send(TrayIconEvent::Click {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Middle,
+                        button_state: MouseButtonState::Up,
+                    }),
+                    WM_LBUTTONDBLCLK => TrayIconEvent::send(TrayIconEvent::DoubleClick {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Left,
+                    }),
+                    WM_RBUTTONDBLCLK => TrayIconEvent::send(TrayIconEvent::DoubleClick {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Right,
+                    }),
+                    WM_MBUTTONDBLCLK => TrayIconEvent::send(TrayIconEvent::DoubleClick {
+                        id,
+                        rect,
+                        position,
+                        button: MouseButton::Middle,
+                    }),
+                    WM_MOUSEMOVE if !userdata.entered => {
+                        userdata.entered = true;
+                        TrayIconEvent::send(TrayIconEvent::Enter { id, rect, position })
+                    }
+                    WM_MOUSEMOVE if userdata.entered => {
+                        // handle extra WM_MOUSEMOVE events, ignore if position hasn't changed
+                        let cursor_moved = userdata.last_position != Some(position);
+                        userdata.last_position = Some(position);
+                        if cursor_moved {
+                            // Set or update existing timer, where we check if cursor left
+                            SetTimer(
+                                hwnd,
+                                WM_USER_LEAVE_TIMER_ID as _,
+                                15,
+                                Some(tray_timer_proc),
+                            );
+
+                            TrayIconEvent::send(TrayIconEvent::Move { id, rect, position })
+                        } else {
+                            return 0;
+                        }
+                    }
+                    // Menu key
+                    WM_CONTEXTMENU
+                    // Keyboard select and then SPACEBAR or ENTER key
+                    | NIN_KEYSELECT => {
+                        // Mimic the events without `NOTIFYICON_VERSION_4`
+                        TrayIconEvent::send(TrayIconEvent::Click {
+                            id: id.clone(),
+                            rect,
+                            position,
+                            button: MouseButton::Right,
+                            button_state: MouseButtonState::Down,
+                        });
+                        TrayIconEvent::send(TrayIconEvent::Click {
+                            id,
+                            rect,
+                            position,
+                            button: MouseButton::Right,
+                            button_state: MouseButtonState::Up,
+                        });
+                    },
+                    // Mouse select and then ENTER key (in reality this just fires on left clicks)
+                    NIN_SELECT => {
+                        // Mimic the events without `NOTIFYICON_VERSION_4`
+                        TrayIconEvent::send(TrayIconEvent::Click {
+                            id: id.clone(),
+                            rect,
+                            position,
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Down,
+                        });
+                        TrayIconEvent::send(TrayIconEvent::Click {
+                            id,
+                            rect,
+                            position,
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                        });
+                    }
+                    _ => {},
+                };
+
+                if (userdata.menu_on_right_click
+                    && matches!(win_event, WM_RBUTTONUP | WM_CONTEXTMENU | NIN_KEYSELECT))
+                    || (userdata.menu_on_left_click
+                        && matches!(win_event, WM_LBUTTONUP | NIN_SELECT))
+                {
+                    if let Some(menu) = userdata.hpopupmenu {
+                        show_tray_menu(hwnd, menu, position.x as i32, position.y as i32);
+                    }
                 }
             }
         }
@@ -576,7 +618,7 @@ unsafe fn register_tray_icon(
     }
 
     if let Some(tooltip) = tooltip {
-        flags |= NIF_TIP;
+        flags |= NIF_TIP | NIF_SHOWTIP;
         let tip = util::encode_wide(tooltip);
         #[allow(clippy::manual_memcpy)]
         for i in 0..tip.len().min(128) {
@@ -592,7 +634,7 @@ unsafe fn register_tray_icon(
         0
     };
 
-    let mut nid = NOTIFYICONDATAW {
+    let nid = NOTIFYICONDATAW {
         uFlags: flags,
         hWnd: hwnd,
         uID: tray_id,
@@ -601,11 +643,14 @@ unsafe fn register_tray_icon(
         szTip: sz_tip,
         dwState,
         dwStateMask: dwState,
+        Anonymous: NOTIFYICONDATAW_0 {
+            uVersion: NOTIFYICON_VERSION_4,
+        },
         cbSize: size_of::<NOTIFYICONDATAW>() as u32,
         ..std::mem::zeroed()
     };
 
-    Shell_NotifyIconW(NIM_ADD, &mut nid as _) == TRUE
+    Shell_NotifyIconW(NIM_ADD, &nid) == TRUE && Shell_NotifyIconW(NIM_SETVERSION, &nid) == TRUE
 }
 
 #[inline]

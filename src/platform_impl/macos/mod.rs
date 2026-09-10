@@ -241,10 +241,16 @@ impl TrayIcon {
     }
 
     pub fn show_menu(&self) {
-        if let Some(ns_status_item) = &self.ns_status_item {
+        if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
+        {
             unsafe {
-                let button = ns_status_item.button(self.mtm).unwrap();
-                button.performClick(None);
+                let menu = tray_target.ivars().menu.borrow().clone();
+                if let Some(menu) = &menu {
+                    let button = ns_status_item.button(self.mtm).unwrap();
+                    ns_status_item.setMenu(Some(menu));
+                    button.performClick(None);
+                    ns_status_item.setMenu(None);
+                }
             }
         }
     }
@@ -486,15 +492,12 @@ fn on_tray_click(this: &TrayTarget, button: MouseButton) {
         if (menu_on_right_click && button == MouseButton::Right)
             || (menu_on_left_click && button == MouseButton::Left)
         {
-            let has_items = if let Some(menu) = &*this.ivars().menu.borrow() {
-                menu.numberOfItems() > 0
-            } else {
-                false
-            };
+            // Retain the menu out of the `RefCell`: `performClick` runs a
+            // nested event loop that may re-enter `set_menu`.
+            let menu = this.ivars().menu.borrow().clone();
+            let has_items = menu.as_ref().is_some_and(|menu| menu.numberOfItems() > 0);
             if has_items {
-                let menu = this.ivars().menu.borrow();
-                let menu = menu.as_ref().unwrap();
-                status_item.setMenu(Some(menu));
+                status_item.setMenu(menu.as_deref());
                 ns_button.performClick(None);
                 status_item.setMenu(None);
             } else {

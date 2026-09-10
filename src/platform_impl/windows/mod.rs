@@ -8,12 +8,13 @@ use std::{mem::size_of, ptr};
 
 use once_cell::sync::Lazy;
 use windows_sys::{
+    core::GUID,
     s,
     Win32::{
         Foundation::{FALSE, HWND, LPARAM, LRESULT, POINT, RECT, S_OK, TRUE, WPARAM},
         UI::{
             Shell::{
-                Shell_NotifyIconGetRect, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_STATE,
+                Shell_NotifyIconGetRect, Shell_NotifyIconW, NIF_GUID, NIF_ICON, NIF_MESSAGE, NIF_STATE,
                 NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIS_HIDDEN, NOTIFYICONDATAW,
                 NOTIFYICONIDENTIFIER,
             },
@@ -54,6 +55,7 @@ static S_U_TASKBAR_RESTART: Lazy<u32> =
 
 struct TrayUserData {
     internal_id: u32,
+    guid: Option<GUID>,
     id: TrayIconId,
     hwnd: HWND,
     hpopupmenu: Option<HMENU>,
@@ -69,7 +71,7 @@ struct TrayUserData {
 impl TrayUserData {
     fn set_tray_visible(&mut self, visible: bool) {
         self.visible = visible;
-        let nid = NOTIFYICONDATAW {
+        let mut nid = NOTIFYICONDATAW {
             uFlags: NIF_STATE,
             hWnd: self.hwnd,
             uID: self.internal_id,
@@ -78,6 +80,7 @@ impl TrayUserData {
             cbSize: size_of::<NOTIFYICONDATAW>() as u32,
             ..Default::default()
         };
+        apply_guid(&mut nid, self.guid);
         unsafe { Shell_NotifyIconW(NIM_MODIFY, &nid) };
     }
 }
@@ -86,11 +89,13 @@ pub struct TrayIcon {
     hwnd: HWND,
     menu: Option<Box<dyn menu::ContextMenu>>,
     internal_id: u32,
+    guid: Option<GUID>,
 }
 
 impl TrayIcon {
     pub fn new(id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
         let internal_id = COUNTER.next();
+        let guid = attrs.guid.map(GUID::from_u128);
 
         let class_name = util::encode_wide("tray_icon_app");
         unsafe {
@@ -108,6 +113,7 @@ impl TrayIcon {
             let traydata = TrayUserData {
                 id,
                 internal_id,
+                guid,
                 hwnd: std::ptr::null_mut(),
                 hpopupmenu: attrs.menu.as_ref().map(|m| m.hpopupmenu() as _),
                 icon: attrs.icon.clone(),
@@ -150,7 +156,7 @@ impl TrayIcon {
 
             let hicon = attrs.icon.as_ref().map(|i| i.inner.as_raw_handle());
 
-            if !register_tray_icon(hwnd, internal_id, &hicon, &attrs.tooltip, true) {
+            if !register_tray_icon(hwnd, internal_id, guid, &hicon, &attrs.tooltip, true) {
                 // Explorer/taskbar may not be ready yet (e.g., app starts before explorer.exe).
                 // Keep the window alive and wait for TaskbarCreated to re-register.
             }
@@ -162,6 +168,7 @@ impl TrayIcon {
             Ok(Self {
                 hwnd,
                 internal_id,
+                guid,
                 menu: attrs.menu,
             })
         }
@@ -180,6 +187,7 @@ impl TrayIcon {
             if let Some(hicon) = icon.as_ref().map(|i| i.inner.as_raw_handle()) {
                 nid.hIcon = hicon;
             }
+            apply_guid(&mut nid, self.guid);
 
             if Shell_NotifyIconW(NIM_MODIFY, &nid) == 0 {
                 return Err(crate::Error::OsError(std::io::Error::last_os_error()));
@@ -277,7 +285,7 @@ impl TrayIcon {
     pub fn show_menu(&self) {
         if let Some(menu) = &self.menu {
             unsafe {
-                if let Some(rect) = get_tray_rect(self.internal_id, self.hwnd) {
+                if let Some(rect) = get_tray_rect(self.internal_id, self.guid, self.hwnd) {
                     show_tray_menu(self.hwnd, menu.hpopupmenu() as _, rect.left, rect.top);
                 }
             }
@@ -294,7 +302,7 @@ impl TrayIcon {
     }
 
     pub fn rect(&self) -> Option<Rect> {
-        get_tray_rect(self.internal_id, self.hwnd).map(Into::into)
+        get_tray_rect(self.internal_id, self.guid, self.hwnd).map(Into::into)
     }
 
     pub fn hwnd(&self) -> HWND {
@@ -305,7 +313,7 @@ impl TrayIcon {
 impl Drop for TrayIcon {
     fn drop(&mut self) {
         unsafe {
-            remove_tray_icon(self.hwnd, self.internal_id);
+            remove_tray_icon(self.hwnd, self.internal_id, self.guid);
 
             if let Some(menu) = &self.menu {
                 menu.detach_menu_subclass_from_hwnd(self.hwnd as _);
@@ -361,10 +369,11 @@ unsafe extern "system" fn tray_proc(
             userdata.tooltip = *tooltip;
         }
         _ if msg == *S_U_TASKBAR_RESTART => {
-            remove_tray_icon(userdata.hwnd, userdata.internal_id);
+            remove_tray_icon(userdata.hwnd, userdata.internal_id, userdata.guid);
             register_tray_icon(
                 userdata.hwnd,
                 userdata.internal_id,
+                userdata.guid,
                 &userdata.icon.as_ref().map(|i| i.inner.as_raw_handle()),
                 &userdata.tooltip,
                 userdata.visible,
@@ -400,7 +409,7 @@ unsafe extern "system" fn tray_proc(
             let id = userdata.id.clone();
             let position = PhysicalPosition::new(cursor.x as f64, cursor.y as f64);
 
-            let rect = match get_tray_rect(userdata.internal_id, hwnd) {
+            let rect = match get_tray_rect(userdata.internal_id, userdata.guid, hwnd) {
                 Some(rect) => Rect::from(rect),
                 None => return 0,
             };
@@ -505,7 +514,7 @@ unsafe extern "system" fn tray_proc(
                     return 0;
                 }
 
-                let rect = match get_tray_rect(userdata.internal_id, hwnd) {
+                let rect = match get_tray_rect(userdata.internal_id, userdata.guid, hwnd) {
                     Some(r) => r,
                     None => return 0,
                 };
@@ -562,6 +571,7 @@ unsafe fn show_tray_menu(hwnd: HWND, menu: HMENU, x: i32, y: i32) {
 unsafe fn register_tray_icon(
     hwnd: HWND,
     tray_id: u32,
+    guid: Option<GUID>,
     hicon: &Option<HICON>,
     tooltip: &Option<String>,
     visible: bool,
@@ -604,33 +614,52 @@ unsafe fn register_tray_icon(
         cbSize: size_of::<NOTIFYICONDATAW>() as u32,
         ..std::mem::zeroed()
     };
+    apply_guid(&mut nid, guid);
 
     Shell_NotifyIconW(NIM_ADD, &mut nid as _) == TRUE
 }
 
 #[inline]
-unsafe fn remove_tray_icon(hwnd: HWND, id: u32) {
-    let nid = NOTIFYICONDATAW {
+unsafe fn remove_tray_icon(hwnd: HWND, id: u32, guid: Option<GUID>) {
+    let mut nid = NOTIFYICONDATAW {
         uFlags: NIF_ICON,
         hWnd: hwnd,
         uID: id,
         cbSize: size_of::<NOTIFYICONDATAW>() as u32,
         ..std::mem::zeroed()
     };
+    apply_guid(&mut nid, guid);
 
     if Shell_NotifyIconW(NIM_DELETE, &nid) == FALSE {
         eprintln!("Error removing system tray icon");
     }
 }
 
+/// Stamp the optional stable identity onto a `NOTIFYICONDATAW`.
+///
+/// With `NIF_GUID` set, the shell identifies the icon by `guidItem` instead of
+/// `(hWnd, uID)`. That identity is what Windows keys the user's "always show"
+/// (promoted) setting on, so a fixed GUID lets the setting survive the binary
+/// being replaced by an update.
 #[inline]
-fn get_tray_rect(id: u32, hwnd: HWND) -> Option<RECT> {
-    let nid = NOTIFYICONIDENTIFIER {
+fn apply_guid(nid: &mut NOTIFYICONDATAW, guid: Option<GUID>) {
+    if let Some(guid) = guid {
+        nid.uFlags |= NIF_GUID;
+        nid.guidItem = guid;
+    }
+}
+
+#[inline]
+fn get_tray_rect(id: u32, guid: Option<GUID>, hwnd: HWND) -> Option<RECT> {
+    let mut nid = NOTIFYICONIDENTIFIER {
         hWnd: hwnd,
         cbSize: size_of::<NOTIFYICONIDENTIFIER>() as _,
         uID: id,
         ..unsafe { std::mem::zeroed() }
     };
+    if let Some(guid) = guid {
+        nid.guidItem = guid;
+    }
 
     let mut rect = RECT {
         left: 0,

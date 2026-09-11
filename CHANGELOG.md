@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.0]
+
+- [`c648db3`](https://www.github.com/tauri-apps/tray-icon/commit/c648db3e7efefcb604141097b6817c635f04c8ad) ([#201](https://www.github.com/tauri-apps/tray-icon/pull/201) by [@dfaust](https://www.github.com/tauri-apps/tray-icon/../../dfaust)) Add a GTK-free `ksni` StatusNotifierItem backend for Linux and BSD.
+- [`c1990d6`](https://www.github.com/tauri-apps/tray-icon/commit/c1990d6e98749dc97143cea712015641c19b499c) ([#361](https://www.github.com/tauri-apps/tray-icon/pull/361) by [@amrbashir](https://www.github.com/tauri-apps/tray-icon/../../amrbashir)) Separate the Linux/BSD `libappindicator` and `ksni` tray backends from muda's GTK backend features, and expose muda features with a `muda-` prefix.
+- [`1c23131`](https://www.github.com/tauri-apps/tray-icon/commit/1c23131c96ebce1703d5dee17c483cfdc892999b) ([#352](https://www.github.com/tauri-apps/tray-icon/pull/352) by [@Legend-Master](https://www.github.com/tauri-apps/tray-icon/../../Legend-Master)) On macOS, updated `objc2-*` dependencies to 0.3.2
+- [`95fc3cc`](https://www.github.com/tauri-apps/tray-icon/commit/95fc3cc10f56557c965fbc8a70b63b8b2a734245) ([#366](https://www.github.com/tauri-apps/tray-icon/pull/366) by [@dylanh724](https://www.github.com/tauri-apps/tray-icon/../../dylanh724)) Add `TrayIconBuilder::with_guid` / `TrayIconAttributes::guid` to register the icon with a stable `NOTIFYICONDATA.guidItem` on Windows, so the user's "always show in taskbar" setting survives the executable being replaced by an update.
+
 ## \[0.24.2]
 
 - [`962c9be`](https://www.github.com/tauri-apps/tray-icon/commit/962c9be6fcc6f82782abe86e9a3a86427ba7bbb8) ([#337](https://www.github.com/tauri-apps/tray-icon/pull/337) by [@Legend-Master](https://www.github.com/tauri-apps/tray-icon/../../Legend-Master)) Migrated to use `NIS_HIDDEN` to change visible states on Windows

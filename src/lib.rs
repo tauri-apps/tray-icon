@@ -220,6 +220,27 @@ pub struct TrayIconAttributes {
     ///   on the user's panel.  This may not be shown in all visualizations.
     /// - **Windows:** Unsupported.
     pub title: Option<String>,
+
+    /// A stable identity for the tray icon, as a UUID in `u128` form. **Windows only**.
+    ///
+    /// Windows remembers per-icon user settings (most importantly whether the
+    /// icon is pinned to the taskbar or hidden in the overflow) keyed on the
+    /// icon's identity. Without a GUID that identity is the executable path
+    /// plus a per-process counter, so the setting is lost whenever the binary
+    /// moves - for example every update of an installer that uses versioned
+    /// directories. With a GUID, and an executable that is Authenticode-signed
+    /// by the same publisher across versions, the setting survives.
+    ///
+    /// Use one fixed GUID per tray icon your application creates, and never
+    /// share it between two icons that can be alive at the same time. See
+    /// <https://learn.microsoft.com/windows/win32/api/shellapi/ns-shellapi-notifyicondataw#troubleshooting>
+    /// for the rules Windows applies (the GUID is bound to the binary's path
+    /// unless the binary is signed).
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux / macOS:** Ignored.
+    pub guid: Option<u128>,
 }
 
 impl Default for TrayIconAttributes {
@@ -233,6 +254,7 @@ impl Default for TrayIconAttributes {
             menu_on_left_click: true,
             menu_on_right_click: true,
             title: None,
+            guid: None,
         }
     }
 }
@@ -340,6 +362,14 @@ impl TrayIconBuilder {
     /// - **Linux:** Unsupported.
     pub fn with_menu_on_right_click(mut self, enable: bool) -> Self {
         self.attrs.menu_on_right_click = enable;
+        self
+    }
+
+    /// Set a stable identity GUID for this tray icon. **Windows only**.
+    ///
+    /// See [`TrayIconAttributes::guid`] for why and how to pick one.
+    pub fn with_guid(mut self, guid: u128) -> Self {
+        self.attrs.guid = Some(guid);
         self
     }
 

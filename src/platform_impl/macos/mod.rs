@@ -243,10 +243,20 @@ impl TrayIcon {
     }
 
     pub fn show_menu(&self) {
-        if let Some(ns_status_item) = &self.ns_status_item {
+        // Drive the popup through NSStatusItem rather than synthesising a
+        // button click. `performClick(None)` produces a click with no NSEvent
+        // context, which AppKit's status-item popup logic relies on to
+        // discover the active screen/Space. On a secondary display while a
+        // full-screen Space is active there, the synthesised click resolves
+        // to the wrong context and the popup silently no-ops (#251).
+        if let (Some(ns_status_item), Some(menu)) = (&self.ns_status_item, &self.attrs.menu) {
             unsafe {
-                let button = ns_status_item.button(self.mtm).unwrap();
-                button.performClick(None);
+                if let Some(ns_menu) = (menu.ns_menu() as *const NSMenu).as_ref() {
+                    if ns_menu.numberOfItems() > 0 {
+                        #[allow(deprecated)]
+                        ns_status_item.popUpStatusItemMenu(ns_menu);
+                    }
+                }
             }
         }
     }
@@ -469,6 +479,19 @@ impl TrayTarget {
     }
 }
 
+// Drive the popup through NSStatusItem rather than synthesising a button
+// click. `performClick(None)` produces a click with no NSEvent context, which
+// AppKit's status-item popup logic relies on to discover the active
+// screen/Space. On a secondary display while a full-screen Space is active
+// there, the synthesised click resolves to the wrong context and the popup
+// silently no-ops (#251).
+//
+// `popUpStatusItemMenu` is modal — it does not return until the menu is
+// dismissed. A menu item action selected inside that modal can re-enter
+// `TrayIcon::set_menu`, which calls `menu.borrow_mut()` on the same RefCell,
+// so we must not hold a `RefCell::borrow()` across the popup. Clone the
+// `Retained<NSMenu>` (an ObjC retain bump) and drop the borrow first.
+#[allow(deprecated)]
 fn on_tray_click(this: &TrayTarget, button: MouseButton) {
     let mtm = MainThreadMarker::from(this);
     unsafe {
@@ -479,16 +502,16 @@ fn on_tray_click(this: &TrayTarget, button: MouseButton) {
         if (menu_on_right_click && button == MouseButton::Right)
             || (menu_on_left_click && button == MouseButton::Left)
         {
-            let has_items = if let Some(menu) = &*this.ivars().menu.borrow() {
-                menu.numberOfItems() > 0
-            } else {
-                false
-            };
-            if has_items {
-                ns_button.performClick(None);
-            } else {
-                ns_button.highlight(true);
+            let menu = this.ivars().menu.borrow().as_ref().map(Retained::clone);
+            if let Some(menu) = menu {
+                if menu.numberOfItems() > 0 {
+                    ns_button.highlight(true);
+                    this.ivars().status_item.popUpStatusItemMenu(&menu);
+                    ns_button.highlight(false);
+                    return;
+                }
             }
+            ns_button.highlight(true);
         } else {
             ns_button.highlight(true);
         }

@@ -61,12 +61,6 @@ impl TrayIcon {
             mtm,
         )?;
 
-        if let Some(menu) = &attrs.menu {
-            unsafe {
-                ns_status_item.setMenu((menu.ns_menu() as *const NSMenu).as_ref());
-            }
-        }
-
         Self::set_tooltip_inner(&ns_status_item, attrs.tooltip.as_deref(), mtm)?;
         Self::set_title_inner(&ns_status_item, attrs.title.as_deref(), mtm);
 
@@ -120,17 +114,12 @@ impl TrayIcon {
     }
 
     pub fn set_menu(&mut self, menu: Option<Box<dyn menu::ContextMenu>>) {
-        if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
-        {
+        if let (Some(_), Some(tray_target)) = (&self.ns_status_item, &self.tray_target) {
             unsafe {
                 let menu = menu
                     .as_ref()
                     .and_then(|m| m.ns_menu().cast::<NSMenu>().as_ref())
                     .map(|menu| menu.retain());
-                ns_status_item.setMenu(menu.as_deref());
-                if let Some(menu) = &menu {
-                    let () = msg_send![menu, setDelegate: &**ns_status_item];
-                }
 
                 *tray_target.ivars().menu.borrow_mut() = menu;
             }
@@ -243,10 +232,16 @@ impl TrayIcon {
     }
 
     pub fn show_menu(&self) {
-        if let Some(ns_status_item) = &self.ns_status_item {
+        if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
+        {
             unsafe {
-                let button = ns_status_item.button(self.mtm).unwrap();
-                button.performClick(None);
+                let menu = tray_target.ivars().menu.borrow().clone();
+                if let Some(menu) = &menu {
+                    let button = ns_status_item.button(self.mtm).unwrap();
+                    ns_status_item.setMenu(Some(menu));
+                    button.performClick(None);
+                    ns_status_item.setMenu(None);
+                }
             }
         }
     }
@@ -473,19 +468,21 @@ fn on_tray_click(this: &TrayTarget, button: MouseButton) {
     let mtm = MainThreadMarker::from(this);
     unsafe {
         let ns_button = this.ivars().status_item.button(mtm).unwrap();
+        let status_item = &this.ivars().status_item;
 
         let menu_on_left_click = this.ivars().menu_on_left_click.get();
         let menu_on_right_click = this.ivars().menu_on_right_click.get();
         if (menu_on_right_click && button == MouseButton::Right)
             || (menu_on_left_click && button == MouseButton::Left)
         {
-            let has_items = if let Some(menu) = &*this.ivars().menu.borrow() {
-                menu.numberOfItems() > 0
-            } else {
-                false
-            };
+            // Retain the menu out of the `RefCell`: `performClick` runs a
+            // nested event loop that may re-enter `set_menu`.
+            let menu = this.ivars().menu.borrow().clone();
+            let has_items = menu.as_ref().is_some_and(|menu| menu.numberOfItems() > 0);
             if has_items {
+                status_item.setMenu(menu.as_deref());
                 ns_button.performClick(None);
+                status_item.setMenu(None);
             } else {
                 ns_button.highlight(true);
             }

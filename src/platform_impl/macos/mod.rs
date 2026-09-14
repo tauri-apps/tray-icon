@@ -176,10 +176,11 @@ impl TrayIcon {
         title: Option<S>,
         mtm: MainThreadMarker,
     ) {
-        if let Some(title) = title {
-            if let Some(button) = ns_status_item.button(mtm) {
-                button.setTitle(&NSString::from_str(title.as_ref()));
-            }
+        if let Some(button) = ns_status_item.button(mtm) {
+            let title = title
+                .map(|title| NSString::from_str(title.as_ref()))
+                .unwrap_or_default();
+            button.setTitle(&title);
         }
     }
 

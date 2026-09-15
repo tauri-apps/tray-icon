@@ -114,7 +114,7 @@ impl TrayIcon {
     }
 
     pub fn set_menu(&mut self, menu: Option<Box<dyn menu::ContextMenu>>) {
-        if let (Some(_), Some(tray_target)) = (&self.ns_status_item, &self.tray_target) {
+        if let Some(tray_target) = &self.tray_target {
             unsafe {
                 let menu = menu
                     .as_ref()

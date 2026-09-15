@@ -2246,7 +2246,7 @@ dependencies = [
  "simd_cesu8",
  "thiserror 2.0.11",
  "walkdir",
- "windows-link 0.2.1",
+ "windows-link",
 ]
 
 [[package]]

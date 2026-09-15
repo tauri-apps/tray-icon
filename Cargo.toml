@@ -7,7 +7,7 @@ homepage = "https://github.com/tauri-apps/tray-icon"
 repository = "https://github.com/tauri-apps/tray-icon"
 license = "MIT OR Apache-2.0"
 categories = ["gui"]
-rust-version = "1.90"
+rust-version = "1.92"
 include = [
   "README.md",
   "build.rs",

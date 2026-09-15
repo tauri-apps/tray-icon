@@ -5265,28 +5265,3 @@ dependencies = [
  "syn 3.0.4",
  "winnow",
 ]
-
-[[patch.unused]]
-name = "javascriptcore-rs"
-version = "1.1.2"
-source = "git+https://github.com/tauri-apps/javascriptcore-rs.git#1e15afba6ed9ad56d3b499e58c36a5e222d84c5e"
-
-[[patch.unused]]
-name = "javascriptcore-rs-sys"
-version = "1.1.1"
-source = "git+https://github.com/tauri-apps/javascriptcore-rs.git#1e15afba6ed9ad56d3b499e58c36a5e222d84c5e"
-
-[[patch.unused]]
-name = "webkit2gtk"
-version = "2.0.2"
-source = "git+https://github.com/tauri-apps/webkit2gtk-rs.git?branch=bump-gir#145fea6d054258ef0b7b5373edb4b80253f557f7"
-
-[[patch.unused]]
-name = "webkit2gtk-sys"
-version = "2.0.2"
-source = "git+https://github.com/tauri-apps/webkit2gtk-rs.git?branch=bump-gir#145fea6d054258ef0b7b5373edb4b80253f557f7"
-
-[[patch.unused]]
-name = "wry"
-version = "0.57.0"
-source = "git+https://github.com/tauri-apps/wry.git?branch=gtk-0.19#6888d196259e9ec43c7311b9a6208d3969647769"

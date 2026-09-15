@@ -111,9 +111,4 @@ serde_json = "1"
 [patch.crates-io]
 libappindicator = { git = "https://github.com/tauri-apps/libappindicator-rs.git", branch = "gtk-0.19" }
 tao = { git = "https://github.com/tauri-apps/tao.git", branch = "gtk-0.19" }
-wry = { git = "https://github.com/tauri-apps/wry.git", branch = "gtk-0.19" }
 muda = { git = "https://github.com/tauri-apps/muda.git", branch = "renovate/gtk-0.x" }
-javascriptcore-rs = { git = "https://github.com/tauri-apps/javascriptcore-rs.git" }
-javascriptcore-rs-sys = { git = "https://github.com/tauri-apps/javascriptcore-rs.git" }
-webkit2gtk = { git = "https://github.com/tauri-apps/webkit2gtk-rs.git", branch = "bump-gir" }
-webkit2gtk-sys = { git = "https://github.com/tauri-apps/webkit2gtk-rs.git", branch = "bump-gir" }

@@ -8,14 +8,15 @@ use std::cmp::max;
 
 use block2::RcBlock;
 use objc2::rc::Retained;
-use objc2::runtime::Bool;
-use objc2::{available, define_class, msg_send, AllocAnyThread, DeclaredClass, Message};
+use objc2::runtime::{AnyObject, Bool};
+use objc2::{available, define_class, msg_send, sel, AllocAnyThread, DeclaredClass, Message};
 use objc2_app_kit::{
     NSAppearanceCustomization, NSAppearanceNameAccessibilityHighContrastAqua,
     NSAppearanceNameAccessibilityHighContrastDarkAqua, NSAppearanceNameAqua,
-    NSAppearanceNameDarkAqua, NSCellImagePosition, NSEvent, NSImage, NSMenu, NSStatusBar,
-    NSStatusBarButton, NSStatusItem, NSTrackingArea, NSTrackingAreaOptions,
-    NSVariableStatusItemLength, NSView, NSWindow,
+    NSAppearanceNameDarkAqua, NSApplication, NSCellImagePosition, NSEvent, NSEventMask,
+    NSEventModifierFlags, NSEventType, NSImage, NSMenu, NSStatusBar, NSStatusBarButton,
+    NSStatusItem, NSTrackingArea, NSTrackingAreaOptions, NSVariableStatusItemLength, NSView,
+    NSWindow,
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
@@ -77,9 +78,14 @@ impl TrayIcon {
             )?;
         }
 
-        if let Some(menu) = &attrs.menu {
-            unsafe {
-                ns_status_item.setMenu((menu.ns_menu() as *const NSMenu).as_ref());
+        // Only leave the menu attached to the status item when it should open on every
+        // click. When the app wants to handle left clicks itself, an attached menu lets
+        // AppKit swallow the click and pop the menu before we ever see it.
+        if attrs.menu_on_left_click {
+            if let Some(menu) = &attrs.menu {
+                unsafe {
+                    ns_status_item.setMenu((menu.ns_menu() as *const NSMenu).as_ref());
+                }
             }
         }
 
@@ -106,6 +112,19 @@ impl TrayIcon {
             tray_target.setWantsLayer(true);
 
             button.addSubview(&tray_target);
+
+            // macOS 27 stopped delivering mouse-down to this overlay view (tracking-area
+            // enter/exit still arrive), which left left-clicks completely dead. Wire the
+            // status item button's own target/action as well so clicks are reported either
+            // way: on older macOS the overlay consumes the event and the action never
+            // fires, so this does not double-report.
+            button.setTarget(Some(&tray_target));
+            button.setAction(Some(sel!(onStatusItemClick:)));
+            button.sendActionOn(
+                NSEventMask::LeftMouseDown
+                    | NSEventMask::RightMouseDown
+                    | NSEventMask::OtherMouseDown,
+            );
 
             tray_target
         };
@@ -161,7 +180,12 @@ impl TrayIcon {
                     .as_ref()
                     .and_then(|m| m.ns_menu().cast::<NSMenu>().as_ref())
                     .map(|menu| menu.retain());
-                ns_status_item.setMenu(menu.as_deref());
+                // See `create`: only attach when the menu opens on every click.
+                if self.attrs.menu_on_left_click {
+                    ns_status_item.setMenu(menu.as_deref());
+                } else {
+                    ns_status_item.setMenu(None);
+                }
                 if let Some(menu) = &menu {
                     let () = msg_send![menu, setDelegate: &**ns_status_item];
                 }
@@ -271,6 +295,18 @@ impl TrayIcon {
     pub fn set_show_menu_on_left_click(&mut self, enable: bool) {
         if let Some(tray_target) = &self.tray_target {
             tray_target.ivars().menu_on_left_click.set(enable);
+        }
+        // Attaching the menu is what makes AppKit open it on every click, so the
+        // attachment has to follow this setting. See `create`.
+        if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
+        {
+            unsafe {
+                if enable {
+                    ns_status_item.setMenu(tray_target.ivars().menu.borrow().as_deref());
+                } else {
+                    ns_status_item.setMenu(None);
+                }
+            }
         }
         self.attrs.menu_on_left_click = enable;
     }
@@ -480,6 +516,47 @@ define_class!(
             }
         }
 
+        /// Click path for macOS versions that no longer deliver mouse events to this
+        /// overlay view (27 and later). Driven by the status item button's target/action,
+        /// which only fires when the overlay did not already consume the event.
+        #[unsafe(method(onStatusItemClick:))]
+        fn on_status_item_click(&self, _sender: Option<&AnyObject>) {
+            let mtm = MainThreadMarker::from(self);
+            let Some(event) = NSApplication::sharedApplication(mtm).currentEvent() else {
+                return;
+            };
+
+            let event_type = unsafe { event.r#type() };
+            let button = if event_type == NSEventType::RightMouseDown {
+                MouseButton::Right
+            } else if event_type == NSEventType::OtherMouseDown {
+                if unsafe { event.buttonNumber() } != 2 {
+                    return;
+                }
+                MouseButton::Middle
+            } else if event_type == NSEventType::LeftMouseDown {
+                // Control-click is a secondary click on macOS.
+                if unsafe { event.modifierFlags() }.contains(NSEventModifierFlags::Control) {
+                    MouseButton::Right
+                } else {
+                    MouseButton::Left
+                }
+            } else {
+                return;
+            };
+
+            send_mouse_event(
+                self,
+                &event,
+                MouseEventType::Click,
+                Some(MouseClickEvent {
+                    button,
+                    state: MouseButtonState::Down,
+                }),
+            );
+            show_menu_for(self, button);
+        }
+
         #[unsafe(method(mouseEntered:))]
         fn on_mouse_entered(&self, event: &NSEvent) {
             send_mouse_event(self, event, MouseEventType::Enter, None);
@@ -543,26 +620,54 @@ impl TrayTarget {
 }
 
 fn on_tray_click(this: &TrayTarget, button: MouseButton) {
-    let mtm = MainThreadMarker::from(this);
-    unsafe {
-        let ns_button = this.ivars().status_item.button(mtm).unwrap();
-
-        let menu_on_left_click = this.ivars().menu_on_left_click.get();
-        if button == MouseButton::Right || (menu_on_left_click && button == MouseButton::Left) {
-            let has_items = if let Some(menu) = &*this.ivars().menu.borrow() {
-                menu.numberOfItems() > 0
-            } else {
-                false
-            };
-            if has_items {
-                ns_button.performClick(None);
-            } else {
-                ns_button.highlight(true);
-            }
-        } else {
+    if !show_menu_for(this, button) {
+        let mtm = MainThreadMarker::from(this);
+        unsafe {
+            let ns_button = this.ivars().status_item.button(mtm).unwrap();
             ns_button.highlight(true);
         }
     }
+}
+
+/// Opens the context menu if this click is the one that should open it. Returns whether
+/// a menu was opened.
+fn show_menu_for(this: &TrayTarget, button: MouseButton) -> bool {
+    let menu_on_left_click = this.ivars().menu_on_left_click.get();
+    if button != MouseButton::Right && !(menu_on_left_click && button == MouseButton::Left) {
+        return false;
+    }
+
+    let menu = this.ivars().menu.borrow().clone();
+    let Some(menu) = menu else {
+        return false;
+    };
+
+    let mtm = MainThreadMarker::from(this);
+    unsafe {
+        if menu.numberOfItems() == 0 {
+            return false;
+        }
+
+        let ns_button = this.ivars().status_item.button(mtm).unwrap();
+        if this.ivars().status_item.menu(mtm).is_some() {
+            // The menu is attached to the status item, so AppKit knows how to open and
+            // position it; a synthetic click is all it takes.
+            ns_button.performClick(None);
+        } else {
+            // Not attached (left clicks belong to the app), so open it ourselves. The
+            // menu's top-left goes at the status item's bottom-left, which is where a
+            // native menu bar extra drops its menu.
+            ns_button.highlight(true);
+            menu.popUpMenuPositioningItem_atLocation_inView(
+                None,
+                CGPoint { x: 0.0, y: 0.0 },
+                Some(&ns_button),
+            );
+            ns_button.highlight(false);
+        }
+    }
+
+    true
 }
 
 fn get_tray_rect(window: &NSWindow) -> Rect {
@@ -591,7 +696,20 @@ fn send_mouse_event(
         let tray_id = TrayIconId(this.ivars().id.to_string());
 
         // icon position & size
-        let window = event.window(mtm).unwrap();
+        let window = match event.window(mtm) {
+            Some(window) => window,
+            // Events delivered through the button's action are not always tied to a
+            // window; fall back to the status item's own window.
+            None => match this
+                .ivars()
+                .status_item
+                .button(mtm)
+                .and_then(|button| button.window())
+            {
+                Some(window) => window,
+                None => return,
+            },
+        };
         let icon_rect = get_tray_rect(&window);
 
         // cursor position

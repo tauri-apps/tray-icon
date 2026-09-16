@@ -7,7 +7,7 @@ homepage = "https://github.com/tauri-apps/tray-icon"
 repository = "https://github.com/tauri-apps/tray-icon"
 license = "MIT OR Apache-2.0"
 categories = ["gui"]
-rust-version = "1.90"
+rust-version = "1.92"
 include = [
   "README.md",
   "build.rs",
@@ -56,7 +56,7 @@ ksni = { version = "0.3.6", default-features = false, features = [
 ], optional = true }
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"netbsd\", target_os = \"openbsd\"))".dev-dependencies]
-gtk = "0.18"
+gtk = "0.19"
 
 [target."cfg(target_os = \"macos\")".dependencies]
 objc2 = "0.6"
@@ -107,3 +107,8 @@ tao = "0.37"
 eframe = "0.31"
 image = { version = "0.25", default-features = false, features = ["png"] }
 serde_json = "1"
+
+[patch.crates-io]
+libappindicator = { git = "https://github.com/tauri-apps/libappindicator-rs.git", branch = "gtk-0.19" }
+tao = { git = "https://github.com/tauri-apps/tao.git", branch = "gtk-0.19" }
+muda = { git = "https://github.com/tauri-apps/muda.git", branch = "renovate/gtk-0.x" }

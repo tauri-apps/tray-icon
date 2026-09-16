@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.25.1]
+
+- [`830f259`](https://www.github.com/tauri-apps/tray-icon/commit/830f259b49b8a3e2e23161e7ef2a839e56905461) ([#360](https://www.github.com/tauri-apps/tray-icon/pull/360) by [@renovate](https://www.github.com/tauri-apps/tray-icon/../../renovate)) Updated `dirs` to v7
+- [`42eb44e`](https://www.github.com/tauri-apps/tray-icon/commit/42eb44ea1507d51b68a8b2fbb0d96a9c85f5b4cd) ([#365](https://www.github.com/tauri-apps/tray-icon/pull/365) by [@Tunglies](https://www.github.com/tauri-apps/tray-icon/../../Tunglies)) Fix left-click events being swallowed on macOS 27 by attaching the menu to the status item only while it is being presented.
+- [`3a5258b`](https://www.github.com/tauri-apps/tray-icon/commit/3a5258be56f1bc70435df3fced1cb4becf75d05d) ([#367](https://www.github.com/tauri-apps/tray-icon/pull/367) by [@cpruijsen](https://www.github.com/tauri-apps/tray-icon/../../cpruijsen)) Fix `TrayIcon::set_title(None)` not clearing the tray title on macOS.
+
 ## [0.25.0]
 
 - [`c648db3`](https://www.github.com/tauri-apps/tray-icon/commit/c648db3e7efefcb604141097b6817c635f04c8ad) ([#201](https://www.github.com/tauri-apps/tray-icon/pull/201) by [@dfaust](https://www.github.com/tauri-apps/tray-icon/../../dfaust)) Add a GTK-free `ksni` StatusNotifierItem backend for Linux and BSD.

@@ -508,7 +508,7 @@ unsafe extern "system" fn tray_proc(
         }
 
         WM_TIMER if wparam as u32 == WM_USER_LEAVE_TIMER_ID => {
-            if let Some(position) = userdata.last_position.take() {
+            if userdata.last_position.is_some() {
                 let mut cursor = POINT { x: 0, y: 0 };
                 if GetCursorPos(&mut cursor as _) == 0 {
                     return 0;
@@ -519,12 +519,13 @@ unsafe extern "system" fn tray_proc(
                     None => return 0,
                 };
 
-                let in_x = (rect.left..rect.right).contains(&cursor.x);
-                let in_y = (rect.top..rect.bottom).contains(&cursor.y);
-
-                if !in_x || !in_y {
+                if let Some(position) = cursor_left_tray(
+                    &mut userdata.last_position,
+                    &mut userdata.entered,
+                    cursor,
+                    rect,
+                ) {
                     KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
-                    userdata.entered = false;
 
                     TrayIconEvent::send(TrayIconEvent::Leave {
                         id: userdata.id.clone(),
@@ -545,6 +546,27 @@ unsafe extern "system" fn tray_proc(
 
 unsafe extern "system" fn tray_timer_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: u32) {
     tray_proc(hwnd, msg, wparam, lparam as _);
+}
+
+/// Check whether the cursor left the tray icon without consuming the last
+/// position while it is still inside the icon's rectangle.
+fn cursor_left_tray(
+    last_position: &mut Option<PhysicalPosition<f64>>,
+    entered: &mut bool,
+    cursor: POINT,
+    rect: RECT,
+) -> Option<PhysicalPosition<f64>> {
+    let position = (*last_position)?;
+    let in_x = (rect.left..rect.right).contains(&cursor.x);
+    let in_y = (rect.top..rect.bottom).contains(&cursor.y);
+
+    if in_x && in_y {
+        return None;
+    }
+
+    *last_position = None;
+    *entered = false;
+    Some(position)
 }
 
 #[inline]
@@ -683,5 +705,43 @@ impl From<RECT> for Rect {
                 rect.bottom.saturating_sub(rect.top) as u32,
             ),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{cursor_left_tray, POINT, RECT};
+    use crate::dpi::PhysicalPosition;
+
+    #[test]
+    fn leave_poll_retains_position_until_cursor_leaves() {
+        let position = PhysicalPosition::new(5.0, 5.0);
+        let mut last_position = Some(position);
+        let mut entered = true;
+        let rect = RECT {
+            left: 0,
+            top: 0,
+            right: 10,
+            bottom: 10,
+        };
+
+        assert_eq!(
+            cursor_left_tray(&mut last_position, &mut entered, POINT { x: 5, y: 5 }, rect,),
+            None
+        );
+        assert_eq!(last_position, Some(position));
+        assert!(entered);
+
+        assert_eq!(
+            cursor_left_tray(
+                &mut last_position,
+                &mut entered,
+                POINT { x: 10, y: 5 },
+                rect,
+            ),
+            Some(position)
+        );
+        assert_eq!(last_position, None);
+        assert!(!entered);
     }
 }

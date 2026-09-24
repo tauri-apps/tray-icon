@@ -19,14 +19,13 @@ include = [
 ]
 
 [features]
-default = ["muda-libxdo", "libappindicator"]
+default = ["libappindicator"]
 serde = ["dep:serde", "muda-serde"]
 libappindicator = ["dep:dirs", "dep:libappindicator", "muda-gtk3"]
 ksni = ["dep:ksni", "muda-snapshot"]
 muda-common-controls-v6 = ["muda/common-controls-v6"]
 muda-gtk3 = ["muda/gtk3"]
 muda-gtk4 = ["muda/gtk4"]
-muda-libxdo = ["muda/libxdo"]
 muda-serde = ["muda/serde"]
 muda-snapshot = ["muda/snapshot"]
 

@@ -21,7 +21,6 @@ tray-icon lets you create tray icons for desktop applications.
 - `muda-common-controls-v6`: Forwards muda's `common-controls-v6` feature.
 - `muda-gtk3`: Forwards muda's `gtk3` feature.
 - `muda-gtk4`: Forwards muda's `gtk4` feature.
-- `muda-libxdo`: Forwards muda's `libxdo` feature. This is enabled by default.
 - `muda-serde`: Forwards muda's `serde` feature. The `serde` feature also enables it.
 - `muda-snapshot`: Forwards muda's `snapshot` feature. The `ksni` feature also enables it.
 
@@ -30,20 +29,20 @@ backend and emits a Cargo warning.
 
 ## Dependencies (Linux/BSD)
 
-The default Linux backend uses GTK 3, `libxdo`, and `libappindicator` or
+The default Linux backend uses GTK 3 and `libappindicator` or
 `libayatana-appindicator`. The `ksni` backend does not require these system libraries unless a
 muda GTK backend is also enabled.
 
 #### Arch Linux / Manjaro:
 
 ```sh
-pacman -S gtk3 xdotool libappindicator-gtk3 #or libayatana-appindicator
+pacman -S gtk3 libappindicator-gtk3 #or libayatana-appindicator
 ```
 
 #### Debian / Ubuntu:
 
 ```sh
-sudo apt install libgtk-3-dev libxdo-dev libappindicator3-dev #or libayatana-appindicator3-dev
+sudo apt install libgtk-3-dev libappindicator3-dev #or libayatana-appindicator3-dev
 ```
 
 ## Dependencies in FreeBSD

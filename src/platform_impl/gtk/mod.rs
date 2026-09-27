@@ -5,10 +5,9 @@
 mod icon;
 use std::path::{Path, PathBuf};
 
-use crate::icon::Icon;
 pub(crate) use icon::PlatformIcon;
 
-use crate::{TrayIconAttributes, TrayIconId};
+use crate::{icon::IconType, TrayIconAttributes, TrayIconId};
 use libappindicator::{AppIndicator, AppIndicatorStatus};
 
 pub struct TrayIcon {
@@ -21,18 +20,20 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
-    pub fn new(id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
+    pub fn new(id: TrayIconId, mut attrs: TrayIconAttributes) -> crate::Result<Self> {
         let mut indicator = AppIndicator::new(&format!("tray-icon tray app {}", id.as_ref()), "");
         indicator.set_status(AppIndicatorStatus::Active);
 
         let (parent_path, icon_path) = temp_icon_path(attrs.temp_dir_path.as_ref(), &id, 0)?;
 
-        if let Some(icon) = attrs.icon {
-            icon.inner.write_to_png(&icon_path)?;
-        }
+        let icon = match (attrs.icon.take(), attrs.native_icon.take()) {
+            (Some(icon), _) => Some(IconType::Custom(icon)),
+            (None, icon) => icon.map(IconType::Native),
+        };
+        let icon_name = indicator_icon_name(icon, &icon_path)?;
 
         indicator.set_icon_theme_path(&parent_path.to_string_lossy());
-        indicator.set_icon_full(&icon_path.to_string_lossy(), "icon");
+        indicator.set_icon_full(&icon_name, "icon");
 
         if let Some(menu) = &attrs.menu {
             indicator.set_menu(&mut menu.gtk_context_menu());
@@ -51,7 +52,7 @@ impl TrayIcon {
             menu: attrs.menu,
         })
     }
-    pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
+    pub fn set_icon(&mut self, icon: Option<IconType>) -> crate::Result<()> {
         let _ = std::fs::remove_file(&self.path);
 
         self.counter += 1;
@@ -59,14 +60,11 @@ impl TrayIcon {
         let (parent_path, icon_path) =
             temp_icon_path(self.temp_dir_path.as_ref(), &self.id, self.counter)?;
 
-        if let Some(icon) = icon {
-            icon.inner.write_to_png(&icon_path)?;
-        }
+        let icon_name = indicator_icon_name(icon, &icon_path)?;
 
         self.indicator
             .set_icon_theme_path(&parent_path.to_string_lossy());
-        self.indicator
-            .set_icon_full(&icon_path.to_string_lossy(), "tray icon");
+        self.indicator.set_icon_full(&icon_name, "tray icon");
         self.path = icon_path;
 
         Ok(())
@@ -115,6 +113,19 @@ impl Drop for TrayIcon {
     fn drop(&mut self) {
         self.indicator.set_status(AppIndicatorStatus::Passive);
         let _ = std::fs::remove_file(&self.path);
+    }
+}
+
+/// Returns the icon name or path to pass to AppIndicator, writing a custom icon to
+/// `icon_path` as a PNG first.
+fn indicator_icon_name(icon: Option<IconType>, icon_path: &Path) -> crate::Result<String> {
+    match icon {
+        Some(IconType::Native(icon)) => Ok(icon.freedesktop_name().to_owned()),
+        Some(IconType::Custom(icon)) => {
+            icon.inner.write_to_png(icon_path)?;
+            Ok(icon_path.to_string_lossy().into_owned())
+        }
+        None => Ok(icon_path.to_string_lossy().into_owned()),
     }
 }
 

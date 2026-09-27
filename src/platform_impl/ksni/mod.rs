@@ -12,7 +12,8 @@ use ksni::blocking::{Handle, TrayMethods};
 use muda::{ContextMenu, MenuChangeEvent, MenuSnapshotHandle};
 
 use crate::{
-    icon::Icon, MouseButton, MouseButtonState, Rect, TrayIconAttributes, TrayIconEvent, TrayIconId,
+    icon::IconType, MouseButton, MouseButtonState, Rect, TrayIconAttributes, TrayIconEvent,
+    TrayIconId,
 };
 
 pub(crate) use icon::PlatformIcon;
@@ -28,6 +29,11 @@ pub struct TrayIcon {
 
 impl TrayIcon {
     pub fn new(id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
+        // A custom icon takes precedence over a native icon
+        let icon_name = match (&attrs.icon, &attrs.native_icon) {
+            (None, Some(icon)) => icon.freedesktop_name().to_owned(),
+            _ => String::new(),
+        };
         let handle = StatusNotifierTray {
             id,
             icon: attrs
@@ -35,7 +41,7 @@ impl TrayIcon {
                 .map(|icon| icon.inner.into())
                 .into_iter()
                 .collect(),
-            icon_name: attrs.icon_name.unwrap_or_default(),
+            icon_name,
             title: attrs.title.unwrap_or_default(),
             tooltip: attrs.tooltip.unwrap_or_default(),
             status: ksni::Status::Active,
@@ -61,16 +67,9 @@ impl TrayIcon {
         })
     }
 
-    pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
-        let icon = icon.map(|icon| icon.inner.into()).into_iter().collect();
-        let _ = self.handle.update(move |tray| tray.icon = icon);
+    pub fn set_icon(&mut self, icon: Option<IconType>) -> crate::Result<()> {
+        let _ = self.handle.update(move |tray| tray.set_icon(icon));
         Ok(())
-    }
-
-    pub fn set_icon_name<S: AsRef<str>>(&mut self, icon_name: S) {
-        let _ = self
-            .handle
-            .update(move |tray| tray.icon_name = icon_name.as_ref().to_owned());
     }
 
     pub fn set_menu(&mut self, menu: Option<Box<dyn ContextMenu>>) {
@@ -155,6 +154,16 @@ pub(super) struct StatusNotifierTray {
 }
 
 impl StatusNotifierTray {
+    fn set_icon(&mut self, icon: Option<IconType>) {
+        self.icon.clear();
+        self.icon_name.clear();
+        match icon {
+            Some(IconType::Custom(icon)) => self.icon.push(icon.inner.into()),
+            Some(IconType::Native(icon)) => self.icon_name = icon.freedesktop_name().to_owned(),
+            None => {}
+        }
+    }
+
     fn emit_click(&self, x: i32, y: i32, button: MouseButton) {
         TrayIconEvent::send(TrayIconEvent::Click {
             id: self.id.clone(),

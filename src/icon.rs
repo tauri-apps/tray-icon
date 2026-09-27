@@ -5,6 +5,7 @@
 // taken from https://github.com/rust-windowing/winit/blob/92fdf5ba85f920262a61cee4590f4a11ad5738d1/src/icon.rs
 
 use crate::platform_impl::PlatformIcon;
+use muda::NativeIcon;
 use std::{error::Error, fmt, io, mem};
 
 #[repr(C)]
@@ -113,6 +114,12 @@ mod constructors {
             Ok(NoIcon)
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum IconType {
+    Custom(Icon),
+    Native(NativeIcon),
 }
 
 /// An icon used for the window titlebar, taskbar, etc.

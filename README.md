@@ -4,34 +4,45 @@ tray-icon lets you create tray icons for desktop applications.
 
 - Windows
 - macOS
-- Linux (gtk Only)
-- FreeBSD (gtk Only)
+- Linux (AppIndicator or KSNI)
+- FreeBSD (AppIndicator or KSNI)
 
 ## Platform-specific notes:
 
-- On Windows and Linux or FreeBSD, an event loop must be running on the thread, on Windows, a win32 event loop and on Linux or FreeBSD, a gtk event loop. It doesn't need to be the main thread but you have to create the tray icon on the same thread as the event loop.
+- On Windows and the Linux/FreeBSD AppIndicator backend, an event loop must be running on the thread. The KSNI backend manages its own worker thread.
 - On macOS, an event loop must be running on the main thread so you also need to create the tray icon on the main thread.
 
 ### Cargo Features
 
-- `common-controls-v6`: Use `TaskDialogIndirect` API from `ComCtl32.dll` v6 on Windows for showing the predefined `About` menu item dialog.
-- `libxdo`: Enables linking to `libxdo` which is used for the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu item, see https://github.com/tauri-apps/muda#cargo-features
+- `libappindicator`: Uses the GTK 3 AppIndicator backend on Linux and BSD. This is enabled by
+  default and also enables `muda-gtk3`.
+- `ksni`: Uses the StatusNotifierItem D-Bus backend on Linux and BSD.
 - `serde`: Enables de/serializing derives.
+- `muda-common-controls-v6`: Forwards muda's `common-controls-v6` feature.
+- `muda-gtk3`: Forwards muda's `gtk3` feature.
+- `muda-gtk4`: Forwards muda's `gtk4` feature.
+- `muda-serde`: Forwards muda's `serde` feature. The `serde` feature also enables it.
+- `muda-snapshot`: Forwards muda's `snapshot` feature. The `ksni` feature also enables it.
 
-## Dependencies (Linux Only)
+When both `libappindicator` and `ksni` are enabled on Linux or BSD, tray-icon uses the `ksni`
+backend and emits a Cargo warning.
 
-On Linux, `gtk`, `libxdo` is used to make the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu items work and `libappindicator` or `libayatnat-appindicator` are used to create the tray icon, so make sure to install them on your system.
+## Dependencies (Linux/BSD)
+
+The default Linux backend uses GTK 3 and `libappindicator` or
+`libayatana-appindicator`. The `ksni` backend does not require these system libraries unless a
+muda GTK backend is also enabled.
 
 #### Arch Linux / Manjaro:
 
 ```sh
-pacman -S gtk3 xdotool libappindicator-gtk3 #or libayatana-appindicator
+pacman -S gtk3 libappindicator-gtk3 #or libayatana-appindicator
 ```
 
 #### Debian / Ubuntu:
 
 ```sh
-sudo apt install libgtk-3-dev libxdo-dev libappindicator3-dev #or libayatana-appindicator3-dev
+sudo apt install libgtk-3-dev libappindicator3-dev #or libayatana-appindicator3-dev
 ```
 
 ## Dependencies in FreeBSD

@@ -10,27 +10,32 @@
 //!
 //! - Windows
 //! - macOS
-//! - Linux (gtk Only)
+//! - Linux and BSD (AppIndicator or KSNI)
 //!
 //! # Platform-specific notes:
 //!
-//! - On Windows and Linux, an event loop must be running on the thread, on Windows, a win32 event loop and on Linux, a gtk event loop. It doesn't need to be the main thread but you have to create the tray icon on the same thread as the event loop.
+//! - On Windows and the Linux/BSD AppIndicator backend, an event loop must be running on the thread. The
+//!   KSNI backend runs its D-Bus service on a worker thread and does not require a GTK event loop.
+//! - When both the `libappindicator` and `ksni` features are enabled on Linux or BSD, tray-icon
+//!   uses the KSNI backend and emits a Cargo warning.
 //! - On macOS, an event loop must be running on the main thread so you also need to create the tray icon on the main thread. You must make sure that the event loop is already running and not just created before creating a TrayIcon to prevent issues with fullscreen apps. In Winit for example the earliest you can create icons is on [`StartCause::Init`](https://docs.rs/winit/latest/winit/event/enum.StartCause.html#variant.Init).
 //!
-//! # Dependencies (Linux Only)
+//! # Dependencies (Linux/BSD)
 //!
-//! On Linux, `gtk`, `libxdo` is used to make the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu items work and `libappindicator` or `libayatnat-appindicator` are used to create the tray icon, so make sure to install them on your system.
+//! The default Linux backend uses GTK and `libappindicator` or
+//! `libayatana-appindicator`. The `ksni` backend does not require these system libraries unless a
+//!  GTK backend is also enabled.
 //!
 //! #### Arch Linux / Manjaro:
 //!
 //! ```sh
-//! pacman -S gtk3 xdotool libappindicator-gtk3 #or libayatana-appindicator
+//! pacman -S gtk3 libappindicator-gtk3 #or libayatana-appindicator
 //! ```
 //!
 //! #### Debian / Ubuntu:
 //!
 //! ```sh
-//! sudo apt install libgtk-3-dev libxdo-dev libappindicator3-dev #or libayatana-appindicator3-dev
+//! sudo apt install libgtk-3-dev libappindicator3-dev #or libayatana-appindicator3-dev
 //! ```
 //!
 //! # Examples
@@ -94,7 +99,7 @@
 //! You should use [`TrayIconEvent::set_event_handler`] and forward
 //! the tray icon events to the event loop by using [`EventLoopProxy`]
 //! so that the event loop is awakened on each tray icon event.
-//! Same can be done for menu events using [`MenuEvent::set_event_handler`].
+//! Same can be done for menu events using [`crate::menu::MenuEvent::set_event_handler`].
 //!
 //! ```no_run
 //! # use winit::event_loop::EventLoop;
@@ -120,6 +125,18 @@
 //! [winit]: https://docs.rs/winit
 //! [tao]: https://docs.rs/tao
 
+#[cfg(all(
+    any(
+        target_os = "linux",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    ),
+    not(any(feature = "libappindicator", feature = "ksni"))
+))]
+compile_error!("either the `libappindicator` or `ksni` feature must be enabled on Linux and BSD");
+
 use std::{
     cell::RefCell,
     path::{Path, PathBuf},
@@ -137,14 +154,16 @@ mod platform_impl;
 mod tray_icon_id;
 
 pub use self::error::*;
+use self::icon::IconType;
 pub use self::icon::{BadIcon, Icon};
 pub use self::tray_icon_id::TrayIconId;
 
-/// Re-export of [muda](::muda) crate and used for tray context menu.
+/// Re-export of the [muda] crate and used for tray context menu.
 pub mod menu {
     pub use muda::*;
 }
 pub use muda::dpi;
+pub use muda::NativeIcon;
 
 static COUNTER: Counter = Counter::new();
 
@@ -154,28 +173,37 @@ pub struct TrayIconAttributes {
     ///
     /// ## Platform-specific:
     ///
-    /// - **Linux:** Unsupported.
+    /// - **Linux/BSD AppIndicator backend:** Unsupported.
     pub tooltip: Option<String>,
 
     /// Tray menu
     ///
     /// ## Platform-specific:
     ///
-    /// - **Linux**: once a menu is set, it cannot be removed.
+    /// - **Linux/BSD AppIndicator backend:** Once a menu is set, it cannot be removed.
     pub menu: Option<Box<dyn menu::ContextMenu>>,
 
     /// Tray icon
     ///
     /// ## Platform-specific:
     ///
-    /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
+    /// - **Linux/BSD AppIndicator backend:** Sometimes the icon won't be visible unless a menu is set.
     ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub icon: Option<Icon>,
 
-    /// Tray icon temp dir path. **Linux only**.
+    /// Tray icon from a platform-native icon. Ignored if [`Self::icon`] is set.
+    ///
+    /// See [`TrayIcon::set_native_icon`] for more info.
+    pub native_icon: Option<NativeIcon>,
+
+    /// Tray icon temp dir path. **Linux/BSD AppIndicator backend only**.
     pub temp_dir_path: Option<PathBuf>,
 
-    /// Use the icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+    /// Draw [`Self::icon`] as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+    ///
+    /// `TrayIconBuilder::with_icon_templated` and `TrayIcon::set_icon_templated` set this
+    /// along with the icon. Ignored for a [`Self::native_icon`], which the system already flags
+    /// when it is meant to be a template, like [`NativeIcon::Add`].
     pub icon_is_template: bool,
 
     /// Whether to show the tray menu on left click or not, default is `true`.
@@ -196,13 +224,34 @@ pub struct TrayIconAttributes {
     ///
     /// ## Platform-specific
     ///
-    /// - **Linux:** The title will not be shown unless there is an icon
+    /// - **Linux/BSD AppIndicator backend:** The title will not be shown unless there is an icon
     ///   as well.  The title is useful for numerical and other frequently
     ///   updated information.  In general, it shouldn't be shown unless a
     ///   user requests it as it can take up a significant amount of space
     ///   on the user's panel.  This may not be shown in all visualizations.
     /// - **Windows:** Unsupported.
     pub title: Option<String>,
+
+    /// A stable identity for the tray icon, as a UUID in `u128` form. **Windows only**.
+    ///
+    /// Windows remembers per-icon user settings (most importantly whether the
+    /// icon is pinned to the taskbar or hidden in the overflow) keyed on the
+    /// icon's identity. Without a GUID that identity is the executable path
+    /// plus a per-process counter, so the setting is lost whenever the binary
+    /// moves - for example every update of an installer that uses versioned
+    /// directories. With a GUID, and an executable that is Authenticode-signed
+    /// by the same publisher across versions, the setting survives.
+    ///
+    /// Use one fixed GUID per tray icon your application creates, and never
+    /// share it between two icons that can be alive at the same time. See
+    /// <https://learn.microsoft.com/windows/win32/api/shellapi/ns-shellapi-notifyicondataw#troubleshooting>
+    /// for the rules Windows applies (the GUID is bound to the binary's path
+    /// unless the binary is signed).
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux / macOS:** Ignored.
+    pub guid: Option<u128>,
 
     /// Autosave name passed to `NSStatusItem.setAutosaveName`. AppKit
     /// uses this key to persist the user's ⌘+drag position across
@@ -227,11 +276,13 @@ impl Default for TrayIconAttributes {
             tooltip: None,
             menu: None,
             icon: None,
+            native_icon: None,
             temp_dir_path: None,
             icon_is_template: false,
             menu_on_left_click: true,
             menu_on_right_click: true,
             title: None,
+            guid: None,
             autosave_name: None,
         }
     }
@@ -265,7 +316,8 @@ impl TrayIconBuilder {
     ///
     /// ## Platform-specific:
     ///
-    /// - **Linux**: once a menu is set, it cannot be removed or replaced but you can change its content.
+    /// - **Linux/BSD AppIndicator backend:** Once a menu is set, it cannot be removed or replaced, but its
+    ///   content can be changed.
     pub fn with_menu(mut self, menu: Box<dyn menu::ContextMenu>) -> Self {
         self.attrs.menu = Some(menu);
         self
@@ -275,10 +327,39 @@ impl TrayIconBuilder {
     ///
     /// ## Platform-specific:
     ///
-    /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
+    /// - **Linux/BSD AppIndicator backend:** Sometimes the icon won't be visible unless a menu is set.
     ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
+    ///
+    /// (Note that setting an icon will override any existing [.with_native_icon()](Self::with_native_icon))
     pub fn with_icon(mut self, icon: Icon) -> Self {
         self.attrs.icon = Some(icon);
+        self.attrs.native_icon = None;
+        self
+    }
+
+    /// Set the tray icon and draw it as a template image on macOS.
+    ///
+    /// A [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc)
+    /// image is drawn using only its alpha channel, so the system recolours it to match the menu
+    /// bar, light or dark. [`with_icon`](Self::with_icon) uses the icon as-is instead.
+    ///
+    /// (Note that setting an icon will override any existing [.with_native_icon()](Self::with_native_icon))
+    #[cfg(target_os = "macos")]
+    pub fn with_icon_templated(mut self, icon: Icon) -> Self {
+        self.attrs.icon = Some(icon);
+        self.attrs.native_icon = None;
+        self.attrs.icon_is_template = true;
+        self
+    }
+
+    /// Set a platform-native icon for this tray icon.
+    ///
+    /// See [`TrayIcon::set_native_icon`] for more info.
+    ///
+    /// (Note that setting a native icon will override any existing [.with_icon()](Self::with_icon))
+    pub fn with_native_icon(mut self, icon: NativeIcon) -> Self {
+        self.attrs.native_icon = Some(icon);
+        self.attrs.icon = None;
         self
     }
 
@@ -286,7 +367,7 @@ impl TrayIconBuilder {
     ///
     /// ## Platform-specific:
     ///
-    /// - **Linux:** Unsupported.
+    /// - **Linux/BSD AppIndicator backend:** Unsupported.
     pub fn with_tooltip<S: AsRef<str>>(mut self, s: S) -> Self {
         self.attrs.tooltip = Some(s.as_ref().to_string());
         self
@@ -296,7 +377,7 @@ impl TrayIconBuilder {
     ///
     /// ## Platform-specific
     ///
-    /// - **Linux:** The title will not be shown unless there is an icon
+    /// - **Linux/BSD AppIndicator backend:** The title will not be shown unless there is an icon
     ///   as well.  The title is useful for numerical and other frequently
     ///   updated information.  In general, it shouldn't be shown unless a
     ///   user requests it as it can take up a significant amount of space
@@ -307,7 +388,7 @@ impl TrayIconBuilder {
         self
     }
 
-    /// Set tray icon temp dir path. **Linux only**.
+    /// Set tray icon temp dir path. **Linux/BSD AppIndicator backend only**.
     ///
     /// On Linux, we need to write the icon to the disk and usually it will
     /// be `$XDG_RUNTIME_DIR/tray-icon` or `$TEMP/tray-icon`.
@@ -317,6 +398,11 @@ impl TrayIconBuilder {
     }
 
     /// Use the icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+    // TODO: Remove when tauri v3 drops its own deprecated tray APIs
+    #[deprecated(
+        since = "0.26.0",
+        note = "use `TrayIconBuilder::with_icon_templated`, which takes the icon to draw as a template"
+    )]
     pub fn with_icon_as_template(mut self, is_template: bool) -> Self {
         self.attrs.icon_is_template = is_template;
         self
@@ -360,6 +446,14 @@ impl TrayIconBuilder {
         self
     }
 
+    /// Set a stable identity GUID for this tray icon. **Windows only**.
+    ///
+    /// See [`TrayIconAttributes::guid`] for why and how to pick one.
+    pub fn with_guid(mut self, guid: u128) -> Self {
+        self.attrs.guid = Some(guid);
+        self
+    }
+
     /// Access the unique id that will be assigned to the tray icon
     /// this builder will create.
     pub fn id(&self) -> &TrayIconId {
@@ -382,11 +476,16 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
+    /// Returns a new [`TrayIconBuilder`].
+    pub fn builder() -> TrayIconBuilder {
+        TrayIconBuilder::new()
+    }
+
     /// Builds and adds a new tray icon to the system tray.
     ///
     /// ## Platform-specific:
     ///
-    /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
+    /// - **Linux/BSD AppIndicator backend:** Sometimes the icon won't be visible unless a menu is set.
     ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
     pub fn new(attrs: TrayIconAttributes) -> Result<Self> {
         let id = TrayIconId::new_unique();
@@ -419,15 +518,63 @@ impl TrayIcon {
     }
 
     /// Set new tray icon. If `None` is provided, it will remove the icon.
+    ///
+    /// (Note that setting an icon will override any existing [.set_native_icon()](Self::set_native_icon))
     pub fn set_icon(&self, icon: Option<Icon>) -> Result<()> {
-        self.tray.borrow_mut().set_icon(icon)
+        self.tray.borrow_mut().set_icon(icon.map(IconType::Custom))
+    }
+
+    /// Set new tray icon, or remove it, and draw it as a template image on macOS.
+    ///
+    /// A [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc)
+    /// image is drawn using only its alpha channel, so the system recolours it to match the menu
+    /// bar, light or dark. [`set_icon`](Self::set_icon) draws the icon as-is instead.
+    ///
+    /// (Note that setting an icon will override any existing [.set_native_icon()](Self::set_native_icon))
+    #[cfg(target_os = "macos")]
+    pub fn set_icon_templated(&self, icon: Option<Icon>) -> Result<()> {
+        self.tray
+            .borrow_mut()
+            .set_icon_templated(icon.map(IconType::Custom))
+    }
+
+    /// Whether the current tray icon is drawn as a template image.
+    ///
+    /// See [`set_icon_templated`](Self::set_icon_templated). An icon set with
+    /// [`set_native_icon`](Self::set_native_icon) reports `false`, as the system flags those itself.
+    #[cfg(target_os = "macos")]
+    pub fn icon_is_template(&self) -> bool {
+        self.tray.borrow().icon_is_template()
+    }
+
+    /// Set new tray icon from a platform-native icon. If `None` is provided, it will remove the icon.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux/BSD:** Known variants map to freedesktop icon names, see
+    ///   [`NativeIcon::freedesktop_name`]. The icon is resolved by the desktop icon theme, so it
+    ///   follows the theme's dark/light variants. Use [`NativeIcon::Raw`] or
+    ///   `NativeIcon::from_name` to pass any icon theme name.
+    /// - **macOS:** Known variants map to AppKit image names. Use [`NativeIcon::Raw`] or
+    ///   `NativeIcon::from_name` to pass an AppKit [`NSImage.Name`] string.
+    /// - **Windows:** Known variants map to stock shell icons where an equivalent exists, and an
+    ///   error is returned otherwise. Use [`NativeIcon::Raw`] or `NativeIcon::from_id` to pass a
+    ///   raw [`SHSTOCKICONID`] value.
+    ///
+    /// [`NSImage.Name`]: https://developer.apple.com/documentation/appkit/nsimage/name-swift.typealias
+    /// [`SHSTOCKICONID`]: https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ne-shellapi-shstockiconid
+    ///
+    /// (Note that setting a native icon will override any existing [.set_icon()](Self::set_icon))
+    pub fn set_native_icon(&self, icon: Option<NativeIcon>) -> Result<()> {
+        self.tray.borrow_mut().set_icon(icon.map(IconType::Native))
     }
 
     /// Set new tray menu.
     ///
     /// ## Platform-specific:
     ///
-    /// - **Linux**: once a menu is set it cannot be removed so `None` has no effect
+    /// - **Linux/BSD AppIndicator backend:** Once a menu is set it cannot be removed, so `None` has no
+    ///   effect.
     pub fn set_menu(&self, menu: Option<Box<dyn menu::ContextMenu>>) {
         self.tray.borrow_mut().set_menu(menu)
     }
@@ -436,7 +583,7 @@ impl TrayIcon {
     ///
     /// ## Platform-specific:
     ///
-    /// - **Linux:** Unsupported
+    /// - **Linux/BSD AppIndicator backend:** Unsupported.
     pub fn set_tooltip<S: AsRef<str>>(&self, tooltip: Option<S>) -> Result<()> {
         self.tray.borrow_mut().set_tooltip(tooltip)
     }
@@ -445,7 +592,7 @@ impl TrayIcon {
     ///
     /// ## Platform-specific:
     ///
-    /// - **Linux:** The title will not be shown unless there is an icon
+    /// - **Linux/BSD AppIndicator backend:** The title will not be shown unless there is an icon
     ///   as well.  The title is useful for numerical and other frequently
     ///   updated information.  In general, it shouldn't be shown unless a
     ///   user requests it as it can take up a significant amount of space
@@ -460,7 +607,7 @@ impl TrayIcon {
         self.tray.borrow_mut().set_visible(visible)
     }
 
-    /// Sets the tray icon temp dir path. **Linux only**.
+    /// Sets the tray icon temp dir path. **Linux/BSD AppIndicator backend only**.
     ///
     /// On Linux, we need to write the icon to the disk and usually it will
     /// be `$XDG_RUNTIME_DIR/tray-icon` or `$TEMP/tray-icon`.
@@ -484,6 +631,11 @@ impl TrayIcon {
     }
 
     /// Set the current icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+    // TODO: Remove when tauri v3 drops its own deprecated tray APIs
+    #[deprecated(
+        since = "0.26.0",
+        note = "use `TrayIcon::set_icon_templated`, which sets the icon and draws it as a template in one call"
+    )]
     pub fn set_icon_as_template(&self, is_template: bool) {
         #[cfg(target_os = "macos")]
         self.tray.borrow_mut().set_icon_as_template(is_template);
@@ -491,12 +643,19 @@ impl TrayIcon {
         let _ = is_template;
     }
 
+    /// Set new tray icon, or remove it, and draw it as a template image. **macOS only**.
+    // TODO: Remove when tauri v3 drops its own deprecated tray APIs
+    #[deprecated(
+        since = "0.26.0",
+        note = "use `TrayIcon::set_icon_templated` for a template icon, or `TrayIcon::set_icon` for a plain one"
+    )]
     pub fn set_icon_with_as_template(&self, icon: Option<Icon>, is_template: bool) -> Result<()> {
         #[cfg(target_os = "macos")]
-        return self
-            .tray
-            .borrow_mut()
-            .set_icon_with_as_template(icon, is_template);
+        return if is_template {
+            self.set_icon_templated(icon)
+        } else {
+            self.set_icon(icon)
+        };
         #[cfg(not(target_os = "macos"))]
         {
             let _ = icon;
@@ -567,12 +726,18 @@ impl TrayIcon {
         self.tray.borrow().ns_status_item().cloned()
     }
 
-    /// Get the tray icon's underlying [AppIndicator](libappindicator::AppIndicator) **Linux only**.
+    /// Get the tray icon's underlying [AppIndicator](libappindicator::AppIndicator).
+    /// **Linux/BSD AppIndicator backend only**.
     ///
     /// # Safety
     ///
     /// The returned pointer is valid as long as the `TrayIcon` is.
-    #[cfg(all(unix, not(target_os = "macos")))]
+    #[cfg(all(
+        unix,
+        not(target_os = "macos"),
+        feature = "libappindicator",
+        not(feature = "ksni")
+    ))]
     pub unsafe fn app_indicator(&self) -> *const libappindicator::AppIndicator {
         self.tray.borrow().app_indicator() as *const _
     }
@@ -582,8 +747,11 @@ impl TrayIcon {
 ///
 /// ## Platform-specific:
 ///
-/// - **Linux**: Unsupported. The event is not emmited even though the icon is shown
-///   and will still show a context menu on right click.
+/// - **Linux/BSD AppIndicator backend:** Unsupported. The event is not emitted even though the icon is
+///   shown and will still show a context menu on right click.
+/// - **Linux/BSD KSNI backend:** Emits left- and middle-click activation events. The StatusNotifier
+///   host handles right clicks itself and does not expose them to the application. The protocol
+///   does not provide the icon rectangle, so `rect` is empty.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]

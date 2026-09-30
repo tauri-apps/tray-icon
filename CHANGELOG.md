@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.25.1]
+
+- [`830f259`](https://www.github.com/tauri-apps/tray-icon/commit/830f259b49b8a3e2e23161e7ef2a839e56905461) ([#360](https://www.github.com/tauri-apps/tray-icon/pull/360) by [@renovate](https://www.github.com/tauri-apps/tray-icon/../../renovate)) Updated `dirs` to v7
+- [`42eb44e`](https://www.github.com/tauri-apps/tray-icon/commit/42eb44ea1507d51b68a8b2fbb0d96a9c85f5b4cd) ([#365](https://www.github.com/tauri-apps/tray-icon/pull/365) by [@Tunglies](https://www.github.com/tauri-apps/tray-icon/../../Tunglies)) Fix left-click events being swallowed on macOS 27 by attaching the menu to the status item only while it is being presented.
+- [`3a5258b`](https://www.github.com/tauri-apps/tray-icon/commit/3a5258be56f1bc70435df3fced1cb4becf75d05d) ([#367](https://www.github.com/tauri-apps/tray-icon/pull/367) by [@cpruijsen](https://www.github.com/tauri-apps/tray-icon/../../cpruijsen)) Fix `TrayIcon::set_title(None)` not clearing the tray title on macOS.
+
+## [0.25.0]
+
+- [`c648db3`](https://www.github.com/tauri-apps/tray-icon/commit/c648db3e7efefcb604141097b6817c635f04c8ad) ([#201](https://www.github.com/tauri-apps/tray-icon/pull/201) by [@dfaust](https://www.github.com/tauri-apps/tray-icon/../../dfaust)) Add a GTK-free `ksni` StatusNotifierItem backend for Linux and BSD.
+- [`c1990d6`](https://www.github.com/tauri-apps/tray-icon/commit/c1990d6e98749dc97143cea712015641c19b499c) ([#361](https://www.github.com/tauri-apps/tray-icon/pull/361) by [@amrbashir](https://www.github.com/tauri-apps/tray-icon/../../amrbashir)) Separate the Linux/BSD `libappindicator` and `ksni` tray backends from muda's GTK backend features, and expose muda features with a `muda-` prefix.
+- [`1c23131`](https://www.github.com/tauri-apps/tray-icon/commit/1c23131c96ebce1703d5dee17c483cfdc892999b) ([#352](https://www.github.com/tauri-apps/tray-icon/pull/352) by [@Legend-Master](https://www.github.com/tauri-apps/tray-icon/../../Legend-Master)) On macOS, updated `objc2-*` dependencies to 0.3.2
+- [`95fc3cc`](https://www.github.com/tauri-apps/tray-icon/commit/95fc3cc10f56557c965fbc8a70b63b8b2a734245) ([#366](https://www.github.com/tauri-apps/tray-icon/pull/366) by [@dylanh724](https://www.github.com/tauri-apps/tray-icon/../../dylanh724)) Add `TrayIconBuilder::with_guid` / `TrayIconAttributes::guid` to register the icon with a stable `NOTIFYICONDATA.guidItem` on Windows, so the user's "always show in taskbar" setting survives the executable being replaced by an update.
+
+## \[0.24.2]
+
+- [`962c9be`](https://www.github.com/tauri-apps/tray-icon/commit/962c9be6fcc6f82782abe86e9a3a86427ba7bbb8) ([#337](https://www.github.com/tauri-apps/tray-icon/pull/337) by [@Legend-Master](https://www.github.com/tauri-apps/tray-icon/../../Legend-Master)) Migrated to use `NIS_HIDDEN` to change visible states on Windows
+- [`9826ff4`](https://www.github.com/tauri-apps/tray-icon/commit/9826ff42e52be0ac92e0803eed16d517299ec7c0) ([#327](https://www.github.com/tauri-apps/tray-icon/pull/327) by [@Tunglies](https://www.github.com/tauri-apps/tray-icon/../../Tunglies)) Avoid unnecessary cloning when applying tray icons, titles, and tooltips on macOS.
+- [`962c9be`](https://www.github.com/tauri-apps/tray-icon/commit/962c9be6fcc6f82782abe86e9a3a86427ba7bbb8) ([#337](https://www.github.com/tauri-apps/tray-icon/pull/337) by [@Legend-Master](https://www.github.com/tauri-apps/tray-icon/../../Legend-Master)) Set `NOTIFYICONDATAW.cbSize` to `size_of::<NOTIFYICONDATAW>()`, this increased the max tooltip length from 64 to 128 characters.
+
+## \[0.24.1]
+
+- [`7adc007`](https://www.github.com/tauri-apps/tray-icon/commit/7adc007bb54a91e7e6de4baac87ae534e1aa0550) ([#325](https://www.github.com/tauri-apps/tray-icon/pull/325) by [@Y-ASLant](https://www.github.com/tauri-apps/tray-icon/../../Y-ASLant)) On Windows, preserve tray icon visibility on Explorer restart so a hidden tray icon won't become visible.
+
 ## \[0.24.0]
 
 - [`19bcab3`](https://www.github.com/tauri-apps/tray-icon/commit/19bcab382753cbbb883b7d6ae96d07111fc73e67) ([#305](https://www.github.com/tauri-apps/tray-icon/pull/305) by [@expenses](https://www.github.com/tauri-apps/tray-icon/../../expenses)) Make gtk an optional feature (enabled by default)

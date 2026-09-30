@@ -78,10 +78,10 @@ fn main() {
                 // Tao only exposes a redraw method on the Window so we use core-foundation directly.
                 #[cfg(target_os = "macos")]
                 unsafe {
-                    use objc2_core_foundation::{CFRunLoopGetMain, CFRunLoopWakeUp};
+                    use objc2_core_foundation::CFRunLoop;
 
-                    let rl = CFRunLoopGetMain().unwrap();
-                    CFRunLoopWakeUp(&rl);
+                    let rl = CFRunLoop::main().unwrap();
+                    CFRunLoop::wake_up(&rl);
                 }
             }
 

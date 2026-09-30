@@ -13,12 +13,12 @@ use objc2_app_kit::{
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
-use objc2_foundation::{MainThreadMarker, NSData, NSSize, NSString};
+use objc2_foundation::{MainThreadMarker, NSCopying, NSData, NSSize, NSString};
 
 pub(crate) use self::icon::PlatformIcon;
 use crate::Error;
 use crate::{
-    icon::Icon, menu, MouseButton, MouseButtonState, Rect, TrayIconAttributes, TrayIconEvent,
+    icon::IconType, menu, MouseButton, MouseButtonState, Rect, TrayIconAttributes, TrayIconEvent,
     TrayIconId,
 };
 
@@ -26,19 +26,25 @@ pub struct TrayIcon {
     ns_status_item: Option<Retained<NSStatusItem>>,
     tray_target: Option<Retained<TrayTarget>>,
     id: TrayIconId,
+    icon: Option<IconType>,
     attrs: TrayIconAttributes,
     mtm: MainThreadMarker,
 }
 
 impl TrayIcon {
-    pub fn new(id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
+    pub fn new(id: TrayIconId, mut attrs: TrayIconAttributes) -> crate::Result<Self> {
         let mtm = MainThreadMarker::new().ok_or(Error::NotMainThread)?;
-        let (ns_status_item, tray_target) = Self::create(&id, &attrs, mtm)?;
+        let icon = match (attrs.icon.take(), attrs.native_icon.take()) {
+            (Some(icon), _) => Some(IconType::Custom(icon)),
+            (None, icon) => icon.map(IconType::Native),
+        };
+        let (ns_status_item, tray_target) = Self::create(&id, &attrs, icon.as_ref(), mtm)?;
 
         let tray_icon = Self {
             ns_status_item: Some(ns_status_item),
             tray_target: Some(tray_target),
             id,
+            icon,
             attrs,
             mtm,
         };
@@ -49,17 +55,13 @@ impl TrayIcon {
     fn create(
         id: &TrayIconId,
         attrs: &TrayIconAttributes,
+        icon: Option<&IconType>,
         mtm: MainThreadMarker,
     ) -> crate::Result<(Retained<NSStatusItem>, Retained<TrayTarget>)> {
         let ns_status_item =
             NSStatusBar::systemStatusBar().statusItemWithLength(NSVariableStatusItemLength);
 
-        set_icon_for_ns_status_item_button(
-            &ns_status_item,
-            attrs.icon.as_ref(),
-            attrs.icon_is_template,
-            mtm,
-        )?;
+        set_icon_for_ns_status_item_button(&ns_status_item, icon, attrs.icon_is_template, mtm)?;
 
         Self::set_tooltip_inner(&ns_status_item, attrs.tooltip.as_deref(), mtm)?;
         Self::set_title_inner(&ns_status_item, attrs.title.as_deref(), mtm);
@@ -103,13 +105,13 @@ impl TrayIcon {
         self.tray_target = None;
     }
 
-    pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
+    pub fn set_icon(&mut self, icon: Option<IconType>) -> crate::Result<()> {
         if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
         {
             set_icon_for_ns_status_item_button(ns_status_item, icon.as_ref(), false, self.mtm)?;
             tray_target.update_dimensions();
         }
-        self.attrs.icon = icon;
+        self.icon = icon;
         Ok(())
     }
 
@@ -176,7 +178,8 @@ impl TrayIcon {
     pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {
         if visible {
             if self.ns_status_item.is_none() {
-                let (ns_status_item, tray_target) = Self::create(&self.id, &self.attrs, self.mtm)?;
+                let (ns_status_item, tray_target) =
+                    Self::create(&self.id, &self.attrs, self.icon.as_ref(), self.mtm)?;
                 self.ns_status_item = Some(ns_status_item);
                 self.tray_target = Some(tray_target);
             }
@@ -200,7 +203,7 @@ impl TrayIcon {
 
     pub fn set_icon_with_as_template(
         &mut self,
-        icon: Option<Icon>,
+        icon: Option<IconType>,
         is_template: bool,
     ) -> crate::Result<()> {
         if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
@@ -213,7 +216,7 @@ impl TrayIcon {
             )?;
             tray_target.update_dimensions();
         }
-        self.attrs.icon = icon;
+        self.icon = icon;
         self.attrs.icon_is_template = is_template;
         Ok(())
     }
@@ -267,31 +270,46 @@ impl Drop for TrayIcon {
 
 fn set_icon_for_ns_status_item_button(
     ns_status_item: &NSStatusItem,
-    icon: Option<&Icon>,
+    icon: Option<&IconType>,
     icon_is_template: bool,
     mtm: MainThreadMarker,
 ) -> crate::Result<()> {
     let button = ns_status_item.button(mtm).unwrap();
 
     if let Some(icon) = icon {
-        let png_icon = icon.inner.to_png()?;
-
-        let (width, height) = icon.inner.get_size();
+        let (nsimage, width, height, is_template) = match icon {
+            IconType::Custom(icon) => {
+                let nsdata = NSData::from_vec(icon.inner.to_png()?);
+                let nsimage = NSImage::initWithData(NSImage::alloc(), &nsdata).unwrap();
+                let (width, height) = icon.inner.get_size();
+                (nsimage, width as f64, height as f64, icon_is_template)
+            }
+            IconType::Native(icon) => {
+                let name = NSString::from_str(&icon.appkit_name());
+                let nsimage = NSImage::imageNamed(&name).ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::NotFound,
+                        format!("no AppKit image named {name}"),
+                    )
+                })?;
+                // They may already be templates, e.g. `NSAddTemplate`.
+                let is_template = icon_is_template || nsimage.isTemplate();
+                let size = nsimage.size();
+                // Named images are shared, so copy before resizing it.
+                (nsimage.copy(), size.width, size.height, is_template)
+            }
+        };
 
         let icon_height: f64 = 18.0;
-        let icon_width: f64 = (width as f64) / (height as f64 / icon_height);
+        let icon_width: f64 = width / (height / icon_height);
 
-        // build our icon
-        let nsdata = NSData::from_vec(png_icon);
-
-        let nsimage = NSImage::initWithData(NSImage::alloc(), &nsdata).unwrap();
         let new_size = NSSize::new(icon_width, icon_height);
 
         button.setImage(Some(&nsimage));
         nsimage.setSize(new_size);
         // The image is to the right of the title
         button.setImagePosition(NSCellImagePosition::ImageLeft);
-        nsimage.setTemplate(icon_is_template);
+        nsimage.setTemplate(is_template);
     } else {
         button.setImage(None);
     }

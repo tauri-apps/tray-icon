@@ -34,7 +34,7 @@ use windows_sys::{
 };
 
 use crate::{
-    dpi::PhysicalPosition, icon::Icon, menu, MouseButton, MouseButtonState, Rect,
+    dpi::PhysicalPosition, icon::IconType, menu, MouseButton, MouseButtonState, Rect,
     TrayIconAttributes, TrayIconEvent, TrayIconId, COUNTER,
 };
 
@@ -59,7 +59,7 @@ struct TrayUserData {
     id: TrayIconId,
     hwnd: HWND,
     hpopupmenu: Option<HMENU>,
-    icon: Option<Icon>,
+    icon: Option<PlatformIcon>,
     tooltip: Option<String>,
     entered: bool,
     last_position: Option<PhysicalPosition<f64>>,
@@ -93,9 +93,14 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
-    pub fn new(id: TrayIconId, attrs: TrayIconAttributes) -> crate::Result<Self> {
+    pub fn new(id: TrayIconId, mut attrs: TrayIconAttributes) -> crate::Result<Self> {
         let internal_id = COUNTER.next();
         let guid = attrs.guid.map(GUID::from_u128);
+        let icon = match (attrs.icon.take(), attrs.native_icon.take()) {
+            (Some(icon), _) => Some(IconType::Custom(icon)),
+            (None, icon) => icon.map(IconType::Native),
+        };
+        let icon = icon.map(to_platform_icon).transpose()?;
 
         let class_name = util::encode_wide("tray_icon_app");
         unsafe {
@@ -116,7 +121,7 @@ impl TrayIcon {
                 guid,
                 hwnd: std::ptr::null_mut(),
                 hpopupmenu: attrs.menu.as_ref().map(|m| m.hpopupmenu() as _),
-                icon: attrs.icon.clone(),
+                icon: icon.clone(),
                 tooltip: attrs.tooltip.clone(),
                 entered: false,
                 last_position: None,
@@ -154,7 +159,7 @@ impl TrayIcon {
             // Allow "TaskbarCreated" through UIPI so elevated apps can re-register on explorer restart.
             ChangeWindowMessageFilterEx(hwnd, *S_U_TASKBAR_RESTART, MSGFLT_ALLOW, ptr::null_mut());
 
-            let hicon = attrs.icon.as_ref().map(|i| i.inner.as_raw_handle());
+            let hicon = icon.as_ref().map(|i| i.as_raw_handle());
 
             if !register_tray_icon(hwnd, internal_id, guid, &hicon, &attrs.tooltip, true) {
                 // Explorer/taskbar may not be ready yet (e.g., app starts before explorer.exe).
@@ -174,7 +179,9 @@ impl TrayIcon {
         }
     }
 
-    pub fn set_icon(&mut self, icon: Option<Icon>) -> crate::Result<()> {
+    pub fn set_icon(&mut self, icon: Option<IconType>) -> crate::Result<()> {
+        let icon = icon.map(to_platform_icon).transpose()?;
+
         unsafe {
             let mut nid = NOTIFYICONDATAW {
                 uFlags: NIF_ICON,
@@ -184,7 +191,7 @@ impl TrayIcon {
                 ..std::mem::zeroed()
             };
 
-            if let Some(hicon) = icon.as_ref().map(|i| i.inner.as_raw_handle()) {
+            if let Some(hicon) = icon.as_ref().map(|i| i.as_raw_handle()) {
                 nid.hIcon = hicon;
             }
             apply_guid(&mut nid, self.guid);
@@ -360,7 +367,7 @@ unsafe extern "system" fn tray_proc(
             userdata.hpopupmenu = (*hpopupmenu).map(|h| h as *mut _);
         }
         WM_USER_UPDATE_TRAYICON => {
-            let icon = Box::from_raw(wparam as *mut Option<Icon>);
+            let icon = Box::from_raw(wparam as *mut Option<PlatformIcon>);
             userdata.icon = *icon;
         }
         WM_USER_SHOW_TRAYICON => userdata.set_tray_visible(wparam as i32 == TRUE),
@@ -374,7 +381,7 @@ unsafe extern "system" fn tray_proc(
                 userdata.hwnd,
                 userdata.internal_id,
                 userdata.guid,
-                &userdata.icon.as_ref().map(|i| i.inner.as_raw_handle()),
+                &userdata.icon.as_ref().map(|i| i.as_raw_handle()),
                 &userdata.tooltip,
                 userdata.visible,
             );
@@ -565,6 +572,20 @@ unsafe fn show_tray_menu(hwnd: HWND, menu: HMENU, x: i32, y: i32) {
     // The shell docs recommend posting a benign message after TrackPopupMenu
     // for notification area menus so the task switch is finalized correctly.
     PostMessageW(hwnd, WM_NULL, 0, 0);
+}
+
+fn to_platform_icon(icon: IconType) -> crate::Result<PlatformIcon> {
+    match icon {
+        IconType::Custom(icon) => Ok(icon.inner),
+        // The caller owns the returned icon, `PlatformIcon` destroys it on drop
+        IconType::Native(icon) => match icon.to_hicon() {
+            Some(hicon) => Ok(PlatformIcon::from_handle(hicon as _)),
+            None => Err(std::io::Error::other(format!(
+                "failed to load a Windows stock icon for {icon:?}"
+            ))
+            .into()),
+        },
+    }
 }
 
 #[inline]

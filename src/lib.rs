@@ -252,6 +252,28 @@ pub struct TrayIconAttributes {
     ///
     /// - **Linux / macOS:** Ignored.
     pub guid: Option<u128>,
+
+    /// A stable key for this tray icon's saved position in the menu bar. **macOS only**.
+    ///
+    /// macOS restores where the user ⌘+dragged a tray icon on the next launch, with or
+    /// without this set: given no name of its own, AppKit generates one from the order
+    /// in which the process created its status items - `Item-0`, `Item-1`, and so on.
+    /// Setting this replaces that generated key with one of your choosing.
+    ///
+    /// Set it when that numbering is not stable from launch to launch, as in an
+    /// application that creates several tray icons, or that creates one conditionally:
+    /// two icons can otherwise come back holding each other's positions. An application
+    /// with a single tray icon already gets a stable key and needs nothing here.
+    ///
+    /// Use one fixed string per tray icon, typically a reverse-DNS identifier such as
+    /// `"com.example.app.tray"`. AppKit stores the position under the
+    /// `NSStatusItem Preferred Position <name>` preference, so changing the name
+    /// abandons the position saved under the old one.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux / Windows:** Ignored.
+    pub autosave_name: Option<String>,
 }
 
 impl Default for TrayIconAttributes {
@@ -267,6 +289,7 @@ impl Default for TrayIconAttributes {
             menu_on_right_click: true,
             title: None,
             guid: None,
+            autosave_name: None,
         }
     }
 }
@@ -388,6 +411,14 @@ impl TrayIconBuilder {
     )]
     pub fn with_icon_as_template(mut self, is_template: bool) -> Self {
         self.attrs.icon_is_template = is_template;
+        self
+    }
+
+    /// Set a stable key for this tray icon's saved position in the menu bar. **macOS only**.
+    ///
+    /// See [`TrayIconAttributes::autosave_name`] for when to set one and how to pick it.
+    pub fn with_autosave_name<S: AsRef<str>>(mut self, name: S) -> Self {
+        self.attrs.autosave_name = Some(name.as_ref().to_string());
         self
     }
 

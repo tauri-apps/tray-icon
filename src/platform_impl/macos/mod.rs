@@ -61,6 +61,13 @@ impl TrayIcon {
         let ns_status_item =
             NSStatusBar::systemStatusBar().statusItemWithLength(NSVariableStatusItemLength);
 
+        // AppKit saves the item's position either way, under a name generated from the
+        // creation order when we supply none. An explicit name is what keeps the saved
+        // position attached to this icon rather than to its index.
+        if let Some(name) = attrs.autosave_name.as_deref() {
+            ns_status_item.setAutosaveName(Some(&NSString::from_str(name)));
+        }
+
         set_icon_for_ns_status_item_button(&ns_status_item, icon, attrs.icon_is_template, mtm)?;
 
         Self::set_tooltip_inner(&ns_status_item, attrs.tooltip.as_deref(), mtm)?;

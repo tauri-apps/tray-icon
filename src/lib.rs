@@ -253,20 +253,26 @@ pub struct TrayIconAttributes {
     /// - **Linux / macOS:** Ignored.
     pub guid: Option<u128>,
 
-    /// Autosave name passed to `NSStatusItem.setAutosaveName`. AppKit
-    /// uses this key to persist the user's ⌘+drag position across
-    /// app launches via NSUserDefaults. Without it, the status item
-    /// snaps back to the default leftmost slot every launch — which
-    /// on notched MacBooks (M1+ Pro/Max/14"/16") collides with the
-    /// camera cutout.
+    /// A stable key for this tray icon's saved position in the menu bar. **macOS only**.
     ///
-    /// Pick a stable, app-unique string (typically a reverse-DNS
-    /// identifier like `"com.example.app.tray"`); changing it
-    /// invalidates the saved position.
+    /// macOS restores where the user ⌘+dragged a tray icon on the next launch, with or
+    /// without this set: given no name of its own, AppKit generates one from the order
+    /// in which the process created its status items - `Item-0`, `Item-1`, and so on.
+    /// Setting this replaces that generated key with one of your choosing.
     ///
-    /// ## Platform-specific
+    /// Set it when that numbering is not stable from launch to launch, as in an
+    /// application that creates several tray icons, or that creates one conditionally:
+    /// two icons can otherwise come back holding each other's positions. An application
+    /// with a single tray icon already gets a stable key and needs nothing here.
     ///
-    /// - **macOS only.** No-op on Linux / Windows.
+    /// Use one fixed string per tray icon, typically a reverse-DNS identifier such as
+    /// `"com.example.app.tray"`. AppKit stores the position under the
+    /// `NSStatusItem Preferred Position <name>` preference, so changing the name
+    /// abandons the position saved under the old one.
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **Linux / Windows:** Ignored.
     pub autosave_name: Option<String>,
 }
 
@@ -408,19 +414,9 @@ impl TrayIconBuilder {
         self
     }
 
-    /// Set the autosave name handed to `NSStatusItem.setAutosaveName`.
-    /// AppKit uses this key to persist the user's ⌘+drag position
-    /// across launches via NSUserDefaults. Without it, the status
-    /// item snaps back to the default leftmost slot every launch —
-    /// which on notched MacBooks collides with the camera cutout.
+    /// Set a stable key for this tray icon's saved position in the menu bar. **macOS only**.
     ///
-    /// Pick a stable, app-unique string (typically a reverse-DNS
-    /// identifier like `"com.example.app.tray"`); changing it
-    /// invalidates the saved position.
-    ///
-    /// ## Platform-specific
-    ///
-    /// - **macOS only.** No-op on Linux / Windows.
+    /// See [`TrayIconAttributes::autosave_name`] for when to set one and how to pick it.
     pub fn with_autosave_name<S: AsRef<str>>(mut self, name: S) -> Self {
         self.attrs.autosave_name = Some(name.as_ref().to_string());
         self

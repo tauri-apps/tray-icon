@@ -61,16 +61,11 @@ impl TrayIcon {
         let ns_status_item =
             NSStatusBar::systemStatusBar().statusItemWithLength(NSVariableStatusItemLength);
 
-        // When the caller supplied an autosave name, hand it to
-        // AppKit so the user's ⌘+drag position survives app
-        // launches via NSUserDefaults. Without this, every launch
-        // the status item resets to the default leftmost slot,
-        // which on notched MacBooks (M1+ Pro/Max/14"/16") collides
-        // with the camera cutout.
+        // AppKit saves the item's position either way, under a name generated from the
+        // creation order when we supply none. An explicit name is what keeps the saved
+        // position attached to this icon rather than to its index.
         if let Some(name) = attrs.autosave_name.as_deref() {
-            unsafe {
-                ns_status_item.setAutosaveName(Some(&NSString::from_str(name)));
-            }
+            ns_status_item.setAutosaveName(Some(&NSString::from_str(name)));
         }
 
         set_icon_for_ns_status_item_button(&ns_status_item, icon, attrs.icon_is_template, mtm)?;

@@ -441,6 +441,11 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
+    /// Returns a new [`TrayIconBuilder`].
+    pub fn builder() -> TrayIconBuilder {
+        TrayIconBuilder::new()
+    }
+
     /// Builds and adds a new tray icon to the system tray.
     ///
     /// ## Platform-specific:
@@ -496,6 +501,15 @@ impl TrayIcon {
         self.tray
             .borrow_mut()
             .set_icon_templated(icon.map(IconType::Custom))
+    }
+
+    /// Whether the current tray icon is drawn as a template image.
+    ///
+    /// See [`set_icon_templated`](Self::set_icon_templated). An icon set with
+    /// [`set_native_icon`](Self::set_native_icon) reports `false`, as the system flags those itself.
+    #[cfg(target_os = "macos")]
+    pub fn icon_is_template(&self) -> bool {
+        self.tray.borrow().icon_is_template()
     }
 
     /// Set new tray icon from a platform-native icon. If `None` is provided, it will remove the icon.

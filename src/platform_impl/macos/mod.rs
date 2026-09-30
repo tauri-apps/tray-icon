@@ -113,6 +113,10 @@ impl TrayIcon {
         self.set_icon_inner(icon, true)
     }
 
+    pub fn icon_is_template(&self) -> bool {
+        self.attrs.icon_is_template
+    }
+
     // TODO: Remove when tauri v3 drops its own deprecated tray APIs
     /// Flips the template flag of the icon already in the menu bar, for the deprecated
     /// `TrayIcon::set_icon_as_template`.

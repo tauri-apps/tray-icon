@@ -4177,7 +4177,7 @@ dependencies = [
 
 [[package]]
 name = "tray-icon"
-version = "0.25.1"
+version = "0.26.0"
 dependencies = [
  "crossbeam-channel",
  "dirs",

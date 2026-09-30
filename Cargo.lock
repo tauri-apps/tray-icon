@@ -1503,7 +1503,7 @@ dependencies = [
  "gobject-sys",
  "libc",
  "system-deps 9.0.0",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2241,7 +2241,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -2366,7 +2366,7 @@ dependencies = [
 [[package]]
 name = "muda"
 version = "0.21.0"
-source = "git+https://github.com/tauri-apps/muda.git?branch=renovate%2Fgtk-0.x#75069df6f4e0826bb0c1e2161a624a007e144397"
+source = "git+https://github.com/tauri-apps/muda.git?branch=renovate%2Fgtk-0.x#920ee6fd027ee778bd9867b5ab7005f7a130ff03"
 dependencies = [
  "crossbeam-channel",
  "dpi",
@@ -3250,7 +3250,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

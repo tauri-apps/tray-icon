@@ -73,15 +73,20 @@ fn into_ksni_item(item: &MenuItemKindSnapshot) -> Option<ksni::MenuItem<StatusNo
                 .into(),
             )
         }
-        // TODO: support some predefined items like "Quit" or "About"
-        MenuItemKindSnapshot::Predefined(item) => Some(
-            ksni::menu::StandardItem {
-                label: to_ksni_mnemonic(&item.text()),
-                enabled: false,
-                ..Default::default()
-            }
-            .into(),
-        ),
+        // muda creates the items it has no action for on this platform disabled, so the window
+        // management and macOS-only items render disabled here as they do in its GTK menus.
+        MenuItemKindSnapshot::Predefined(item) => {
+            let activate = Arc::clone(&item.activate);
+            Some(
+                ksni::menu::StandardItem {
+                    label: to_ksni_mnemonic(&item.text()),
+                    enabled: item.is_enabled(),
+                    activate: Box::new(move |_| activate()),
+                    ..Default::default()
+                }
+                .into(),
+            )
+        }
     }
 }
 

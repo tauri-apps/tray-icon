@@ -199,7 +199,11 @@ pub struct TrayIconAttributes {
     /// Tray icon temp dir path. **Linux/BSD AppIndicator backend only**.
     pub temp_dir_path: Option<PathBuf>,
 
-    /// Use the icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+    /// Draw [`Self::icon`] as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+    ///
+    /// `TrayIconBuilder::with_icon_templated` and `TrayIcon::set_icon_templated` set this
+    /// along with the icon. Ignored for a [`Self::native_icon`], which the system already flags
+    /// when it is meant to be a template, like [`NativeIcon::Add`].
     pub icon_is_template: bool,
 
     /// Whether to show the tray menu on left click or not, default is `true`.
@@ -316,6 +320,21 @@ impl TrayIconBuilder {
         self
     }
 
+    /// Set the tray icon and draw it as a template image on macOS.
+    ///
+    /// A [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc)
+    /// image is drawn using only its alpha channel, so the system recolours it to match the menu
+    /// bar, light or dark. [`with_icon`](Self::with_icon) uses the icon as-is instead.
+    ///
+    /// (Note that setting an icon will override any existing [.with_native_icon()](Self::with_native_icon))
+    #[cfg(target_os = "macos")]
+    pub fn with_icon_templated(mut self, icon: Icon) -> Self {
+        self.attrs.icon = Some(icon);
+        self.attrs.native_icon = None;
+        self.attrs.icon_is_template = true;
+        self
+    }
+
     /// Set a platform-native icon for this tray icon.
     ///
     /// See [`TrayIcon::set_native_icon`] for more info.
@@ -362,6 +381,11 @@ impl TrayIconBuilder {
     }
 
     /// Use the icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+    // TODO: Remove when tauri v3 drops its own deprecated tray APIs
+    #[deprecated(
+        since = "0.26.0",
+        note = "use `TrayIconBuilder::with_icon_templated`, which takes the icon to draw as a template"
+    )]
     pub fn with_icon_as_template(mut self, is_template: bool) -> Self {
         self.attrs.icon_is_template = is_template;
         self
@@ -460,6 +484,20 @@ impl TrayIcon {
         self.tray.borrow_mut().set_icon(icon.map(IconType::Custom))
     }
 
+    /// Set new tray icon, or remove it, and draw it as a template image on macOS.
+    ///
+    /// A [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc)
+    /// image is drawn using only its alpha channel, so the system recolours it to match the menu
+    /// bar, light or dark. [`set_icon`](Self::set_icon) draws the icon as-is instead.
+    ///
+    /// (Note that setting an icon will override any existing [.set_native_icon()](Self::set_native_icon))
+    #[cfg(target_os = "macos")]
+    pub fn set_icon_templated(&self, icon: Option<Icon>) -> Result<()> {
+        self.tray
+            .borrow_mut()
+            .set_icon_templated(icon.map(IconType::Custom))
+    }
+
     /// Set new tray icon from a platform-native icon. If `None` is provided, it will remove the icon.
     ///
     /// ## Platform-specific:
@@ -544,6 +582,11 @@ impl TrayIcon {
     }
 
     /// Set the current icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+    // TODO: Remove when tauri v3 drops its own deprecated tray APIs
+    #[deprecated(
+        since = "0.26.0",
+        note = "use `TrayIcon::set_icon_templated`, which sets the icon and draws it as a template in one call"
+    )]
     pub fn set_icon_as_template(&self, is_template: bool) {
         #[cfg(target_os = "macos")]
         self.tray.borrow_mut().set_icon_as_template(is_template);
@@ -551,12 +594,19 @@ impl TrayIcon {
         let _ = is_template;
     }
 
+    /// Set new tray icon, or remove it, and draw it as a template image. **macOS only**.
+    // TODO: Remove when tauri v3 drops its own deprecated tray APIs
+    #[deprecated(
+        since = "0.26.0",
+        note = "use `TrayIcon::set_icon_templated` for a template icon, or `TrayIcon::set_icon` for a plain one"
+    )]
     pub fn set_icon_with_as_template(&self, icon: Option<Icon>, is_template: bool) -> Result<()> {
         #[cfg(target_os = "macos")]
-        return self
-            .tray
-            .borrow_mut()
-            .set_icon_with_as_template(icon.map(IconType::Custom), is_template);
+        return if is_template {
+            self.set_icon_templated(icon)
+        } else {
+            self.set_icon(icon)
+        };
         #[cfg(not(target_os = "macos"))]
         {
             let _ = icon;

@@ -13,13 +13,13 @@ use objc2_app_kit::{
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
-use objc2_foundation::{MainThreadMarker, NSCopying, NSData, NSSize, NSString};
+use objc2_foundation::{MainThreadMarker, NSCopying, NSSize, NSString};
 
 pub(crate) use self::icon::PlatformIcon;
 use crate::Error;
 use crate::{
-    icon::IconType, menu, MouseButton, MouseButtonState, Rect, TrayIconAttributes, TrayIconEvent,
-    TrayIconId,
+    icon::IconType, menu, MouseButton, MouseButtonState, NativeIcon, Rect, TrayIconAttributes,
+    TrayIconEvent, TrayIconId,
 };
 
 pub struct TrayIcon {
@@ -106,9 +106,45 @@ impl TrayIcon {
     }
 
     pub fn set_icon(&mut self, icon: Option<IconType>) -> crate::Result<()> {
+        self.set_icon_inner(icon, false)
+    }
+
+    pub fn set_icon_templated(&mut self, icon: Option<IconType>) -> crate::Result<()> {
+        self.set_icon_inner(icon, true)
+    }
+
+    // TODO: Remove when tauri v3 drops its own deprecated tray APIs
+    /// Flips the template flag of the icon already in the menu bar, for the deprecated
+    /// `TrayIcon::set_icon_as_template`.
+    pub fn set_icon_as_template(&mut self, is_template: bool) {
+        self.attrs.icon_is_template = is_template;
+
+        // A native icon is the instance `imageNamed:` shares with the whole process, and it
+        // already carries the template flag the system picked for it, so leave it alone.
+        if matches!(self.icon, Some(IconType::Native(_))) {
+            return;
+        }
+
+        if let Some(ns_status_item) = &self.ns_status_item {
+            let button = ns_status_item.button(self.mtm).unwrap();
+            if let Some(nsimage) = button.image() {
+                nsimage.setTemplate(is_template);
+                button.setImage(Some(&nsimage));
+            }
+        }
+    }
+
+    fn set_icon_inner(&mut self, icon: Option<IconType>, is_template: bool) -> crate::Result<()> {
+        self.attrs.icon_is_template = is_template;
+
         if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
         {
-            set_icon_for_ns_status_item_button(ns_status_item, icon.as_ref(), false, self.mtm)?;
+            set_icon_for_ns_status_item_button(
+                ns_status_item,
+                icon.as_ref(),
+                is_template,
+                self.mtm,
+            )?;
             tray_target.update_dimensions();
         }
         self.icon = icon;
@@ -190,37 +226,6 @@ impl TrayIcon {
         Ok(())
     }
 
-    pub fn set_icon_as_template(&mut self, is_template: bool) {
-        if let Some(ns_status_item) = &self.ns_status_item {
-            let button = ns_status_item.button(self.mtm).unwrap();
-            if let Some(nsimage) = button.image() {
-                nsimage.setTemplate(is_template);
-                button.setImage(Some(&nsimage));
-            }
-        }
-        self.attrs.icon_is_template = is_template;
-    }
-
-    pub fn set_icon_with_as_template(
-        &mut self,
-        icon: Option<IconType>,
-        is_template: bool,
-    ) -> crate::Result<()> {
-        if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
-        {
-            set_icon_for_ns_status_item_button(
-                ns_status_item,
-                icon.as_ref(),
-                is_template,
-                self.mtm,
-            )?;
-            tray_target.update_dimensions();
-        }
-        self.icon = icon;
-        self.attrs.icon_is_template = is_template;
-        Ok(())
-    }
-
     pub fn set_show_menu_on_left_click(&mut self, enable: bool) {
         if let Some(tray_target) = &self.tray_target {
             tray_target.ivars().menu_on_left_click.set(enable);
@@ -268,6 +273,12 @@ impl Drop for TrayIcon {
     }
 }
 
+/// The tallest a tray icon may be drawn without growing the status item past the menu bar.
+/// Matches `NSStatusBar.system.thickness` and the maximum the macOS Human Interface Guidelines
+/// allow for a menu bar extra, which suggest artwork nearer 16pt so it carries the same visual
+/// weight as the system's own items. Picking a size below this cap is up to the caller.
+const MAX_ICON_HEIGHT: f64 = 22.0;
+
 fn set_icon_for_ns_status_item_button(
     ns_status_item: &NSStatusItem,
     icon: Option<&IconType>,
@@ -276,45 +287,48 @@ fn set_icon_for_ns_status_item_button(
 ) -> crate::Result<()> {
     let button = ns_status_item.button(mtm).unwrap();
 
-    if let Some(icon) = icon {
-        let (nsimage, width, height, is_template) = match icon {
-            IconType::Custom(icon) => {
-                let nsdata = NSData::from_vec(icon.inner.to_png()?);
-                let nsimage = NSImage::initWithData(NSImage::alloc(), &nsdata).unwrap();
-                let (width, height) = icon.inner.get_size();
-                (nsimage, width as f64, height as f64, icon_is_template)
-            }
-            IconType::Native(icon) => {
-                let name = NSString::from_str(&icon.appkit_name());
-                let nsimage = NSImage::imageNamed(&name).ok_or_else(|| {
-                    std::io::Error::new(
-                        std::io::ErrorKind::NotFound,
-                        format!("no AppKit image named {name}"),
-                    )
-                })?;
-                // They may already be templates, e.g. `NSAddTemplate`.
-                let is_template = icon_is_template || nsimage.isTemplate();
-                let size = nsimage.size();
-                // Named images are shared, so copy before resizing it.
-                (nsimage.copy(), size.width, size.height, is_template)
-            }
-        };
+    let nsimage = match icon {
+        Some(IconType::Custom(icon)) => {
+            let nsimage = icon.inner.to_nsimage(Some(MAX_ICON_HEIGHT))?;
+            nsimage.setTemplate(icon_is_template);
+            Some(nsimage)
+        }
+        Some(IconType::Native(icon)) => Some(native_nsimage(icon)?),
+        None => None,
+    };
 
-        let icon_height: f64 = 18.0;
-        let icon_width: f64 = width / (height / icon_height);
-
-        let new_size = NSSize::new(icon_width, icon_height);
-
-        button.setImage(Some(&nsimage));
-        nsimage.setSize(new_size);
+    button.setImage(nsimage.as_deref());
+    if nsimage.is_some() {
         // The image is to the right of the title
         button.setImagePosition(NSCellImagePosition::ImageLeft);
-        nsimage.setTemplate(is_template);
-    } else {
-        button.setImage(None);
     }
 
     Ok(())
+}
+
+/// Resolves a native icon to the [`NSImage`] to show in the menu bar.
+///
+/// `imageNamed:` hands back the one instance shared with the whole process, so we can't change
+/// its size or its `isTemplate`, as either would follow every other use of it. Only the icons
+/// too tall for the menu bar are resized, on a copy, keeping their aspect ratio.
+fn native_nsimage(icon: &NativeIcon) -> crate::Result<Retained<NSImage>> {
+    let name = NSString::from_str(&icon.appkit_name());
+    let nsimage = NSImage::imageNamed(&name).ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("no AppKit image named {name}"),
+        )
+    })?;
+
+    let size = nsimage.size();
+    if size.height <= MAX_ICON_HEIGHT {
+        return Ok(nsimage);
+    }
+
+    let resized = nsimage.copy();
+    let width = size.width / (size.height / MAX_ICON_HEIGHT);
+    resized.setSize(NSSize::new(width, MAX_ICON_HEIGHT));
+    Ok(resized)
 }
 
 #[derive(Debug)]

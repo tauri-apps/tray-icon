@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
+use objc2::{rc::Retained, AllocAnyThread};
+use objc2_app_kit::NSImage;
+use objc2_core_foundation::CGFloat;
+use objc2_foundation::{NSData, NSSize};
+
 use crate::icon::{BadIcon, RgbaIcon};
 use std::io::Cursor;
 
@@ -31,5 +36,32 @@ impl PlatformIcon {
         }
 
         Ok(png)
+    }
+
+    /// Renders the icon as an [`NSImage`].
+    ///
+    /// `max_height` scales the image down to that many points if it is taller, keeping its
+    /// aspect ratio. An icon that already fits is left at its natural size rather than scaled
+    /// up.
+    pub fn to_nsimage(&self, max_height: Option<f64>) -> crate::Result<Retained<NSImage>> {
+        let (width, height) = self.get_size();
+        let icon = self.to_png()?;
+
+        let mut icon_width = width as CGFloat;
+        let mut icon_height = height as CGFloat;
+
+        if let Some(max_height) = max_height.map(|max_height| max_height as CGFloat) {
+            if icon_height > max_height {
+                icon_width /= icon_height / max_height;
+                icon_height = max_height;
+            }
+        }
+
+        let nsdata = NSData::from_vec(icon);
+
+        let nsimage = NSImage::initWithData(NSImage::alloc(), &nsdata).unwrap();
+        nsimage.setSize(NSSize::new(icon_width, icon_height));
+
+        Ok(nsimage)
     }
 }

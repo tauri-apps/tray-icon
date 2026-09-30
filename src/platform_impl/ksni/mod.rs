@@ -47,6 +47,7 @@ impl TrayIcon {
             status: ksni::Status::Active,
             menu_snapshot: attrs.menu.as_ref().map(|menu| menu.snapshot_handle()),
         }
+        .assume_sni_available(true)
         .spawn()?;
 
         let (menu_watcher_thread_shutdown_tx, menu_watcher_thread_shutdown_rx) = unbounded();

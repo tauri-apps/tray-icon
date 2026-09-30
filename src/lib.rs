@@ -22,20 +22,20 @@
 //!
 //! # Dependencies (Linux/BSD)
 //!
-//! The default Linux backend uses GTK, `libxdo`, and `libappindicator` or
+//! The default Linux backend uses GTK and `libappindicator` or
 //! `libayatana-appindicator`. The `ksni` backend does not require these system libraries unless a
 //!  GTK backend is also enabled.
 //!
 //! #### Arch Linux / Manjaro:
 //!
 //! ```sh
-//! pacman -S gtk3 xdotool libappindicator-gtk3 #or libayatana-appindicator
+//! pacman -S gtk3 libappindicator-gtk3 #or libayatana-appindicator
 //! ```
 //!
 //! #### Debian / Ubuntu:
 //!
 //! ```sh
-//! sudo apt install libgtk-3-dev libxdo-dev libappindicator3-dev #or libayatana-appindicator3-dev
+//! sudo apt install libgtk-3-dev libappindicator3-dev #or libayatana-appindicator3-dev
 //! ```
 //!
 //! # Examples

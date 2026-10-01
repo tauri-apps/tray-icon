@@ -22,7 +22,7 @@ include = [
 default = ["libappindicator"]
 serde = ["dep:serde", "muda-serde"]
 libappindicator = ["dep:dirs", "dep:libappindicator", "muda-gtk3"]
-ksni = ["dep:ksni", "muda-snapshot"]
+ksni = ["dep:ksni", "ashpd", "muda-snapshot"]
 muda-common-controls-v6 = ["muda/common-controls-v6"]
 muda-gtk3 = ["muda/gtk3"]
 muda-gtk4 = ["muda/gtk4"]
@@ -53,6 +53,7 @@ ksni = { version = "0.3.6", default-features = false, features = [
   "async-io",
   "blocking",
 ], optional = true }
+ashpd = { version = "0.13.13", optional = true }
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"netbsd\", target_os = \"openbsd\"))".dev-dependencies]
 gtk = "0.18"

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
+mod helpers;
 mod icon;
 mod menu;
 
@@ -48,6 +49,7 @@ impl TrayIcon {
             menu_snapshot: attrs.menu.as_ref().map(|menu| menu.snapshot_handle()),
         }
         .assume_sni_available(true)
+        .disable_dbus_name(helpers::is_sandboxed())
         .spawn()?;
 
         let (menu_watcher_thread_shutdown_tx, menu_watcher_thread_shutdown_rx) = unbounded();

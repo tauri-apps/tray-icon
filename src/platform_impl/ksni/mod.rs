@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-mod util;
 mod icon;
 mod menu;
+mod util;
 
 use std::{path::Path, thread::JoinHandle};
 

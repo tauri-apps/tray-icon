@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.26.1]
+
+- [`59dd8d9`](https://www.github.com/tauri-apps/tray-icon/commit/59dd8d9e4a69915574d71e6002376b6466d9acf8) ([#379](https://www.github.com/tauri-apps/tray-icon/pull/379)) On Linux, when using KSNI backend, disable owning a dbus name when in a sandboxed environment
+
 ## [0.26.0]
 
 - [`930505e`](https://www.github.com/tauri-apps/tray-icon/commit/930505ed1b4aeb9a8a4f6c2c1ce92fdd0635d0e8) ([#377](https://www.github.com/tauri-apps/tray-icon/pull/377) by [@amrbashir](https://www.github.com/tauri-apps/tray-icon/../../amrbashir)) Add `TrayIcon::set_icon_templated` and `TrayIconBuilder::with_icon_templated` on macOS, which set the icon and draw it as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc) image in one call, so the template flag can never be left describing an icon that has since been replaced. Also add `TrayIcon::icon_is_template` to read that state back.

@@ -6,7 +6,7 @@ mod icon;
 mod util;
 use std::{mem::size_of, ptr};
 
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use windows_sys::{
     core::GUID,
     s,
@@ -50,8 +50,8 @@ const WM_USER_SHOW_MENU_ON_LEFT_CLICK: u32 = 6008;
 const WM_USER_SHOW_MENU_ON_RIGHT_CLICK: u32 = 6009;
 /// When the taskbar is created, it registers a message with the "TaskbarCreated" string and then broadcasts this message to all top-level windows
 /// When the application receives this message, it should assume that any taskbar icons it added have been removed and add them again.
-static S_U_TASKBAR_RESTART: Lazy<u32> =
-    Lazy::new(|| unsafe { RegisterWindowMessageA(s!("TaskbarCreated")) });
+static S_U_TASKBAR_RESTART: LazyLock<u32> =
+    LazyLock::new(|| unsafe { RegisterWindowMessageA(s!("TaskbarCreated")) });
 
 struct TrayUserData {
     internal_id: u32,

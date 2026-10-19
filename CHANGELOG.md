@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.26.2]
+
+- [`1100fbe`](https://www.github.com/tauri-apps/tray-icon/commit/1100fbefa1917531b7cbdbc3c712b99e97392609) ([#387](https://www.github.com/tauri-apps/tray-icon/pull/387) by [@FalkWoldmann](https://www.github.com/tauri-apps/tray-icon/../../FalkWoldmann)) Replace the `once_cell` dependency with `std::sync::LazyLock` and `std::sync::OnceLock`.
+
 ## [0.26.1]
 
 - [`59dd8d9`](https://www.github.com/tauri-apps/tray-icon/commit/59dd8d9e4a69915574d71e6002376b6466d9acf8) ([#379](https://www.github.com/tauri-apps/tray-icon/pull/379)) On Linux, when using KSNI backend, disable owning a dbus name when in a sandboxed environment

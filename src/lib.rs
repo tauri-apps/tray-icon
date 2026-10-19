@@ -145,7 +145,7 @@ use std::{
 
 use counter::Counter;
 use crossbeam_channel::{unbounded, Receiver, Sender};
-use once_cell::sync::{Lazy, OnceCell};
+use std::sync::{LazyLock, OnceLock};
 
 mod counter;
 mod error;
@@ -849,8 +849,9 @@ impl Default for Rect {
 pub type TrayIconEventReceiver = Receiver<TrayIconEvent>;
 type TrayIconEventHandler = Box<dyn Fn(TrayIconEvent) + Send + Sync + 'static>;
 
-static TRAY_CHANNEL: Lazy<(Sender<TrayIconEvent>, TrayIconEventReceiver)> = Lazy::new(unbounded);
-static TRAY_EVENT_HANDLER: OnceCell<Option<TrayIconEventHandler>> = OnceCell::new();
+static TRAY_CHANNEL: LazyLock<(Sender<TrayIconEvent>, TrayIconEventReceiver)> =
+    LazyLock::new(unbounded);
+static TRAY_EVENT_HANDLER: OnceLock<Option<TrayIconEventHandler>> = OnceLock::new();
 
 impl TrayIconEvent {
     /// Returns the id of the tray icon which triggered this event.

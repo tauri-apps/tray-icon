@@ -300,7 +300,9 @@ fn set_icon_for_ns_status_item_button(
 
     let nsimage = match icon {
         Some(IconType::Custom(icon)) => {
-            let nsimage = icon.inner.to_nsimage(Some(MAX_ICON_HEIGHT))?;
+            let nsimage = icon
+                .inner
+                .to_nsimage(icon.scale_factor, Some(MAX_ICON_HEIGHT))?;
             nsimage.setTemplate(icon_is_template);
             Some(nsimage)
         }

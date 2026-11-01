@@ -87,8 +87,7 @@ impl WinIcon {
         path: P,
         size: Option<(u32, u32)>,
     ) -> Result<Self, BadIcon> {
-        // width / height of 0 along with LR_DEFAULTSIZE tells windows to load the default icon size
-        let (width, height) = size.unwrap_or((0, 0));
+        let (width, height) = size.unwrap_or_else(util::get_tray_icon_size);
 
         let wide_path = util::encode_wide(path.as_ref());
 
@@ -110,8 +109,7 @@ impl WinIcon {
     }
 
     fn from_resource_inner_name(name: PCWSTR, size: Option<(u32, u32)>) -> Result<Self, BadIcon> {
-        // width / height of 0 along with LR_DEFAULTSIZE tells windows to load the default icon size
-        let (width, height) = size.unwrap_or((0, 0));
+        let (width, height) = size.unwrap_or_else(util::get_tray_icon_size);
         let handle = unsafe {
             LoadImageW(
                 util::get_instance_handle(),

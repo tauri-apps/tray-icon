@@ -139,6 +139,14 @@ impl Icon {
     ///
     /// The length of `rgba` must be divisible by 4, and `width * height` must equal
     /// `rgba.len() / 4`. Otherwise, this will return a `BadIcon` error.
+    ///
+    /// # Windows
+    ///
+    /// The bitmap is resampled to the current notification-area icon size
+    /// (`SM_CXSMICON` × `SM_CYSMICON`) before an `HICON` is created. The shell
+    /// otherwise scales a mismatched bitmap with a nearest-neighbor blit, which
+    /// aliases the edges. A bitmap that is already that size is copied unchanged,
+    /// and a non-square bitmap keeps its aspect ratio.
     pub fn from_rgba(rgba: Vec<u8>, width: u32, height: u32) -> Result<Self, BadIcon> {
         Ok(Icon {
             inner: PlatformIcon::from_rgba(rgba, width, height)?,
@@ -147,8 +155,8 @@ impl Icon {
 
     /// Create an icon from a file path.
     ///
-    /// Specify `size` to load a specific icon size from the file, or `None` to load the default
-    /// icon size from the file.
+    /// Specify `size` to load a specific icon size from the file, or `None` to load the
+    /// notification-area small icon size (`SM_CXSMICON` × `SM_CYSMICON`).
     ///
     /// In cases where the specified size does not exist in the file, Windows may perform scaling
     /// to get an icon of the desired size.
@@ -163,8 +171,8 @@ impl Icon {
 
     /// Create an icon from a resource embedded in this executable or library.
     ///
-    /// Specify `size` to load a specific icon size from the file, or `None` to load the default
-    /// icon size from the file.
+    /// Specify `size` to load a specific icon size from the file, or `None` to load the
+    /// notification-area small icon size (`SM_CXSMICON` × `SM_CYSMICON`).
     ///
     /// In cases where the specified size does not exist in the file, Windows may perform scaling
     /// to get an icon of the desired size.

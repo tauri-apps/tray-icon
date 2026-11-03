@@ -37,6 +37,23 @@ pub unsafe fn get_window_long(hwnd: HWND, nindex: WINDOW_LONG_PTR_INDEX) -> isiz
     };
 }
 
+/// Notification-area icon size in physical pixels.
+///
+/// `LoadImageW` with `LR_DEFAULTSIZE` uses `SM_CXICON` / `SM_CYICON` (32px at
+/// 96 DPI). The tray draws `SM_CXSMICON` / `SM_CYSMICON` (16px at 96 DPI) and
+/// scales anything else with a nearest-neighbor blit, which aliases the edges.
+/// https://learn.microsoft.com/en-us/windows/win32/menurc/about-icons#system-icon-sizes
+pub fn get_tray_icon_size() -> (u32, u32) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSMICON, SM_CYSMICON};
+
+    let width = unsafe { GetSystemMetrics(SM_CXSMICON) };
+    let height = unsafe { GetSystemMetrics(SM_CYSMICON) };
+    (
+        if width > 0 { width as u32 } else { 16 },
+        if height > 0 { height as u32 } else { 16 },
+    )
+}
+
 #[inline(always)]
 pub unsafe fn set_window_long(
     hwnd: HWND,

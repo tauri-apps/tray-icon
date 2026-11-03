@@ -515,14 +515,12 @@ unsafe extern "system" fn tray_proc(
         }
 
         WM_TIMER if wparam as u32 == WM_USER_LEAVE_TIMER_ID => {
-            // Read the position, don't take it: with the cursor still on the icon at the first
-            // tick, every later tick would find none and never kill the timer, which then fires
-            // every 15 ms for as long as the app runs.
             let Some(position) = userdata.last_position else {
                 KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
                 userdata.entered = false;
                 return 0;
             };
+
             let mut cursor = POINT { x: 0, y: 0 };
             let cursor_known = GetCursorPos(&mut cursor as _) != 0;
             let rect = get_tray_rect(userdata.internal_id, userdata.guid, hwnd);
@@ -532,8 +530,9 @@ unsafe extern "system" fn tray_proc(
             // on firing until they can be found again.
             let inside = cursor_known
                 && rect.is_some_and(|rect| {
-                    (rect.left..rect.right).contains(&cursor.x)
-                        && (rect.top..rect.bottom).contains(&cursor.y)
+                    let in_x = (rect.left..rect.right).contains(&cursor.x);
+                    let in_y = (rect.top..rect.bottom).contains(&cursor.y);
+                    in_x && in_y
                 });
 
             if !inside {

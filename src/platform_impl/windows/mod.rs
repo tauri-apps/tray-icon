@@ -515,30 +515,36 @@ unsafe extern "system" fn tray_proc(
         }
 
         WM_TIMER if wparam as u32 == WM_USER_LEAVE_TIMER_ID => {
-            if let Some(position) = userdata.last_position.take() {
-                let mut cursor = POINT { x: 0, y: 0 };
-                if GetCursorPos(&mut cursor as _) == 0 {
-                    return 0;
-                }
+            let Some(position) = userdata.last_position else {
+                KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
+                userdata.entered = false;
+                return 0;
+            };
 
-                let rect = match get_tray_rect(userdata.internal_id, userdata.guid, hwnd) {
-                    Some(r) => r,
-                    None => return 0,
-                };
+            let mut cursor = POINT { x: 0, y: 0 };
+            let cursor_known = GetCursorPos(&mut cursor as _) != 0;
+            let rect = get_tray_rect(userdata.internal_id, userdata.guid, hwnd);
 
-                let in_x = (rect.left..rect.right).contains(&cursor.x);
-                let in_y = (rect.top..rect.bottom).contains(&cursor.y);
+            // A cursor or an icon that can't be found (a locked screen, the icon hidden in a
+            // closed overflow area, explorer restarting) counts as left: the timer must not go
+            // on firing until they can be found again.
+            let inside = cursor_known
+                && rect.is_some_and(|rect| {
+                    let in_x = (rect.left..rect.right).contains(&cursor.x);
+                    let in_y = (rect.top..rect.bottom).contains(&cursor.y);
+                    in_x && in_y
+                });
 
-                if !in_x || !in_y {
-                    KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
-                    userdata.entered = false;
+            if !inside {
+                KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
+                userdata.entered = false;
+                userdata.last_position = None;
 
-                    TrayIconEvent::send(TrayIconEvent::Leave {
-                        id: userdata.id.clone(),
-                        rect: rect.into(),
-                        position,
-                    });
-                }
+                TrayIconEvent::send(TrayIconEvent::Leave {
+                    id: userdata.id.clone(),
+                    rect: rect.unwrap_or_default().into(),
+                    position,
+                });
             }
 
             return 0;

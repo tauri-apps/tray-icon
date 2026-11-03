@@ -126,6 +126,8 @@ pub(crate) enum IconType {
 #[derive(Clone)]
 pub struct Icon {
     pub(crate) inner: PlatformIcon,
+    #[cfg(target_os = "macos")]
+    pub(crate) scale_factor: f64,
 }
 
 impl fmt::Debug for Icon {
@@ -140,8 +142,35 @@ impl Icon {
     /// The length of `rgba` must be divisible by 4, and `width * height` must equal
     /// `rgba.len() / 4`. Otherwise, this will return a `BadIcon` error.
     pub fn from_rgba(rgba: Vec<u8>, width: u32, height: u32) -> Result<Self, BadIcon> {
+        Self::from_rgba_with_scale(rgba, width, height, 1.0)
+    }
+
+    /// Creates an icon from 32bpp RGBA data with `scale_factor` pixels per point.
+    ///
+    /// The `rgba` requirements are the same as [`Icon::from_rgba`].
+    ///
+    /// ## Platform-specific:
+    ///
+    /// - **macOS:** The icon is drawn at its pixel size divided by `scale_factor`. A 32x32 icon
+    ///   with a scale factor of `2.0` is drawn at 16x16 points and stays sharp on Retina displays.
+    /// - **Windows / Linux:** `scale_factor` is ignored.
+    ///
+    /// # Panics
+    ///
+    /// Panics if [`dpi::validate_scale_factor`](crate::dpi::validate_scale_factor) rejects
+    /// `scale_factor`.
+    pub fn from_rgba_with_scale(
+        rgba: Vec<u8>,
+        width: u32,
+        height: u32,
+        scale_factor: f64,
+    ) -> Result<Self, BadIcon> {
+        assert!(crate::dpi::validate_scale_factor(scale_factor));
+
         Ok(Icon {
             inner: PlatformIcon::from_rgba(rgba, width, height)?,
+            #[cfg(target_os = "macos")]
+            scale_factor,
         })
     }
 

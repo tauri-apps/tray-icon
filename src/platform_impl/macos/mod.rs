@@ -8,8 +8,8 @@ use std::cell::{Cell, RefCell};
 use objc2::rc::Retained;
 use objc2::{define_class, msg_send, AllocAnyThread, DeclaredClass, Message};
 use objc2_app_kit::{
-    NSCellImagePosition, NSEvent, NSImage, NSMenu, NSStatusBar, NSStatusItem, NSTrackingArea,
-    NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
+    NSCellImagePosition, NSEvent, NSEventModifierFlags, NSImage, NSMenu, NSStatusBar, NSStatusItem,
+    NSTrackingArea, NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
@@ -372,7 +372,18 @@ define_class!(
                     state: MouseButtonState::Down,
                 }),
             );
-            on_tray_click(self, MouseButton::Left);
+
+            // AppKit treats Control-left-down as a request for a contextual menu.
+            // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/MenuList/Articles/DisplayContextMenu.html
+            let menu_button = if event
+                .modifierFlags()
+                .contains(NSEventModifierFlags::Control)
+            {
+                MouseButton::Right
+            } else {
+                MouseButton::Left
+            };
+            on_tray_click(self, menu_button);
         }
 
         #[unsafe(method(mouseUp:))]

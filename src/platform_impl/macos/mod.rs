@@ -89,7 +89,6 @@ impl TrayIcon {
                 status_item: ns_status_item.retain(),
                 menu_on_left_click: Cell::new(attrs.menu_on_left_click),
                 menu_on_right_click: Cell::new(attrs.menu_on_right_click),
-                mouse_down_button: Cell::new(MouseButton::Left),
             });
             let tray_target: Retained<TrayTarget> = msg_send![super(target), initWithFrame: frame];
             tray_target.setWantsLayer(true);
@@ -352,8 +351,6 @@ struct TrayTargetIvars {
     status_item: Retained<NSStatusItem>,
     menu_on_left_click: Cell<bool>,
     menu_on_right_click: Cell<bool>,
-    // The button the last mouse down counted as, so its mouse up matches.
-    mouse_down_button: Cell<MouseButton>,
 }
 
 define_class!(
@@ -366,18 +363,27 @@ define_class!(
     impl TrayTarget {
         #[unsafe(method(mouseDown:))]
         fn on_mouse_down(&self, event: &NSEvent) {
-            let button = clicked_button(event);
-            self.ivars().mouse_down_button.set(button);
             send_mouse_event(
                 self,
                 event,
                 MouseEventType::Click,
                 Some(MouseClickEvent {
-                    button,
+                    button: MouseButton::Left,
                     state: MouseButtonState::Down,
                 }),
             );
-            on_tray_click(self, button);
+
+            // AppKit treats Control-left-down as a request for a contextual menu.
+            // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/MenuList/Articles/DisplayContextMenu.html
+            let menu_button = if event
+                .modifierFlags()
+                .contains(NSEventModifierFlags::Control)
+            {
+                MouseButton::Right
+            } else {
+                MouseButton::Left
+            };
+            on_tray_click(self, menu_button);
         }
 
         #[unsafe(method(mouseUp:))]
@@ -390,7 +396,7 @@ define_class!(
                 event,
                 MouseEventType::Click,
                 Some(MouseClickEvent {
-                    button: self.ivars().mouse_down_button.get(),
+                    button: MouseButton::Left,
                     state: MouseButtonState::Up,
                 }),
             );
@@ -512,18 +518,6 @@ impl TrayTarget {
         let mtm = MainThreadMarker::from(self);
         let button = self.ivars().status_item.button(mtm).unwrap();
         self.setFrame(button.frame());
-    }
-}
-
-// Control-click is a right click on macOS.
-fn clicked_button(event: &NSEvent) -> MouseButton {
-    if event
-        .modifierFlags()
-        .contains(NSEventModifierFlags::Control)
-    {
-        MouseButton::Right
-    } else {
-        MouseButton::Left
     }
 }
 

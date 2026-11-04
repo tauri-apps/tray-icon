@@ -8,8 +8,8 @@ use std::cell::{Cell, RefCell};
 use objc2::rc::Retained;
 use objc2::{define_class, msg_send, AllocAnyThread, DeclaredClass, Message};
 use objc2_app_kit::{
-    NSCellImagePosition, NSEvent, NSImage, NSMenu, NSStatusBar, NSStatusItem, NSTrackingArea,
-    NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
+    NSCellImagePosition, NSEvent, NSEventModifierFlags, NSImage, NSMenu, NSStatusBar, NSStatusItem,
+    NSTrackingArea, NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
@@ -89,6 +89,7 @@ impl TrayIcon {
                 status_item: ns_status_item.retain(),
                 menu_on_left_click: Cell::new(attrs.menu_on_left_click),
                 menu_on_right_click: Cell::new(attrs.menu_on_right_click),
+                mouse_down_button: Cell::new(MouseButton::Left),
             });
             let tray_target: Retained<TrayTarget> = msg_send![super(target), initWithFrame: frame];
             tray_target.setWantsLayer(true);
@@ -351,6 +352,8 @@ struct TrayTargetIvars {
     status_item: Retained<NSStatusItem>,
     menu_on_left_click: Cell<bool>,
     menu_on_right_click: Cell<bool>,
+    // The button the last mouse down counted as, so its mouse up matches.
+    mouse_down_button: Cell<MouseButton>,
 }
 
 define_class!(
@@ -363,16 +366,18 @@ define_class!(
     impl TrayTarget {
         #[unsafe(method(mouseDown:))]
         fn on_mouse_down(&self, event: &NSEvent) {
+            let button = clicked_button(event);
+            self.ivars().mouse_down_button.set(button);
             send_mouse_event(
                 self,
                 event,
                 MouseEventType::Click,
                 Some(MouseClickEvent {
-                    button: MouseButton::Left,
+                    button,
                     state: MouseButtonState::Down,
                 }),
             );
-            on_tray_click(self, MouseButton::Left);
+            on_tray_click(self, button);
         }
 
         #[unsafe(method(mouseUp:))]
@@ -385,7 +390,7 @@ define_class!(
                 event,
                 MouseEventType::Click,
                 Some(MouseClickEvent {
-                    button: MouseButton::Left,
+                    button: self.ivars().mouse_down_button.get(),
                     state: MouseButtonState::Up,
                 }),
             );
@@ -507,6 +512,18 @@ impl TrayTarget {
         let mtm = MainThreadMarker::from(self);
         let button = self.ivars().status_item.button(mtm).unwrap();
         self.setFrame(button.frame());
+    }
+}
+
+// Control-click is a right click on macOS.
+fn clicked_button(event: &NSEvent) -> MouseButton {
+    if event
+        .modifierFlags()
+        .contains(NSEventModifierFlags::Control)
+    {
+        MouseButton::Right
+    } else {
+        MouseButton::Left
     }
 }
 

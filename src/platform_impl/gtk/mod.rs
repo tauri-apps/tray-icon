@@ -3,7 +3,10 @@
 // SPDX-License-Identifier: MIT
 
 mod icon;
-use std::path::{Path, PathBuf};
+use std::{
+    os::unix::fs::DirBuilderExt,
+    path::{Path, PathBuf},
+};
 
 pub(crate) use icon::PlatformIcon;
 
@@ -14,26 +17,27 @@ pub struct TrayIcon {
     id: TrayIconId,
     indicator: AppIndicator,
     temp_dir_path: Option<PathBuf>,
-    path: PathBuf,
+    icon: TempIcon,
     counter: u32,
     menu: Option<Box<dyn muda::ContextMenu>>,
 }
 
 impl TrayIcon {
     pub fn new(id: TrayIconId, mut attrs: TrayIconAttributes) -> crate::Result<Self> {
-        let mut indicator = AppIndicator::new(&format!("tray-icon tray app {}", id.as_ref()), "");
-        indicator.set_status(AppIndicatorStatus::Active);
-
-        let (parent_path, icon_path) = temp_icon_path(attrs.temp_dir_path.as_ref(), &id, 0)?;
+        let temp_icon = TempIcon::new(attrs.temp_dir_path.as_ref(), &id, 0)?;
 
         let icon = match (attrs.icon.take(), attrs.native_icon.take()) {
             (Some(icon), _) => Some(IconType::Custom(icon)),
             (None, icon) => icon.map(IconType::Native),
         };
-        let icon_name = indicator_icon_name(icon, &icon_path)?;
+        let icon_name = indicator_icon_name(icon, &temp_icon.file)?;
 
-        indicator.set_icon_theme_path(&parent_path.to_string_lossy());
-        indicator.set_icon_full(&icon_name, "icon");
+        let mut indicator = AppIndicator::with_path(
+            &format!("tray-icon tray app {}", id.as_ref()),
+            &icon_name,
+            &temp_icon.directory.to_string_lossy(),
+        );
+        indicator.set_status(AppIndicatorStatus::Active);
 
         if let Some(menu) = &attrs.menu {
             indicator.set_menu(&mut menu.gtk_context_menu());
@@ -46,26 +50,24 @@ impl TrayIcon {
         Ok(Self {
             id,
             indicator,
-            path: icon_path,
+            icon: temp_icon,
             temp_dir_path: attrs.temp_dir_path,
             counter: 0,
             menu: attrs.menu,
         })
     }
     pub fn set_icon(&mut self, icon: Option<IconType>) -> crate::Result<()> {
-        let _ = std::fs::remove_file(&self.path);
-
         self.counter += 1;
 
-        let (parent_path, icon_path) =
-            temp_icon_path(self.temp_dir_path.as_ref(), &self.id, self.counter)?;
+        let temp_icon = TempIcon::new(self.temp_dir_path.as_ref(), &self.id, self.counter)?;
+        let icon_name = indicator_icon_name(icon, &temp_icon.file)?;
 
-        let icon_name = indicator_icon_name(icon, &icon_path)?;
-
-        self.indicator
-            .set_icon_theme_path(&parent_path.to_string_lossy());
+        let theme_path = temp_icon.directory.to_string_lossy();
+        self.indicator.set_icon_theme_path(&theme_path);
         self.indicator.set_icon_full(&icon_name, "tray icon");
-        self.path = icon_path;
+
+        // Retire the previous directory only after publishing the replacement.
+        self.icon = temp_icon;
 
         Ok(())
     }
@@ -112,42 +114,73 @@ impl TrayIcon {
 impl Drop for TrayIcon {
     fn drop(&mut self) {
         self.indicator.set_status(AppIndicatorStatus::Passive);
-        let _ = std::fs::remove_file(&self.path);
     }
 }
 
-/// Returns the icon name or path to pass to AppIndicator, writing a custom icon to
+/// Returns the icon name to pass to AppIndicator, writing a custom icon to
 /// `icon_path` as a PNG first.
 fn indicator_icon_name(icon: Option<IconType>, icon_path: &Path) -> crate::Result<String> {
     match icon {
         Some(IconType::Native(icon)) => Ok(icon.freedesktop_name().to_owned()),
         Some(IconType::Custom(icon)) => {
             icon.inner.write_to_png(icon_path)?;
-            Ok(icon_path.to_string_lossy().into_owned())
+            let stem = icon_path.file_stem().unwrap();
+            Ok(stem.to_string_lossy().into_owned())
         }
-        None => Ok(icon_path.to_string_lossy().into_owned()),
+        None => Ok(String::new()),
     }
 }
 
-/// Generates an icon path in one of the following dirs:
-/// 1. If `temp_icon_dir` is `Some` use that.
-/// 2. `$XDG_RUNTIME_DIR/tray-icon`
-/// 3. `/tmp/tray-icon`
-fn temp_icon_path(
-    temp_icon_dir: Option<&PathBuf>,
-    id: &TrayIconId,
-    counter: u32,
-) -> std::io::Result<(PathBuf, PathBuf)> {
-    let parent_path = match temp_icon_dir.as_ref() {
-        Some(path) => path.to_path_buf(),
-        None => dirs::runtime_dir()
-            .unwrap_or_else(std::env::temp_dir)
-            .join("tray-icon"),
-    };
+/// A private directory containing one PNG. Also removes partial files when
+/// preparing an icon fails, without affecting the currently displayed icon.
+struct TempIcon {
+    directory: PathBuf,
+    file: PathBuf,
+}
 
-    std::fs::create_dir_all(&parent_path)?;
-    let icon_path = parent_path.join(format!("tray-icon-{}-{}.png", id.as_ref(), counter));
-    Ok((parent_path, icon_path))
+impl TempIcon {
+    /// Creates a fresh icon directory under one of the following dirs:
+    /// 1. If `temp_icon_dir` is `Some` use that.
+    /// 2. `$XDG_RUNTIME_DIR/tray-icon`
+    /// 3. `/tmp/tray-icon`
+    fn new(
+        temp_icon_dir: Option<&PathBuf>,
+        id: &TrayIconId,
+        counter: u32,
+    ) -> std::io::Result<Self> {
+        let parent_path = match temp_icon_dir.as_ref() {
+            Some(path) => path.to_path_buf(),
+            None => dirs::runtime_dir()
+                .unwrap_or_else(std::env::temp_dir)
+                .join("tray-icon"),
+        };
+
+        std::fs::create_dir_all(&parent_path)?;
+        let parent_path = parent_path.canonicalize()?;
+
+        // Like Chromium's AppIndicator implementation, use a new search directory
+        // for every image so rapid updates are not hidden by icon-theme caches.
+        // https://chromium.googlesource.com/chromium/src/+/8df08cf1a988931e952fb85e811418bfe587d050/chrome/browser/ui/libgtk2ui/app_indicator_icon.cc
+        loop {
+            let directory_id = crate::COUNTER.next();
+            let directory_name = format!("tray-icon-{}-{}", std::process::id(), directory_id);
+            let directory = parent_path.join(directory_name);
+            match std::fs::DirBuilder::new().mode(0o700).create(&directory) {
+                Ok(()) => {
+                    let file = directory.join(format!("tray-icon-{}-{}.png", id.as_ref(), counter));
+                    return Ok(Self { directory, file });
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(error) => return Err(error),
+            }
+        }
+    }
+}
+
+impl Drop for TempIcon {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.directory);
+    }
 }
 
 #[test]
@@ -155,16 +188,22 @@ fn temp_icon_path_preference_order() {
     let runtime_dir = option_env!("XDG_RUNTIME_DIR");
     let override_dir = PathBuf::from("/tmp/tao-tests");
 
-    let (dir1, _file1) = temp_icon_path(Some(&override_dir), &"00".into(), 00).unwrap();
-    let (dir2, _file1) = temp_icon_path(None, &"00".into(), 00).unwrap();
+    let icon1 = TempIcon::new(Some(&override_dir), &"00".into(), 00).unwrap();
+    let icon2 = TempIcon::new(None, &"00".into(), 00).unwrap();
     std::env::remove_var("XDG_RUNTIME_DIR");
-    let (dir3, _file2) = temp_icon_path(None, &"00".into(), 00).unwrap();
+    let icon3 = TempIcon::new(None, &"00".into(), 00).unwrap();
 
-    assert_eq!(dir1, override_dir);
+    assert_eq!(icon1.directory.parent().unwrap(), override_dir);
     if let Some(runtime_dir) = runtime_dir {
         std::env::set_var("XDG_RUNTIME_DIR", runtime_dir);
-        assert_eq!(dir2, PathBuf::from(format!("{}/tray-icon", runtime_dir)));
+        assert_eq!(
+            icon2.directory.parent().unwrap(),
+            PathBuf::from(format!("{}/tray-icon", runtime_dir))
+        );
     }
 
-    assert_eq!(dir3, PathBuf::from("/tmp/tray-icon"));
+    assert_eq!(
+        icon3.directory.parent().unwrap(),
+        PathBuf::from("/tmp/tray-icon")
+    );
 }

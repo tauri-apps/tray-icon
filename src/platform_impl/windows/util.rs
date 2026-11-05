@@ -53,3 +53,20 @@ pub unsafe fn set_window_long(
             as isize
     };
 }
+
+// According to MSDN, the icon size for notification area is smaller than the default value
+// that `LoadImageW` uses. So we need to get the correct tray size manually.
+// https://learn.microsoft.com/en-us/windows/win32/menurc/about-icons#system-icon-sizes
+pub fn get_tray_icon_size() -> (u32, u32) {
+    let width = unsafe {
+        windows_sys::Win32::UI::WindowsAndMessaging::GetSystemMetrics(
+            windows_sys::Win32::UI::WindowsAndMessaging::SM_CXSMICON,
+        )
+    };
+    let height = unsafe {
+        windows_sys::Win32::UI::WindowsAndMessaging::GetSystemMetrics(
+            windows_sys::Win32::UI::WindowsAndMessaging::SM_CYSMICON,
+        )
+    };
+    (width as u32, height as u32)
+}

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.27.0]
+
+- [`25675c3`](https://www.github.com/tauri-apps/tray-icon/commit/25675c359c01471a8ee81f9b5b37cb10e5455afa) ([#398](https://www.github.com/tauri-apps/tray-icon/pull/398) by [@amrbashir](https://www.github.com/tauri-apps/tray-icon/../../amrbashir)) Improve custom tray icon compatibility and rapid updates on Linux when using AppIndicator. Keep the current icon visible if an update fails.
+- [`9c5cd3b`](https://www.github.com/tauri-apps/tray-icon/commit/9c5cd3be5f9a192def4bd8671c22977dc958db7b) ([#391](https://www.github.com/tauri-apps/tray-icon/pull/391) by [@BeanDz](https://www.github.com/tauri-apps/tray-icon/../../BeanDz)) Add `Icon::from_rgba_with_scale`, which creates an icon drawn at a number of pixels per point. On macOS, a 32x32 icon with a scale factor of `2.0` is now drawn at 16x16 points and stays sharp on Retina displays. Windows and Linux ignore the scale factor.
+- [`ad6cd4d`](https://www.github.com/tauri-apps/tray-icon/commit/ad6cd4d63eec2afabe52fb99fc9e34d46c806797) ([#397](https://www.github.com/tauri-apps/tray-icon/pull/397) by [@willemrosenthal](https://www.github.com/tauri-apps/tray-icon/../../willemrosenthal)) On macOS, Control-click now opens the tray menu when showing the menu on right-click is enabled.
+- [`1100fbe`](https://www.github.com/tauri-apps/tray-icon/commit/1100fbefa1917531b7cbdbc3c712b99e97392609) ([#387](https://www.github.com/tauri-apps/tray-icon/pull/387) by [@FalkWoldmann](https://www.github.com/tauri-apps/tray-icon/../../FalkWoldmann)) Replace the `once_cell` dependency with `std::sync::LazyLock` and `std::sync::OnceLock`.
+- [`bd709f8`](https://www.github.com/tauri-apps/tray-icon/commit/bd709f8981e845e963eb16dec019d98d02b70664) ([#395](https://www.github.com/tauri-apps/tray-icon/pull/395) by [@lansyin](https://www.github.com/tauri-apps/tray-icon/../../lansyin)) Fix the default size used by `Icon::from_path`, `Icon::from_resource`, and `Icon::from_resource_name` on Windows to match the system's small icon size.
+- [`23ef3d2`](https://www.github.com/tauri-apps/tray-icon/commit/23ef3d2fe2aff76cc4966099d560ede59191e000) ([#393](https://www.github.com/tauri-apps/tray-icon/pull/393) by [@Seifert69](https://www.github.com/tauri-apps/tray-icon/../../Seifert69)) Fix unnecessary CPU usage after hovering over the tray icon on Windows. A timer kept running after the cursor left the icon.
+
 ## [0.26.1]
 
 - [`59dd8d9`](https://www.github.com/tauri-apps/tray-icon/commit/59dd8d9e4a69915574d71e6002376b6466d9acf8) ([#379](https://www.github.com/tauri-apps/tray-icon/pull/379)) On Linux, when using KSNI backend, disable owning a dbus name when in a sandboxed environment

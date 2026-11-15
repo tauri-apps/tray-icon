@@ -694,7 +694,13 @@ impl TrayIcon {
     /// - **Linux:** Unsupported.
     pub fn show_menu(&self) {
         #[cfg(any(target_os = "macos", target_os = "windows"))]
-        self.tray.borrow().show_menu();
+        {
+            // Release the borrow before the menu opens, so setters called while it is open don't panic.
+            let show_menu = self.tray.borrow().prepare_show_menu();
+            if let Some(show_menu) = show_menu {
+                show_menu();
+            }
+        }
     }
 
     /// Get tray icon rect.

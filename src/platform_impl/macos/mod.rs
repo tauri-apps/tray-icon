@@ -251,19 +251,18 @@ impl TrayIcon {
         self.attrs.menu_on_right_click = enable;
     }
 
-    pub fn show_menu(&self) {
-        if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
-        {
-            unsafe {
-                let menu = tray_target.ivars().menu.borrow().clone();
-                if let Some(menu) = &menu {
-                    let button = ns_status_item.button(self.mtm).unwrap();
-                    ns_status_item.setMenu(Some(menu));
-                    button.performClick(None);
-                    ns_status_item.setMenu(None);
-                }
-            }
-        }
+    /// Returns a function that shows the menu. Call it without holding a borrow of `self`,
+    /// since `performClick` runs the menu's event loop until the menu closes.
+    pub fn prepare_show_menu(&self) -> Option<impl FnOnce() + use<>> {
+        let ns_status_item = self.ns_status_item.clone()?;
+        let menu = self.tray_target.as_ref()?.ivars().menu.borrow().clone()?;
+        let mtm = self.mtm;
+        Some(move || unsafe {
+            let button = ns_status_item.button(mtm).unwrap();
+            ns_status_item.setMenu(Some(&menu));
+            button.performClick(None);
+            ns_status_item.setMenu(None);
+        })
     }
 
     pub fn rect(&self) -> Option<Rect> {

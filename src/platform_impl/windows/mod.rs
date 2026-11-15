@@ -289,14 +289,13 @@ impl TrayIcon {
         }
     }
 
-    pub fn show_menu(&self) {
-        if let Some(menu) = &self.menu {
-            unsafe {
-                if let Some(rect) = get_tray_rect(self.internal_id, self.guid, self.hwnd) {
-                    show_tray_menu(self.hwnd, menu.hpopupmenu() as _, rect.left, rect.top);
-                }
-            }
-        }
+    /// Returns a function that shows the menu. Call it without holding a borrow of `self`,
+    /// since `TrackPopupMenu` runs a nested event loop until the menu closes.
+    pub fn prepare_show_menu(&self) -> Option<impl FnOnce() + use<>> {
+        let hmenu: HMENU = self.menu.as_ref()?.hpopupmenu() as _;
+        let hwnd = self.hwnd;
+        let rect = get_tray_rect(self.internal_id, self.guid, hwnd)?;
+        Some(move || unsafe { show_tray_menu(hwnd, hmenu, rect.left, rect.top) })
     }
 
     pub fn set_title<S: AsRef<str>>(&mut self, _title: Option<S>) {}

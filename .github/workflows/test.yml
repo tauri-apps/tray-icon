@@ -58,12 +58,25 @@ jobs:
         if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libgtk-4-dev libayatana-appindicator3-dev
+          sudo apt-get install -y libgtk-3-dev libgtk-4-dev libayatana-appindicator3-dev dbus-x11 xvfb
 
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
       - run: cargo build ${{ matrix.cargo-args }}
 
+      - name: Compile the Linux integration test on the minimum toolchain
+        if: matrix.platform == 'ubuntu-latest'
+        run: cargo test ${{ matrix.cargo-args }} --test linux_status --no-run
+
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test ${{ matrix.cargo-args }}
+
+      - name: Verify Linux status properties and signals on a private bus
+        if: matrix.platform == 'ubuntu-latest'
+        env:
+          TRAY_ICON_TEST_SESSION: '1'
+          GSETTINGS_BACKEND: memory
+          GIO_USE_VFS: local
+          NO_AT_BRIDGE: '1'
+        run: dbus-run-session -- xvfb-run -a cargo test ${{ matrix.cargo-args }} --test linux_status -- --ignored

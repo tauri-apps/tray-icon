@@ -167,6 +167,19 @@ pub use muda::NativeIcon;
 
 static COUNTER: Counter = Counter::new();
 
+/// Linux StatusNotifierItem status. The panel decides how to present each value.
+#[cfg(target_os = "linux")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum TrayIconStatus {
+    /// Idle; the panel may hide the item.
+    Passive,
+    /// Normal visible state.
+    Active,
+    /// Request the user's attention.
+    NeedsAttention,
+}
+
 /// Attributes to use when creating a tray icon.
 pub struct TrayIconAttributes {
     /// Tray icon tooltip
@@ -598,9 +611,20 @@ impl TrayIcon {
         self.tray.borrow_mut().set_title(title)
     }
 
-    /// Show or hide this tray icon
+    /// Show or hide this tray icon.
+    ///
+    /// On Linux, this sets the status to `Active` or `Passive`, replacing any
+    /// previously requested `NeedsAttention` status.
     pub fn set_visible(&self, visible: bool) -> Result<()> {
         self.tray.borrow_mut().set_visible(visible)
+    }
+
+    /// Sets the Linux StatusNotifierItem status.
+    ///
+    /// Calling `set_visible(true)` resets this to `Active`; `false` sets `Passive`.
+    #[cfg(target_os = "linux")]
+    pub fn set_status(&self, status: TrayIconStatus) -> Result<()> {
+        self.tray.borrow_mut().set_status(status)
     }
 
     /// Sets the tray icon temp dir path. **Linux/BSD AppIndicator backend only**.

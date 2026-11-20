@@ -102,6 +102,22 @@ impl TrayIcon {
         let _ = self.handle.update(move |tray| tray.title = title);
     }
 
+    #[cfg(target_os = "linux")]
+    pub fn set_status(&mut self, status: crate::TrayIconStatus) -> crate::Result<()> {
+        use crate::TrayIconStatus;
+        let status = match status {
+            TrayIconStatus::Passive => ksni::Status::Passive,
+            TrayIconStatus::Active => ksni::Status::Active,
+            TrayIconStatus::NeedsAttention => ksni::Status::NeedsAttention,
+        };
+        self.handle
+            .update(move |tray| tray.status = status)
+            .ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::BrokenPipe, "tray service stopped")
+            })?;
+        Ok(())
+    }
+
     pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {
         let status = if visible {
             ksni::Status::Active

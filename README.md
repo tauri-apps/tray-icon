@@ -81,20 +81,6 @@ let tray_icon = TrayIconBuilder::new()
     .unwrap();
 ```
 
-## Linux tray status
-
-On Linux, `TrayIcon::set_status` sets the StatusNotifierItem status to `Passive`,
-`Active`, or `NeedsAttention` with either backend. The panel decides whether an
-idle item is hidden and how to display an attention request.
-
-```rust
-#[cfg(target_os = "linux")]
-tray_icon.set_status(tray_icon::TrayIconStatus::NeedsAttention).unwrap();
-```
-
-Calling `set_visible(true)` sets the status back to `Active`;
-`set_visible(false)` sets it to `Passive`.
-
 ## Processing tray events
 
 You can use `TrayIconEvent::receiver` to get a reference to the `TrayIconEventReceiver`

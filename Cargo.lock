@@ -4199,7 +4199,6 @@ dependencies = [
  "thiserror 2.0.11",
  "windows-sys 0.61.2",
  "winit",
- "zbus 5.19.0",
 ]
 
 [[package]]

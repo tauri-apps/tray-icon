@@ -614,14 +614,14 @@ impl TrayIcon {
     /// Show or hide this tray icon.
     ///
     /// On Linux, this sets the status to `Active` or `Passive`, replacing any
-    /// previously requested `NeedsAttention` status.
+    /// previously requested `NeedsAttention` status through [`TrayIcon::set_status`]
     pub fn set_visible(&self, visible: bool) -> Result<()> {
         self.tray.borrow_mut().set_visible(visible)
     }
 
     /// Sets the Linux StatusNotifierItem status.
     ///
-    /// Calling `set_visible(true)` resets this to `Active`; `false` sets `Passive`.
+    /// Calling [`TrayIcon::set_visible`] resets the status to either Active or Passive.
     #[cfg(target_os = "linux")]
     pub fn set_status(&self, status: TrayIconStatus) -> Result<()> {
         self.tray.borrow_mut().set_status(status)

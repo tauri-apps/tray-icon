@@ -92,6 +92,14 @@ pub struct TrayIcon {
     guid: Option<GUID>,
 }
 
+/// What [`TrayIcon::show_menu`] needs, detached from the tray icon.
+pub struct MenuRequest {
+    hwnd: HWND,
+    internal_id: u32,
+    guid: Option<GUID>,
+    hpopupmenu: Option<HMENU>,
+}
+
 impl TrayIcon {
     pub fn new(id: TrayIconId, mut attrs: TrayIconAttributes) -> crate::Result<Self> {
         let internal_id = COUNTER.next();
@@ -289,14 +297,25 @@ impl TrayIcon {
         }
     }
 
-    pub fn show_menu(&self) {
-        if let Some(menu) = &self.menu {
-            unsafe {
-                if let Some(rect) = get_tray_rect(self.internal_id, self.guid, self.hwnd) {
-                    show_tray_menu(self.hwnd, menu.hpopupmenu() as _, rect.left, rect.top);
-                }
-            }
+    pub fn menu_request(&self) -> MenuRequest {
+        MenuRequest {
+            hwnd: self.hwnd,
+            internal_id: self.internal_id,
+            guid: self.guid,
+            hpopupmenu: self.menu.as_ref().map(|menu| menu.hpopupmenu() as _),
         }
+    }
+
+    /// Doesn't take `self`, so it can't be called through a borrow: `TrackPopupMenu` runs
+    /// a nested event loop until the menu closes.
+    pub fn show_menu(request: MenuRequest) {
+        let Some(hpopupmenu) = request.hpopupmenu else {
+            return;
+        };
+        let Some(rect) = get_tray_rect(request.internal_id, request.guid, request.hwnd) else {
+            return;
+        };
+        unsafe { show_tray_menu(request.hwnd, hpopupmenu, rect.left, rect.top) };
     }
 
     pub fn set_title<S: AsRef<str>>(&mut self, _title: Option<S>) {}

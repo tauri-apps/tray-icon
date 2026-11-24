@@ -695,11 +695,9 @@ impl TrayIcon {
     pub fn show_menu(&self) {
         #[cfg(any(target_os = "macos", target_os = "windows"))]
         {
-            // Release the borrow before the menu opens, so setters called while it is open don't panic.
-            let show_menu = self.tray.borrow().prepare_show_menu();
-            if let Some(show_menu) = show_menu {
-                show_menu();
-            }
+            // Separate statements, so the borrow is released before the menu opens.
+            let request = self.tray.borrow().menu_request();
+            platform_impl::TrayIcon::show_menu(request);
         }
     }
 

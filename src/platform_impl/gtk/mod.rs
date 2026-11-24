@@ -88,6 +88,17 @@ impl TrayIcon {
             .set_label(title.as_ref().map(|t| t.as_ref()).unwrap_or(""), "");
     }
 
+    #[cfg(target_os = "linux")]
+    pub fn set_status(&mut self, status: crate::TrayIconStatus) -> crate::Result<()> {
+        use crate::TrayIconStatus;
+        self.indicator.set_status(match status {
+            TrayIconStatus::Passive => AppIndicatorStatus::Passive,
+            TrayIconStatus::Active => AppIndicatorStatus::Active,
+            TrayIconStatus::NeedsAttention => AppIndicatorStatus::Attention,
+        });
+        Ok(())
+    }
+
     pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {
         if visible {
             self.indicator.set_status(AppIndicatorStatus::Active);

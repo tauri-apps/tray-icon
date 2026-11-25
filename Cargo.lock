@@ -856,7 +856,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1503,7 +1503,7 @@ dependencies = [
  "gobject-sys",
  "libc",
  "system-deps 9.0.0",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2202,18 +2202,19 @@ dependencies = [
 
 [[package]]
 name = "libappindicator"
-version = "0.9.0"
-source = "git+https://github.com/tauri-apps/libappindicator-rs.git?branch=gtk-0.19#ced1022eaa9f1cc13d77e9b67e9b23d6a95251fe"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f57fd42f20edd22ee374ebcedda7bdecd1d5d1e76f11880d9ff2898ed2150d76"
 dependencies = [
  "gtk",
  "libappindicator-sys",
- "log",
 ]
 
 [[package]]
 name = "libappindicator-sys"
-version = "0.9.0"
-source = "git+https://github.com/tauri-apps/libappindicator-rs.git?branch=gtk-0.19#ced1022eaa9f1cc13d77e9b67e9b23d6a95251fe"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b76d3d67eb285f611b14654cd097f52eb7e83acc2b59913147f8ac695b61149"
 dependencies = [
  "gtk-sys",
  "libloading 0.9.0",
@@ -2241,7 +2242,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -2365,8 +2366,9 @@ dependencies = [
 
 [[package]]
 name = "muda"
-version = "0.21.0"
-source = "git+https://github.com/tauri-apps/muda.git?branch=renovate%2Fgtk-0.x#920ee6fd027ee778bd9867b5ab7005f7a130ff03"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a775675be5389020a44c56efbdf3bbea8b97f47dfdd325e6c5c5213797a7e0aa"
 dependencies = [
  "crossbeam-channel",
  "dpi",
@@ -2378,7 +2380,6 @@ dependencies = [
  "objc2-app-kit 0.3.2",
  "objc2-core-foundation",
  "objc2-foundation 0.3.2",
- "once_cell",
  "png 0.18.0",
  "serde",
  "thiserror 2.0.11",
@@ -3250,7 +3251,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3594,8 +3595,9 @@ dependencies = [
 
 [[package]]
 name = "tao"
-version = "0.37.0"
-source = "git+https://github.com/tauri-apps/tao.git?branch=gtk-0.19#08660027c723e09a45b10badf60a73a661c94a95"
+version = "0.38.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "018765afffb658648fbdfa825af8f117ceee0499296811802d8359663932e7b7"
 dependencies = [
  "async-channel",
  "bitflags 2.13.2",
@@ -3620,7 +3622,6 @@ dependencies = [
  "objc2-app-kit 0.3.2",
  "objc2-foundation 0.3.2",
  "objc2-ui-kit 0.3.2",
- "once_cell",
  "parking_lot",
  "percent-encoding",
  "raw-window-handle",
@@ -3636,7 +3637,8 @@ dependencies = [
 [[package]]
 name = "tao-macros"
 version = "0.1.4"
-source = "git+https://github.com/tauri-apps/tao.git?branch=gtk-0.19#08660027c723e09a45b10badf60a73a661c94a95"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f7eeb6d99155545da6150a1795945f16ac9c178deb2a5f2e74d776107bd5849"
 dependencies = [
  "proc-macro2",
  "quote",

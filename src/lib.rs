@@ -116,9 +116,9 @@
 //! }));
 //!
 //! let proxy = event_loop.create_proxy();
-//! tray_icon::menu::MenuEvent::set_event_handler(Some(move |event| {
+//! tray_icon::menu::MenuEvent::set_event_handler(Some(std::sync::Arc::new(move |event| {
 //!     proxy.send_event(UserEvent::MenuEvent(event));
-//! }));
+//! })));
 //! ```
 //!
 //! [`EventLoopProxy`]: https://docs.rs/winit/latest/winit/event_loop/struct.EventLoopProxy.html

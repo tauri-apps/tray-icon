@@ -31,9 +31,9 @@ fn main() {
 
     // set a menu event handler that forwards the event and wakes up the event loop
     let proxy = event_loop.create_proxy();
-    MenuEvent::set_event_handler(Some(move |event| {
+    MenuEvent::set_event_handler(Some(std::sync::Arc::new(move |event| {
         proxy.send_event(UserEvent::MenuEvent(event));
-    }));
+    })));
 
     let tray_menu = Menu::new();
 

@@ -108,9 +108,9 @@ fn main() {
         proxy.send_event(UserEvent::TrayIconEvent(event));
     }));
     let proxy = event_loop.create_proxy();
-    MenuEvent::set_event_handler(Some(move |event| {
+    MenuEvent::set_event_handler(Some(std::sync::Arc::new(move |event| {
         proxy.send_event(UserEvent::MenuEvent(event));
-    }));
+    })));
 
     let mut app = Application::new();
 

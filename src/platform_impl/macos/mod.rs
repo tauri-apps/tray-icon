@@ -8,8 +8,8 @@ use std::cell::{Cell, RefCell};
 use objc2::rc::Retained;
 use objc2::{define_class, msg_send, AllocAnyThread, DeclaredClass, Message};
 use objc2_app_kit::{
-    NSCellImagePosition, NSEvent, NSImage, NSMenu, NSStatusBar, NSStatusItem, NSTrackingArea,
-    NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
+    NSCellImagePosition, NSEvent, NSEventModifierFlags, NSImage, NSMenu, NSStatusBar, NSStatusItem,
+    NSTrackingArea, NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
@@ -28,6 +28,13 @@ pub struct TrayIcon {
     id: TrayIconId,
     icon: Option<IconType>,
     attrs: TrayIconAttributes,
+    mtm: MainThreadMarker,
+}
+
+/// What [`TrayIcon::show_menu`] needs, detached from the tray icon.
+pub struct MenuRequest {
+    ns_status_item: Option<Retained<NSStatusItem>>,
+    menu: Option<Retained<NSMenu>>,
     mtm: MainThreadMarker,
 }
 
@@ -251,18 +258,28 @@ impl TrayIcon {
         self.attrs.menu_on_right_click = enable;
     }
 
-    pub fn show_menu(&self) {
-        if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
-        {
-            unsafe {
-                let menu = tray_target.ivars().menu.borrow().clone();
-                if let Some(menu) = &menu {
-                    let button = ns_status_item.button(self.mtm).unwrap();
-                    ns_status_item.setMenu(Some(menu));
-                    button.performClick(None);
-                    ns_status_item.setMenu(None);
-                }
-            }
+    pub fn menu_request(&self) -> MenuRequest {
+        MenuRequest {
+            ns_status_item: self.ns_status_item.clone(),
+            menu: self
+                .tray_target
+                .as_ref()
+                .and_then(|target| target.ivars().menu.borrow().clone()),
+            mtm: self.mtm,
+        }
+    }
+
+    /// Doesn't take `self`, so it can't be called through a borrow: `performClick` runs
+    /// the menu's event loop until the menu closes.
+    pub fn show_menu(request: MenuRequest) {
+        let (Some(ns_status_item), Some(menu)) = (request.ns_status_item, request.menu) else {
+            return;
+        };
+        unsafe {
+            let button = ns_status_item.button(request.mtm).unwrap();
+            ns_status_item.setMenu(Some(&menu));
+            button.performClick(None);
+            ns_status_item.setMenu(None);
         }
     }
 
@@ -300,7 +317,9 @@ fn set_icon_for_ns_status_item_button(
 
     let nsimage = match icon {
         Some(IconType::Custom(icon)) => {
-            let nsimage = icon.inner.to_nsimage(Some(MAX_ICON_HEIGHT))?;
+            let nsimage = icon
+                .inner
+                .to_nsimage(icon.scale_factor, Some(MAX_ICON_HEIGHT))?;
             nsimage.setTemplate(icon_is_template);
             Some(nsimage)
         }
@@ -370,7 +389,18 @@ define_class!(
                     state: MouseButtonState::Down,
                 }),
             );
-            on_tray_click(self, MouseButton::Left);
+
+            // AppKit treats Control-left-down as a request for a contextual menu.
+            // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/MenuList/Articles/DisplayContextMenu.html
+            let menu_button = if event
+                .modifierFlags()
+                .contains(NSEventModifierFlags::Control)
+            {
+                MouseButton::Right
+            } else {
+                MouseButton::Left
+            };
+            on_tray_click(self, menu_button);
         }
 
         #[unsafe(method(mouseUp:))]

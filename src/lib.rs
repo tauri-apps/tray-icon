@@ -145,7 +145,7 @@ use std::{
 
 use counter::Counter;
 use crossbeam_channel::{unbounded, Receiver, Sender};
-use once_cell::sync::{Lazy, OnceCell};
+use std::sync::{LazyLock, OnceLock};
 
 mod counter;
 mod error;
@@ -166,6 +166,19 @@ pub use muda::dpi;
 pub use muda::NativeIcon;
 
 static COUNTER: Counter = Counter::new();
+
+/// Linux StatusNotifierItem status. The panel decides how to present each value.
+#[cfg(target_os = "linux")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum TrayIconStatus {
+    /// Idle; the panel may hide the item.
+    Passive,
+    /// Normal visible state.
+    Active,
+    /// Request the user's attention.
+    NeedsAttention,
+}
 
 /// Attributes to use when creating a tray icon.
 pub struct TrayIconAttributes {
@@ -598,9 +611,20 @@ impl TrayIcon {
         self.tray.borrow_mut().set_title(title)
     }
 
-    /// Show or hide this tray icon
+    /// Show or hide this tray icon.
+    ///
+    /// On Linux, this sets the status to `Active` or `Passive`, replacing any
+    /// previously requested `NeedsAttention` status through [`TrayIcon::set_status`]
     pub fn set_visible(&self, visible: bool) -> Result<()> {
         self.tray.borrow_mut().set_visible(visible)
+    }
+
+    /// Sets the Linux StatusNotifierItem status.
+    ///
+    /// Calling [`TrayIcon::set_visible`] resets the status to either Active or Passive.
+    #[cfg(target_os = "linux")]
+    pub fn set_status(&self, status: TrayIconStatus) -> Result<()> {
+        self.tray.borrow_mut().set_status(status)
     }
 
     /// Sets the tray icon temp dir path. **Linux/BSD AppIndicator backend only**.
@@ -694,7 +718,11 @@ impl TrayIcon {
     /// - **Linux:** Unsupported.
     pub fn show_menu(&self) {
         #[cfg(any(target_os = "macos", target_os = "windows"))]
-        self.tray.borrow().show_menu();
+        {
+            // Separate statements, so the borrow is released before the menu opens.
+            let request = self.tray.borrow().menu_request();
+            platform_impl::TrayIcon::show_menu(request);
+        }
     }
 
     /// Get tray icon rect.
@@ -849,8 +877,9 @@ impl Default for Rect {
 pub type TrayIconEventReceiver = Receiver<TrayIconEvent>;
 type TrayIconEventHandler = Box<dyn Fn(TrayIconEvent) + Send + Sync + 'static>;
 
-static TRAY_CHANNEL: Lazy<(Sender<TrayIconEvent>, TrayIconEventReceiver)> = Lazy::new(unbounded);
-static TRAY_EVENT_HANDLER: OnceCell<Option<TrayIconEventHandler>> = OnceCell::new();
+static TRAY_CHANNEL: LazyLock<(Sender<TrayIconEvent>, TrayIconEventReceiver)> =
+    LazyLock::new(unbounded);
+static TRAY_EVENT_HANDLER: OnceLock<Option<TrayIconEventHandler>> = OnceLock::new();
 
 impl TrayIconEvent {
     /// Returns the id of the tray icon which triggered this event.

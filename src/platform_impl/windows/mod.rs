@@ -6,7 +6,7 @@ mod icon;
 mod util;
 use std::{mem::size_of, ptr};
 
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use windows_sys::{
     core::GUID,
     s,
@@ -50,8 +50,8 @@ const WM_USER_SHOW_MENU_ON_LEFT_CLICK: u32 = 6008;
 const WM_USER_SHOW_MENU_ON_RIGHT_CLICK: u32 = 6009;
 /// When the taskbar is created, it registers a message with the "TaskbarCreated" string and then broadcasts this message to all top-level windows
 /// When the application receives this message, it should assume that any taskbar icons it added have been removed and add them again.
-static S_U_TASKBAR_RESTART: Lazy<u32> =
-    Lazy::new(|| unsafe { RegisterWindowMessageA(s!("TaskbarCreated")) });
+static S_U_TASKBAR_RESTART: LazyLock<u32> =
+    LazyLock::new(|| unsafe { RegisterWindowMessageA(s!("TaskbarCreated")) });
 
 struct TrayUserData {
     internal_id: u32,
@@ -90,6 +90,14 @@ pub struct TrayIcon {
     menu: Option<Box<dyn menu::ContextMenu>>,
     internal_id: u32,
     guid: Option<GUID>,
+}
+
+/// What [`TrayIcon::show_menu`] needs, detached from the tray icon.
+pub struct MenuRequest {
+    hwnd: HWND,
+    internal_id: u32,
+    guid: Option<GUID>,
+    hpopupmenu: Option<HMENU>,
 }
 
 impl TrayIcon {
@@ -289,14 +297,25 @@ impl TrayIcon {
         }
     }
 
-    pub fn show_menu(&self) {
-        if let Some(menu) = &self.menu {
-            unsafe {
-                if let Some(rect) = get_tray_rect(self.internal_id, self.guid, self.hwnd) {
-                    show_tray_menu(self.hwnd, menu.hpopupmenu() as _, rect.left, rect.top);
-                }
-            }
+    pub fn menu_request(&self) -> MenuRequest {
+        MenuRequest {
+            hwnd: self.hwnd,
+            internal_id: self.internal_id,
+            guid: self.guid,
+            hpopupmenu: self.menu.as_ref().map(|menu| menu.hpopupmenu() as _),
         }
+    }
+
+    /// Doesn't take `self`, so it can't be called through a borrow: `TrackPopupMenu` runs
+    /// a nested event loop until the menu closes.
+    pub fn show_menu(request: MenuRequest) {
+        let Some(hpopupmenu) = request.hpopupmenu else {
+            return;
+        };
+        let Some(rect) = get_tray_rect(request.internal_id, request.guid, request.hwnd) else {
+            return;
+        };
+        unsafe { show_tray_menu(request.hwnd, hpopupmenu, rect.left, rect.top) };
     }
 
     pub fn set_title<S: AsRef<str>>(&mut self, _title: Option<S>) {}
@@ -515,30 +534,36 @@ unsafe extern "system" fn tray_proc(
         }
 
         WM_TIMER if wparam as u32 == WM_USER_LEAVE_TIMER_ID => {
-            if let Some(position) = userdata.last_position.take() {
-                let mut cursor = POINT { x: 0, y: 0 };
-                if GetCursorPos(&mut cursor as _) == 0 {
-                    return 0;
-                }
+            let Some(position) = userdata.last_position else {
+                KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
+                userdata.entered = false;
+                return 0;
+            };
 
-                let rect = match get_tray_rect(userdata.internal_id, userdata.guid, hwnd) {
-                    Some(r) => r,
-                    None => return 0,
-                };
+            let mut cursor = POINT { x: 0, y: 0 };
+            let cursor_known = GetCursorPos(&mut cursor as _) != 0;
+            let rect = get_tray_rect(userdata.internal_id, userdata.guid, hwnd);
 
-                let in_x = (rect.left..rect.right).contains(&cursor.x);
-                let in_y = (rect.top..rect.bottom).contains(&cursor.y);
+            // A cursor or an icon that can't be found (a locked screen, the icon hidden in a
+            // closed overflow area, explorer restarting) counts as left: the timer must not go
+            // on firing until they can be found again.
+            let inside = cursor_known
+                && rect.is_some_and(|rect| {
+                    let in_x = (rect.left..rect.right).contains(&cursor.x);
+                    let in_y = (rect.top..rect.bottom).contains(&cursor.y);
+                    in_x && in_y
+                });
 
-                if !in_x || !in_y {
-                    KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
-                    userdata.entered = false;
+            if !inside {
+                KillTimer(hwnd, WM_USER_LEAVE_TIMER_ID as _);
+                userdata.entered = false;
+                userdata.last_position = None;
 
-                    TrayIconEvent::send(TrayIconEvent::Leave {
-                        id: userdata.id.clone(),
-                        rect: rect.into(),
-                        position,
-                    });
-                }
+                TrayIconEvent::send(TrayIconEvent::Leave {
+                    id: userdata.id.clone(),
+                    rect: rect.unwrap_or_default().into(),
+                    position,
+                });
             }
 
             return 0;

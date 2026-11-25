@@ -40,15 +40,19 @@ impl PlatformIcon {
 
     /// Renders the icon as an [`NSImage`].
     ///
-    /// `max_height` scales the image down to that many points if it is taller, keeping its
-    /// aspect ratio. An icon that already fits is left at its natural size rather than scaled
-    /// up.
-    pub fn to_nsimage(&self, max_height: Option<f64>) -> crate::Result<Retained<NSImage>> {
+    /// `scale_factor` is the number of pixels per point. `max_height` scales the image down to
+    /// that many points if it is taller, keeping its aspect ratio. An icon that already fits is
+    /// left at its natural size rather than scaled up.
+    pub fn to_nsimage(
+        &self,
+        scale_factor: f64,
+        max_height: Option<f64>,
+    ) -> crate::Result<Retained<NSImage>> {
         let (width, height) = self.get_size();
         let icon = self.to_png()?;
 
-        let mut icon_width = width as CGFloat;
-        let mut icon_height = height as CGFloat;
+        let mut icon_width = width as CGFloat / scale_factor;
+        let mut icon_height = height as CGFloat / scale_factor;
 
         if let Some(max_height) = max_height.map(|max_height| max_height as CGFloat) {
             if icon_height > max_height {

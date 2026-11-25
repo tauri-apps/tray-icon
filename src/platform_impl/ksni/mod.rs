@@ -4,6 +4,7 @@
 
 mod icon;
 mod menu;
+mod util;
 
 use std::{path::Path, thread::JoinHandle};
 
@@ -48,6 +49,7 @@ impl TrayIcon {
             menu_snapshot: attrs.menu.as_ref().map(|menu| menu.snapshot_handle()),
         }
         .assume_sni_available(true)
+        .disable_dbus_name(util::is_sandboxed())
         .spawn()?;
 
         let (menu_watcher_thread_shutdown_tx, menu_watcher_thread_shutdown_rx) = unbounded();
@@ -98,6 +100,22 @@ impl TrayIcon {
             .unwrap_or_default()
             .to_string();
         let _ = self.handle.update(move |tray| tray.title = title);
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn set_status(&mut self, status: crate::TrayIconStatus) -> crate::Result<()> {
+        use crate::TrayIconStatus;
+        let status = match status {
+            TrayIconStatus::Passive => ksni::Status::Passive,
+            TrayIconStatus::Active => ksni::Status::Active,
+            TrayIconStatus::NeedsAttention => ksni::Status::NeedsAttention,
+        };
+        self.handle
+            .update(move |tray| tray.status = status)
+            .ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::BrokenPipe, "tray service stopped")
+            })?;
+        Ok(())
     }
 
     pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {

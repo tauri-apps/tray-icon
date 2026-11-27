@@ -13,7 +13,7 @@ use objc2_app_kit::{
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
-use objc2_foundation::{MainThreadMarker, NSCopying, NSSize, NSString};
+use objc2_foundation::{MainThreadMarker, NSAttributedString, NSCopying, NSSize, NSString};
 
 pub(crate) use self::icon::PlatformIcon;
 use crate::Error;
@@ -28,6 +28,7 @@ pub struct TrayIcon {
     id: TrayIconId,
     icon: Option<IconType>,
     attrs: TrayIconAttributes,
+    attributed_title: Option<Retained<NSAttributedString>>,
     mtm: MainThreadMarker,
 }
 
@@ -45,7 +46,7 @@ impl TrayIcon {
             (Some(icon), _) => Some(IconType::Custom(icon)),
             (None, icon) => icon.map(IconType::Native),
         };
-        let (ns_status_item, tray_target) = Self::create(&id, &attrs, icon.as_ref(), mtm)?;
+        let (ns_status_item, tray_target) = Self::create(&id, &attrs, icon.as_ref(), None, mtm)?;
 
         let tray_icon = Self {
             ns_status_item: Some(ns_status_item),
@@ -53,6 +54,7 @@ impl TrayIcon {
             id,
             icon,
             attrs,
+            attributed_title: None,
             mtm,
         };
 
@@ -63,6 +65,7 @@ impl TrayIcon {
         id: &TrayIconId,
         attrs: &TrayIconAttributes,
         icon: Option<&IconType>,
+        attributed_title: Option<&NSAttributedString>,
         mtm: MainThreadMarker,
     ) -> crate::Result<(Retained<NSStatusItem>, Retained<TrayTarget>)> {
         let ns_status_item =
@@ -78,7 +81,12 @@ impl TrayIcon {
         set_icon_for_ns_status_item_button(&ns_status_item, icon, attrs.icon_is_template, mtm)?;
 
         Self::set_tooltip_inner(&ns_status_item, attrs.tooltip.as_deref(), mtm)?;
-        Self::set_title_inner(&ns_status_item, attrs.title.as_deref(), mtm);
+        Self::set_title_inner(
+            &ns_status_item,
+            attrs.title.as_deref(),
+            attributed_title,
+            mtm,
+        );
 
         let tray_target = unsafe {
             let button = ns_status_item.button(mtm).unwrap();
@@ -207,33 +215,57 @@ impl TrayIcon {
     }
 
     pub fn set_title<S: AsRef<str>>(&mut self, title: Option<S>) {
-        let title = title.map(|s| s.as_ref().to_string());
+        self.attrs.title = title.map(|s| s.as_ref().to_string());
+        self.attributed_title = None;
+        self.update_title();
+    }
+
+    pub fn set_attributed_title(&mut self, title: Option<&NSAttributedString>) {
+        self.attributed_title = title.map(NSCopying::copy);
+        self.update_title();
+    }
+
+    fn update_title(&self) {
         if let (Some(ns_status_item), Some(tray_target)) = (&self.ns_status_item, &self.tray_target)
         {
-            Self::set_title_inner(ns_status_item, title.as_deref(), self.mtm);
+            Self::set_title_inner(
+                ns_status_item,
+                self.attrs.title.as_deref(),
+                self.attributed_title.as_deref(),
+                self.mtm,
+            );
             tray_target.update_dimensions();
         }
-        self.attrs.title = title;
     }
 
     fn set_title_inner<S: AsRef<str>>(
         ns_status_item: &NSStatusItem,
         title: Option<S>,
+        attributed_title: Option<&NSAttributedString>,
         mtm: MainThreadMarker,
     ) {
         if let Some(button) = ns_status_item.button(mtm) {
-            let title = title
-                .map(|title| NSString::from_str(title.as_ref()))
-                .unwrap_or_default();
-            button.setTitle(&title);
+            if let Some(title) = attributed_title {
+                button.setAttributedTitle(title);
+            } else {
+                let title = title
+                    .map(|title| NSString::from_str(title.as_ref()))
+                    .unwrap_or_default();
+                button.setTitle(&title);
+            }
         }
     }
 
     pub fn set_visible(&mut self, visible: bool) -> crate::Result<()> {
         if visible {
             if self.ns_status_item.is_none() {
-                let (ns_status_item, tray_target) =
-                    Self::create(&self.id, &self.attrs, self.icon.as_ref(), self.mtm)?;
+                let (ns_status_item, tray_target) = Self::create(
+                    &self.id,
+                    &self.attrs,
+                    self.icon.as_ref(),
+                    self.attributed_title.as_deref(),
+                    self.mtm,
+                )?;
                 self.ns_status_item = Some(ns_status_item);
                 self.tray_target = Some(tray_target);
             }

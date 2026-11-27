@@ -611,6 +611,14 @@ impl TrayIcon {
         self.tray.borrow_mut().set_title(title)
     }
 
+    /// Sets the attributed title for this tray icon. **macOS only**.
+    ///
+    /// Pass `None` to restore the plain title. [`Self::set_title`] clears the attributed title.
+    #[cfg(target_os = "macos")]
+    pub fn set_attributed_title(&self, title: Option<&objc2_foundation::NSAttributedString>) {
+        self.tray.borrow_mut().set_attributed_title(title);
+    }
+
     /// Show or hide this tray icon.
     ///
     /// On Linux, this sets the status to `Active` or `Passive`, replacing any

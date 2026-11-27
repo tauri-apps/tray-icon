@@ -83,7 +83,7 @@ impl TrayIcon {
         let tray_target = unsafe {
             let button = ns_status_item.button(mtm).unwrap();
 
-            let frame = button.frame();
+            let frame = button.bounds();
 
             let target = mtm.alloc().set_ivars(TrayTargetIvars {
                 id: NSString::from_str(&id.0),
@@ -534,7 +534,7 @@ impl TrayTarget {
     fn update_dimensions(&self) {
         let mtm = MainThreadMarker::from(self);
         let button = self.ivars().status_item.button(mtm).unwrap();
-        self.setFrame(button.frame());
+        self.setFrame(button.bounds());
     }
 }
 

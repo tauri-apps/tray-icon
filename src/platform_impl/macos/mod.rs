@@ -6,7 +6,8 @@ mod icon;
 use std::cell::{Cell, RefCell};
 
 use objc2::rc::Retained;
-use objc2::{define_class, msg_send, AllocAnyThread, DeclaredClass, Message};
+use objc2::runtime::AnyObject;
+use objc2::{define_class, msg_send, sel, AllocAnyThread, DeclaredClass, Message};
 use objc2_app_kit::{
     NSCellImagePosition, NSEvent, NSEventModifierFlags, NSImage, NSMenu, NSStatusBar, NSStatusItem,
     NSTrackingArea, NSTrackingAreaOptions, NSVariableStatusItemLength, NSView, NSWindow,
@@ -101,6 +102,11 @@ impl TrayIcon {
             tray_target.setWantsLayer(true);
 
             button.addSubview(&tray_target);
+
+            // Mouse clicks land on `tray_target`, but VoiceOver and other assistive apps press
+            // the button itself, which only runs its action.
+            button.setTarget(Some(&tray_target));
+            button.setAction(Some(sel!(onAccessibilityPress:)));
 
             tray_target
         };
@@ -478,6 +484,13 @@ define_class!(
             }
         }
 
+        #[unsafe(method(onAccessibilityPress:))]
+        fn on_accessibility_press(&self, _sender: Option<&AnyObject>) {
+            if self.ivars().menu_on_left_click.get() {
+                show_tray_menu(self);
+            }
+        }
+
         #[unsafe(method(mouseEntered:))]
         fn on_mouse_entered(&self, event: &NSEvent) {
             send_mouse_event(self, event, MouseEventType::Enter, None);
@@ -540,30 +553,32 @@ impl TrayTarget {
 
 fn on_tray_click(this: &TrayTarget, button: MouseButton) {
     let mtm = MainThreadMarker::from(this);
-    unsafe {
-        let ns_button = this.ivars().status_item.button(mtm).unwrap();
-        let status_item = &this.ivars().status_item;
+    let ns_button = this.ivars().status_item.button(mtm).unwrap();
 
-        let menu_on_left_click = this.ivars().menu_on_left_click.get();
-        let menu_on_right_click = this.ivars().menu_on_right_click.get();
-        if (menu_on_right_click && button == MouseButton::Right)
-            || (menu_on_left_click && button == MouseButton::Left)
-        {
-            // Retain the menu out of the `RefCell`: `performClick` runs a
-            // nested event loop that may re-enter `set_menu`.
-            let menu = this.ivars().menu.borrow().clone();
-            let has_items = menu.as_ref().is_some_and(|menu| menu.numberOfItems() > 0);
-            if has_items {
-                status_item.setMenu(menu.as_deref());
-                ns_button.performClick(None);
-                status_item.setMenu(None);
-            } else {
-                ns_button.highlight(true);
-            }
-        } else {
-            ns_button.highlight(true);
-        }
+    let menu_on_left_click = this.ivars().menu_on_left_click.get();
+    let menu_on_right_click = this.ivars().menu_on_right_click.get();
+    let wants_menu = (menu_on_right_click && button == MouseButton::Right)
+        || (menu_on_left_click && button == MouseButton::Left);
+    if !(wants_menu && show_tray_menu(this)) {
+        ns_button.highlight(true);
     }
+}
+
+/// Shows the menu under the icon and returns whether there was one to show.
+fn show_tray_menu(this: &TrayTarget) -> bool {
+    let mtm = MainThreadMarker::from(this);
+    let ns_button = this.ivars().status_item.button(mtm).unwrap();
+    let status_item = &this.ivars().status_item;
+    // Retain the menu out of the `RefCell`: `performClick` runs a
+    // nested event loop that may re-enter `set_menu`.
+    let menu = this.ivars().menu.borrow().clone();
+    let has_items = menu.as_ref().is_some_and(|menu| menu.numberOfItems() > 0);
+    if has_items {
+        status_item.setMenu(menu.as_deref());
+        unsafe { ns_button.performClick(None) };
+        status_item.setMenu(None);
+    }
+    has_items
 }
 
 fn get_tray_rect(window: &NSWindow) -> Rect {
